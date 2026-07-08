@@ -29,7 +29,7 @@ export const dimensionsTable = pgTable(
     unique("dimensions_org_type_name_unique").on(t.orgId, t.type, t.name),
     // Enables composite (org_id, id) foreign keys from journal_lines so a line
     // can never reference a dimension belonging to another tenant.
-    unique("dimensions_org_id_unique").on(t.orgId, t.id),
+    unique("dimensions_org_id_unique").on(t.id, t.orgId),
   ],
 );
 

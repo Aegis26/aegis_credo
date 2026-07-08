@@ -31,7 +31,7 @@ export const approvalRulesTable = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (t) => [unique("approval_rules_org_id_unique").on(t.orgId, t.id)],
+  (t) => [unique("approval_rules_org_id_unique").on(t.id, t.orgId)],
 );
 
 export const insertApprovalRuleSchema = createInsertSchema(

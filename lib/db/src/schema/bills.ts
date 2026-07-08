@@ -40,7 +40,7 @@ export const billsTable = pgTable(
       .defaultNow(),
   },
   (t) => [
-    unique("bills_org_id_unique").on(t.orgId, t.id),
+    unique("bills_org_id_unique").on(t.id, t.orgId),
     unique("bills_org_external_unique").on(t.orgId, t.externalId),
     foreignKey({
       name: "bills_org_ap_account_fk",

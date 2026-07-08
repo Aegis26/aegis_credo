@@ -41,7 +41,7 @@ export const journalEntriesTable = pgTable(
   (t) => [
     // Enables composite (org_id, id) foreign keys from journal_lines so a line
     // can never reference an entry belonging to another tenant.
-    unique("journal_entries_org_id_unique").on(t.orgId, t.id),
+    unique("journal_entries_org_id_unique").on(t.id, t.orgId),
     // Idempotency guard: at most one entry per (org, idempotency_key). NULL
     // keys are unconstrained (manual entries need not supply a key).
     unique("journal_entries_org_idempotency_unique").on(

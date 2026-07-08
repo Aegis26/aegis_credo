@@ -38,7 +38,7 @@ export const invoicesTable = pgTable(
       .defaultNow(),
   },
   (t) => [
-    unique("invoices_org_id_unique").on(t.orgId, t.id),
+    unique("invoices_org_id_unique").on(t.id, t.orgId),
     unique("invoices_org_external_unique").on(t.orgId, t.externalId),
     foreignKey({
       name: "invoices_org_ar_account_fk",

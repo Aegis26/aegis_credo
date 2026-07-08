@@ -39,7 +39,7 @@ export const accountsTable = pgTable(
     unique("accounts_org_code_unique").on(t.orgId, t.code),
     // Enables composite (org_id, id) foreign keys from journal_lines so a line
     // can never reference an account belonging to another tenant.
-    unique("accounts_org_id_unique").on(t.orgId, t.id),
+    unique("accounts_org_id_unique").on(t.id, t.orgId),
   ],
 );
 

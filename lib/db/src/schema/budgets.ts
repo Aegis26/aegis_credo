@@ -30,7 +30,7 @@ export const budgetsTable = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (t) => [unique("budgets_org_id_unique").on(t.orgId, t.id)],
+  (t) => [unique("budgets_org_id_unique").on(t.id, t.orgId)],
 );
 
 export const insertBudgetSchema = createInsertSchema(budgetsTable).omit({

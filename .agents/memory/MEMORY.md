@@ -1,2 +1,3 @@
 - [Ledger money-path invariants](ledger-money-paths.md) — idempotency is mandatory & race-safe, AP/AR/payroll flows atomic via threaded tx, RBAC is caller-side, reconciliation is source-vs-ledger.
 - [Orval params collision](orval-params-collision.md) — endpoints with BOTH path+query params make `<Op>Params` collide across zod client & types; fix with explicit re-export in the api-zod barrel.
+- [drizzle-kit composite constraints](drizzle-kit-composite-constraints.md) — declare composite `(org_id,id)` uniques as `.on(t.id,t.orgId)` (table-ordinal order) or `push` false-diffs & prompts to truncate forever; BigInt default snapshot bug too.
