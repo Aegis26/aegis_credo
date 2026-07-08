@@ -8,6 +8,8 @@ export * from "./generated/types";
 export {
   GetCloseStatusParams,
   ListClosePeriodsParams,
+  ListBankTransactionsParams,
+  GetTaxEstimateParams,
 } from "./generated/api";
 export * from './generated/api';
 export * from './generated/types';

@@ -20,18 +20,40 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AccountList,
   AuthSession,
+  BalanceSheetReport,
+  BankExchangeInput,
+  BankLinkToken,
+  BankStatus,
+  BankSyncResult,
+  BankTransaction,
+  BankTransactionList,
   BatchExportRequest,
   BatchExportResponse,
+  CategorizeInput,
   ClientList,
   ClosePeriodList,
   CloseStatusSummary,
   ErrorResponse,
   GetPracticeDashboardParams,
+  GetTaxEstimateParams,
   HealthStatus,
+  Invoice,
+  InvoiceInput,
+  InvoiceList,
+  InvoicePaymentInput,
+  ListBankTransactionsParams,
   LoginRequest,
+  Org,
+  OrgDashboard,
+  OrgInput,
+  OrgList,
   PracticeDashboard,
-  SignupRequest
+  ProfitAndLossReport,
+  SignupRequest,
+  TaxEstimate,
+  TrialBalanceReport
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -812,6 +834,1384 @@ export function useGetCloseStatus<TData = Awaited<ReturnType<typeof getCloseStat
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetCloseStatusQueryOptions(orgId,periodId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListMyOrgsUrl = () => {
+
+
+
+
+  return `/api/orgs`
+}
+
+/**
+ * Returns exactly the orgs the session user has an active membership in. Identity comes from the session — never from the request.
+ * @summary List organizations the authenticated user belongs to
+ */
+export const listMyOrgs = async ( options?: RequestInit): Promise<OrgList> => {
+
+  return customFetch<OrgList>(getListMyOrgsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMyOrgsQueryKey = () => {
+    return [
+    `/api/orgs`
+    ] as const;
+    }
+
+
+export const getListMyOrgsQueryOptions = <TData = Awaited<ReturnType<typeof listMyOrgs>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMyOrgs>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMyOrgsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMyOrgs>>> = ({ signal }) => listMyOrgs({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMyOrgs>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMyOrgsQueryResult = NonNullable<Awaited<ReturnType<typeof listMyOrgs>>>
+export type ListMyOrgsQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List organizations the authenticated user belongs to
+ */
+
+export function useListMyOrgs<TData = Awaited<ReturnType<typeof listMyOrgs>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMyOrgs>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMyOrgsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateOrgUrl = () => {
+
+
+
+
+  return `/api/orgs`
+}
+
+/**
+ * Creates a new org, seeds the standard chart of accounts, and makes the session user its owner. Identity comes from the session.
+ * @summary Create an organization and seed its starter chart of accounts
+ */
+export const createOrg = async (orgInput: OrgInput, options?: RequestInit): Promise<Org> => {
+
+  return customFetch<Org>(getCreateOrgUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(orgInput)
+  }
+);}
+
+
+
+
+
+export const getCreateOrgMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrg>>, TError,{data: BodyType<OrgInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createOrg>>, TError,{data: BodyType<OrgInput>}, TContext> => {
+
+const mutationKey = ['createOrg'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createOrg>>, {data: BodyType<OrgInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createOrg(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateOrgMutationResult = NonNullable<Awaited<ReturnType<typeof createOrg>>>
+    export type CreateOrgMutationBody = BodyType<OrgInput>
+    export type CreateOrgMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Create an organization and seed its starter chart of accounts
+ */
+export const useCreateOrg = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrg>>, TError,{data: BodyType<OrgInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createOrg>>,
+        TError,
+        {data: BodyType<OrgInput>},
+        TContext
+      > => {
+      return useMutation(getCreateOrgMutationOptions(options));
+    }
+
+export const getListAccountsUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/accounts`
+}
+
+/**
+ * @summary List the chart of accounts for an org
+ */
+export const listAccounts = async (orgId: string, options?: RequestInit): Promise<AccountList> => {
+
+  return customFetch<AccountList>(getListAccountsUrl(orgId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAccountsQueryKey = (orgId: string,) => {
+    return [
+    `/api/orgs/${orgId}/accounts`
+    ] as const;
+    }
+
+
+export const getListAccountsQueryOptions = <TData = Awaited<ReturnType<typeof listAccounts>>, TError = ErrorType<ErrorResponse>>(orgId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAccounts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAccountsQueryKey(orgId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAccounts>>> = ({ signal }) => listAccounts(orgId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAccounts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAccountsQueryResult = NonNullable<Awaited<ReturnType<typeof listAccounts>>>
+export type ListAccountsQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List the chart of accounts for an org
+ */
+
+export function useListAccounts<TData = Awaited<ReturnType<typeof listAccounts>>, TError = ErrorType<ErrorResponse>>(
+ orgId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAccounts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAccountsQueryOptions(orgId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetOrgDashboardUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/dashboard`
+}
+
+/**
+ * Cash position, current net income, trial-balance totals (which always net to zero), and recent ledger activity. Money fields are decimal strings.
+ * @summary Headline dashboard for an org
+ */
+export const getOrgDashboard = async (orgId: string, options?: RequestInit): Promise<OrgDashboard> => {
+
+  return customFetch<OrgDashboard>(getGetOrgDashboardUrl(orgId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOrgDashboardQueryKey = (orgId: string,) => {
+    return [
+    `/api/orgs/${orgId}/dashboard`
+    ] as const;
+    }
+
+
+export const getGetOrgDashboardQueryOptions = <TData = Awaited<ReturnType<typeof getOrgDashboard>>, TError = ErrorType<ErrorResponse>>(orgId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOrgDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOrgDashboardQueryKey(orgId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOrgDashboard>>> = ({ signal }) => getOrgDashboard(orgId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOrgDashboard>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetOrgDashboardQueryResult = NonNullable<Awaited<ReturnType<typeof getOrgDashboard>>>
+export type GetOrgDashboardQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Headline dashboard for an org
+ */
+
+export function useGetOrgDashboard<TData = Awaited<ReturnType<typeof getOrgDashboard>>, TError = ErrorType<ErrorResponse>>(
+ orgId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOrgDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetOrgDashboardQueryOptions(orgId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetTrialBalanceReportUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/reports/trial-balance`
+}
+
+/**
+ * @summary Trial balance for an org
+ */
+export const getTrialBalanceReport = async (orgId: string, options?: RequestInit): Promise<TrialBalanceReport> => {
+
+  return customFetch<TrialBalanceReport>(getGetTrialBalanceReportUrl(orgId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTrialBalanceReportQueryKey = (orgId: string,) => {
+    return [
+    `/api/orgs/${orgId}/reports/trial-balance`
+    ] as const;
+    }
+
+
+export const getGetTrialBalanceReportQueryOptions = <TData = Awaited<ReturnType<typeof getTrialBalanceReport>>, TError = ErrorType<ErrorResponse>>(orgId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTrialBalanceReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTrialBalanceReportQueryKey(orgId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTrialBalanceReport>>> = ({ signal }) => getTrialBalanceReport(orgId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTrialBalanceReport>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetTrialBalanceReportQueryResult = NonNullable<Awaited<ReturnType<typeof getTrialBalanceReport>>>
+export type GetTrialBalanceReportQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Trial balance for an org
+ */
+
+export function useGetTrialBalanceReport<TData = Awaited<ReturnType<typeof getTrialBalanceReport>>, TError = ErrorType<ErrorResponse>>(
+ orgId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTrialBalanceReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetTrialBalanceReportQueryOptions(orgId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetProfitAndLossReportUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/reports/profit-and-loss`
+}
+
+/**
+ * @summary Profit and loss for an org
+ */
+export const getProfitAndLossReport = async (orgId: string, options?: RequestInit): Promise<ProfitAndLossReport> => {
+
+  return customFetch<ProfitAndLossReport>(getGetProfitAndLossReportUrl(orgId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetProfitAndLossReportQueryKey = (orgId: string,) => {
+    return [
+    `/api/orgs/${orgId}/reports/profit-and-loss`
+    ] as const;
+    }
+
+
+export const getGetProfitAndLossReportQueryOptions = <TData = Awaited<ReturnType<typeof getProfitAndLossReport>>, TError = ErrorType<ErrorResponse>>(orgId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getProfitAndLossReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetProfitAndLossReportQueryKey(orgId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProfitAndLossReport>>> = ({ signal }) => getProfitAndLossReport(orgId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getProfitAndLossReport>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetProfitAndLossReportQueryResult = NonNullable<Awaited<ReturnType<typeof getProfitAndLossReport>>>
+export type GetProfitAndLossReportQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Profit and loss for an org
+ */
+
+export function useGetProfitAndLossReport<TData = Awaited<ReturnType<typeof getProfitAndLossReport>>, TError = ErrorType<ErrorResponse>>(
+ orgId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getProfitAndLossReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetProfitAndLossReportQueryOptions(orgId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetBalanceSheetReportUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/reports/balance-sheet`
+}
+
+/**
+ * @summary Balance sheet for an org
+ */
+export const getBalanceSheetReport = async (orgId: string, options?: RequestInit): Promise<BalanceSheetReport> => {
+
+  return customFetch<BalanceSheetReport>(getGetBalanceSheetReportUrl(orgId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetBalanceSheetReportQueryKey = (orgId: string,) => {
+    return [
+    `/api/orgs/${orgId}/reports/balance-sheet`
+    ] as const;
+    }
+
+
+export const getGetBalanceSheetReportQueryOptions = <TData = Awaited<ReturnType<typeof getBalanceSheetReport>>, TError = ErrorType<ErrorResponse>>(orgId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBalanceSheetReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetBalanceSheetReportQueryKey(orgId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBalanceSheetReport>>> = ({ signal }) => getBalanceSheetReport(orgId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBalanceSheetReport>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetBalanceSheetReportQueryResult = NonNullable<Awaited<ReturnType<typeof getBalanceSheetReport>>>
+export type GetBalanceSheetReportQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Balance sheet for an org
+ */
+
+export function useGetBalanceSheetReport<TData = Awaited<ReturnType<typeof getBalanceSheetReport>>, TError = ErrorType<ErrorResponse>>(
+ orgId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBalanceSheetReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetBalanceSheetReportQueryOptions(orgId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListBankTransactionsUrl = (orgId: string,
+    params?: ListBankTransactionsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/orgs/${orgId}/bank-transactions?${stringifiedParams}` : `/api/orgs/${orgId}/bank-transactions`
+}
+
+/**
+ * @summary List bank transactions for an org
+ */
+export const listBankTransactions = async (orgId: string,
+    params?: ListBankTransactionsParams, options?: RequestInit): Promise<BankTransactionList> => {
+
+  return customFetch<BankTransactionList>(getListBankTransactionsUrl(orgId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListBankTransactionsQueryKey = (orgId: string,
+    params?: ListBankTransactionsParams,) => {
+    return [
+    `/api/orgs/${orgId}/bank-transactions`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListBankTransactionsQueryOptions = <TData = Awaited<ReturnType<typeof listBankTransactions>>, TError = ErrorType<ErrorResponse>>(orgId: string,
+    params?: ListBankTransactionsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBankTransactions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListBankTransactionsQueryKey(orgId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listBankTransactions>>> = ({ signal }) => listBankTransactions(orgId,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listBankTransactions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListBankTransactionsQueryResult = NonNullable<Awaited<ReturnType<typeof listBankTransactions>>>
+export type ListBankTransactionsQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List bank transactions for an org
+ */
+
+export function useListBankTransactions<TData = Awaited<ReturnType<typeof listBankTransactions>>, TError = ErrorType<ErrorResponse>>(
+ orgId: string,
+    params?: ListBankTransactionsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBankTransactions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListBankTransactionsQueryOptions(orgId,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCategorizeBankTransactionUrl = (orgId: string,
+    txnId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/bank-transactions/${txnId}/categorize`
+}
+
+/**
+ * Matches an unmatched bank transaction to a chart account, posting the correct double-entry through the ledger posting service and linking the transaction to the posted entry. Idempotent per transaction.
+ * @summary Categorize (reconcile) a bank transaction
+ */
+export const categorizeBankTransaction = async (orgId: string,
+    txnId: string,
+    categorizeInput: CategorizeInput, options?: RequestInit): Promise<BankTransaction> => {
+
+  return customFetch<BankTransaction>(getCategorizeBankTransactionUrl(orgId,txnId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(categorizeInput)
+  }
+);}
+
+
+
+
+
+export const getCategorizeBankTransactionMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof categorizeBankTransaction>>, TError,{orgId: string;txnId: string;data: BodyType<CategorizeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof categorizeBankTransaction>>, TError,{orgId: string;txnId: string;data: BodyType<CategorizeInput>}, TContext> => {
+
+const mutationKey = ['categorizeBankTransaction'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof categorizeBankTransaction>>, {orgId: string;txnId: string;data: BodyType<CategorizeInput>}> = (props) => {
+          const {orgId,txnId,data} = props ?? {};
+
+          return  categorizeBankTransaction(orgId,txnId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CategorizeBankTransactionMutationResult = NonNullable<Awaited<ReturnType<typeof categorizeBankTransaction>>>
+    export type CategorizeBankTransactionMutationBody = BodyType<CategorizeInput>
+    export type CategorizeBankTransactionMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Categorize (reconcile) a bank transaction
+ */
+export const useCategorizeBankTransaction = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof categorizeBankTransaction>>, TError,{orgId: string;txnId: string;data: BodyType<CategorizeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof categorizeBankTransaction>>,
+        TError,
+        {orgId: string;txnId: string;data: BodyType<CategorizeInput>},
+        TContext
+      > => {
+      return useMutation(getCategorizeBankTransactionMutationOptions(options));
+    }
+
+export const getGetBankStatusUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/bank/status`
+}
+
+/**
+ * Whether a bank is connected, the institution, last sync time, count of pending (unreconciled) transactions, and the last sync error if any.
+ * @summary Bank connection and sync status
+ */
+export const getBankStatus = async (orgId: string, options?: RequestInit): Promise<BankStatus> => {
+
+  return customFetch<BankStatus>(getGetBankStatusUrl(orgId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetBankStatusQueryKey = (orgId: string,) => {
+    return [
+    `/api/orgs/${orgId}/bank/status`
+    ] as const;
+    }
+
+
+export const getGetBankStatusQueryOptions = <TData = Awaited<ReturnType<typeof getBankStatus>>, TError = ErrorType<ErrorResponse>>(orgId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBankStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetBankStatusQueryKey(orgId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBankStatus>>> = ({ signal }) => getBankStatus(orgId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBankStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetBankStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getBankStatus>>>
+export type GetBankStatusQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Bank connection and sync status
+ */
+
+export function useGetBankStatus<TData = Awaited<ReturnType<typeof getBankStatus>>, TError = ErrorType<ErrorResponse>>(
+ orgId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBankStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetBankStatusQueryOptions(orgId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateBankLinkTokenUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/bank/link-token`
+}
+
+/**
+ * @summary Create a Plaid Link token to start bank connection
+ */
+export const createBankLinkToken = async (orgId: string, options?: RequestInit): Promise<BankLinkToken> => {
+
+  return customFetch<BankLinkToken>(getCreateBankLinkTokenUrl(orgId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getCreateBankLinkTokenMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createBankLinkToken>>, TError,{orgId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createBankLinkToken>>, TError,{orgId: string}, TContext> => {
+
+const mutationKey = ['createBankLinkToken'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createBankLinkToken>>, {orgId: string}> = (props) => {
+          const {orgId} = props ?? {};
+
+          return  createBankLinkToken(orgId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateBankLinkTokenMutationResult = NonNullable<Awaited<ReturnType<typeof createBankLinkToken>>>
+
+    export type CreateBankLinkTokenMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Create a Plaid Link token to start bank connection
+ */
+export const useCreateBankLinkToken = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createBankLinkToken>>, TError,{orgId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createBankLinkToken>>,
+        TError,
+        {orgId: string},
+        TContext
+      > => {
+      return useMutation(getCreateBankLinkTokenMutationOptions(options));
+    }
+
+export const getExchangeBankTokenUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/bank/exchange`
+}
+
+/**
+ * @summary Exchange a Plaid public token and connect the account
+ */
+export const exchangeBankToken = async (orgId: string,
+    bankExchangeInput: BankExchangeInput, options?: RequestInit): Promise<BankStatus> => {
+
+  return customFetch<BankStatus>(getExchangeBankTokenUrl(orgId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(bankExchangeInput)
+  }
+);}
+
+
+
+
+
+export const getExchangeBankTokenMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof exchangeBankToken>>, TError,{orgId: string;data: BodyType<BankExchangeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof exchangeBankToken>>, TError,{orgId: string;data: BodyType<BankExchangeInput>}, TContext> => {
+
+const mutationKey = ['exchangeBankToken'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof exchangeBankToken>>, {orgId: string;data: BodyType<BankExchangeInput>}> = (props) => {
+          const {orgId,data} = props ?? {};
+
+          return  exchangeBankToken(orgId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ExchangeBankTokenMutationResult = NonNullable<Awaited<ReturnType<typeof exchangeBankToken>>>
+    export type ExchangeBankTokenMutationBody = BodyType<BankExchangeInput>
+    export type ExchangeBankTokenMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Exchange a Plaid public token and connect the account
+ */
+export const useExchangeBankToken = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof exchangeBankToken>>, TError,{orgId: string;data: BodyType<BankExchangeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof exchangeBankToken>>,
+        TError,
+        {orgId: string;data: BodyType<BankExchangeInput>},
+        TContext
+      > => {
+      return useMutation(getExchangeBankTokenMutationOptions(options));
+    }
+
+export const getSyncBankUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/bank/sync`
+}
+
+/**
+ * @summary Pull the latest transactions from the connected bank
+ */
+export const syncBank = async (orgId: string, options?: RequestInit): Promise<BankSyncResult> => {
+
+  return customFetch<BankSyncResult>(getSyncBankUrl(orgId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getSyncBankMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncBank>>, TError,{orgId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof syncBank>>, TError,{orgId: string}, TContext> => {
+
+const mutationKey = ['syncBank'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof syncBank>>, {orgId: string}> = (props) => {
+          const {orgId} = props ?? {};
+
+          return  syncBank(orgId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SyncBankMutationResult = NonNullable<Awaited<ReturnType<typeof syncBank>>>
+
+    export type SyncBankMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Pull the latest transactions from the connected bank
+ */
+export const useSyncBank = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncBank>>, TError,{orgId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof syncBank>>,
+        TError,
+        {orgId: string},
+        TContext
+      > => {
+      return useMutation(getSyncBankMutationOptions(options));
+    }
+
+export const getListInvoicesUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/invoices`
+}
+
+/**
+ * @summary List invoices for an org
+ */
+export const listInvoices = async (orgId: string, options?: RequestInit): Promise<InvoiceList> => {
+
+  return customFetch<InvoiceList>(getListInvoicesUrl(orgId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListInvoicesQueryKey = (orgId: string,) => {
+    return [
+    `/api/orgs/${orgId}/invoices`
+    ] as const;
+    }
+
+
+export const getListInvoicesQueryOptions = <TData = Awaited<ReturnType<typeof listInvoices>>, TError = ErrorType<ErrorResponse>>(orgId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInvoices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListInvoicesQueryKey(orgId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInvoices>>> = ({ signal }) => listInvoices(orgId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInvoices>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListInvoicesQueryResult = NonNullable<Awaited<ReturnType<typeof listInvoices>>>
+export type ListInvoicesQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List invoices for an org
+ */
+
+export function useListInvoices<TData = Awaited<ReturnType<typeof listInvoices>>, TError = ErrorType<ErrorResponse>>(
+ orgId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInvoices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListInvoicesQueryOptions(orgId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateInvoiceUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/invoices`
+}
+
+/**
+ * @summary Create an invoice (posts Dr A/R / Cr revenue)
+ */
+export const createInvoice = async (orgId: string,
+    invoiceInput: InvoiceInput, options?: RequestInit): Promise<Invoice> => {
+
+  return customFetch<Invoice>(getCreateInvoiceUrl(orgId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(invoiceInput)
+  }
+);}
+
+
+
+
+
+export const getCreateInvoiceMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInvoice>>, TError,{orgId: string;data: BodyType<InvoiceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createInvoice>>, TError,{orgId: string;data: BodyType<InvoiceInput>}, TContext> => {
+
+const mutationKey = ['createInvoice'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createInvoice>>, {orgId: string;data: BodyType<InvoiceInput>}> = (props) => {
+          const {orgId,data} = props ?? {};
+
+          return  createInvoice(orgId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateInvoiceMutationResult = NonNullable<Awaited<ReturnType<typeof createInvoice>>>
+    export type CreateInvoiceMutationBody = BodyType<InvoiceInput>
+    export type CreateInvoiceMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Create an invoice (posts Dr A/R / Cr revenue)
+ */
+export const useCreateInvoice = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInvoice>>, TError,{orgId: string;data: BodyType<InvoiceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createInvoice>>,
+        TError,
+        {orgId: string;data: BodyType<InvoiceInput>},
+        TContext
+      > => {
+      return useMutation(getCreateInvoiceMutationOptions(options));
+    }
+
+export const getSendInvoiceUrl = (orgId: string,
+    invoiceId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/invoices/${invoiceId}/send`
+}
+
+/**
+ * @summary Mark an invoice as sent to the customer
+ */
+export const sendInvoice = async (orgId: string,
+    invoiceId: string, options?: RequestInit): Promise<Invoice> => {
+
+  return customFetch<Invoice>(getSendInvoiceUrl(orgId,invoiceId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getSendInvoiceMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendInvoice>>, TError,{orgId: string;invoiceId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof sendInvoice>>, TError,{orgId: string;invoiceId: string}, TContext> => {
+
+const mutationKey = ['sendInvoice'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof sendInvoice>>, {orgId: string;invoiceId: string}> = (props) => {
+          const {orgId,invoiceId} = props ?? {};
+
+          return  sendInvoice(orgId,invoiceId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SendInvoiceMutationResult = NonNullable<Awaited<ReturnType<typeof sendInvoice>>>
+
+    export type SendInvoiceMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Mark an invoice as sent to the customer
+ */
+export const useSendInvoice = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendInvoice>>, TError,{orgId: string;invoiceId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof sendInvoice>>,
+        TError,
+        {orgId: string;invoiceId: string},
+        TContext
+      > => {
+      return useMutation(getSendInvoiceMutationOptions(options));
+    }
+
+export const getPayInvoiceUrl = (orgId: string,
+    invoiceId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/invoices/${invoiceId}/pay`
+}
+
+/**
+ * @summary Record a payment on an invoice (posts Dr cash / Cr A/R)
+ */
+export const payInvoice = async (orgId: string,
+    invoiceId: string,
+    invoicePaymentInput: InvoicePaymentInput, options?: RequestInit): Promise<Invoice> => {
+
+  return customFetch<Invoice>(getPayInvoiceUrl(orgId,invoiceId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(invoicePaymentInput)
+  }
+);}
+
+
+
+
+
+export const getPayInvoiceMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof payInvoice>>, TError,{orgId: string;invoiceId: string;data: BodyType<InvoicePaymentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof payInvoice>>, TError,{orgId: string;invoiceId: string;data: BodyType<InvoicePaymentInput>}, TContext> => {
+
+const mutationKey = ['payInvoice'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof payInvoice>>, {orgId: string;invoiceId: string;data: BodyType<InvoicePaymentInput>}> = (props) => {
+          const {orgId,invoiceId,data} = props ?? {};
+
+          return  payInvoice(orgId,invoiceId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PayInvoiceMutationResult = NonNullable<Awaited<ReturnType<typeof payInvoice>>>
+    export type PayInvoiceMutationBody = BodyType<InvoicePaymentInput>
+    export type PayInvoiceMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Record a payment on an invoice (posts Dr cash / Cr A/R)
+ */
+export const usePayInvoice = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof payInvoice>>, TError,{orgId: string;invoiceId: string;data: BodyType<InvoicePaymentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof payInvoice>>,
+        TError,
+        {orgId: string;invoiceId: string;data: BodyType<InvoicePaymentInput>},
+        TContext
+      > => {
+      return useMutation(getPayInvoiceMutationOptions(options));
+    }
+
+export const getGetTaxEstimateUrl = (orgId: string,
+    params?: GetTaxEstimateParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/orgs/${orgId}/tax-estimate?${stringifiedParams}` : `/api/orgs/${orgId}/tax-estimate`
+}
+
+/**
+ * A rough set-aside estimate derived from current net income times a set-aside rate. This is an estimate for cash-planning only — not tax advice and not a filing.
+ * @summary Estimated tax set-aside (estimate only, not tax advice)
+ */
+export const getTaxEstimate = async (orgId: string,
+    params?: GetTaxEstimateParams, options?: RequestInit): Promise<TaxEstimate> => {
+
+  return customFetch<TaxEstimate>(getGetTaxEstimateUrl(orgId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTaxEstimateQueryKey = (orgId: string,
+    params?: GetTaxEstimateParams,) => {
+    return [
+    `/api/orgs/${orgId}/tax-estimate`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetTaxEstimateQueryOptions = <TData = Awaited<ReturnType<typeof getTaxEstimate>>, TError = ErrorType<ErrorResponse>>(orgId: string,
+    params?: GetTaxEstimateParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTaxEstimate>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTaxEstimateQueryKey(orgId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTaxEstimate>>> = ({ signal }) => getTaxEstimate(orgId,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTaxEstimate>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetTaxEstimateQueryResult = NonNullable<Awaited<ReturnType<typeof getTaxEstimate>>>
+export type GetTaxEstimateQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Estimated tax set-aside (estimate only, not tax advice)
+ */
+
+export function useGetTaxEstimate<TData = Awaited<ReturnType<typeof getTaxEstimate>>, TError = ErrorType<ErrorResponse>>(
+ orgId: string,
+    params?: GetTaxEstimateParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTaxEstimate>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetTaxEstimateQueryOptions(orgId,params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

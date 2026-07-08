@@ -5,6 +5,7 @@ export * from "./dimensions";
 export * from "./journal-entries";
 export * from "./journal-lines";
 export * from "./bank-transactions";
+export * from "./bank-connections";
 export * from "./audit-log";
 export * from "./users";
 export * from "./auth-events";

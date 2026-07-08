@@ -16,6 +16,16 @@ tags:
     description: Accounting practice layer — cross-client access, dashboard, batch export
   - name: close
     description: Month-end close management per client
+  - name: orgs
+    description: Freelancer organizations — onboarding, membership, chart of accounts
+  - name: reports
+    description: Ledger-derived financial reports (trial balance, P&L, balance sheet)
+  - name: bank
+    description: Bank connection (Plaid) and reconciliation of bank transactions
+  - name: invoices
+    description: Accounts-receivable invoicing via the posting service
+  - name: tax
+    description: Tax set-aside estimator (estimate only, not tax advice)
 paths:
   /healthz:
     get:
@@ -265,6 +275,608 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
           description: The user was not granted this client
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /orgs:
+    get:
+      operationId: listMyOrgs
+      tags: [orgs]
+      summary: List organizations the authenticated user belongs to
+      description: >-
+        Returns exactly the orgs the session user has an active membership in.
+        Identity comes from the session — never from the request.
+      responses:
+        "200":
+          description: The user's organizations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrgList"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createOrg
+      tags: [orgs]
+      summary: Create an organization and seed its starter chart of accounts
+      description: >-
+        Creates a new org, seeds the standard chart of accounts, and makes the
+        session user its owner. Identity comes from the session.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrgInput"
+      responses:
+        "201":
+          description: Organization created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Org"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /orgs/{orgId}/accounts:
+    get:
+      operationId: listAccounts
+      tags: [orgs]
+      summary: List the chart of accounts for an org
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      responses:
+        "200":
+          description: The chart of accounts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountList"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not a member of this org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /orgs/{orgId}/dashboard:
+    get:
+      operationId: getOrgDashboard
+      tags: [orgs]
+      summary: Headline dashboard for an org
+      description: >-
+        Cash position, current net income, trial-balance totals (which always
+        net to zero), and recent ledger activity. Money fields are decimal
+        strings.
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      responses:
+        "200":
+          description: The org dashboard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrgDashboard"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not a member of this org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /orgs/{orgId}/reports/trial-balance:
+    get:
+      operationId: getTrialBalanceReport
+      tags: [reports]
+      summary: Trial balance for an org
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      responses:
+        "200":
+          description: The trial balance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrialBalanceReport"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not a member of this org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /orgs/{orgId}/reports/profit-and-loss:
+    get:
+      operationId: getProfitAndLossReport
+      tags: [reports]
+      summary: Profit and loss for an org
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      responses:
+        "200":
+          description: The profit and loss
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfitAndLossReport"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not a member of this org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /orgs/{orgId}/reports/balance-sheet:
+    get:
+      operationId: getBalanceSheetReport
+      tags: [reports]
+      summary: Balance sheet for an org
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      responses:
+        "200":
+          description: The balance sheet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BalanceSheetReport"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not a member of this org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /orgs/{orgId}/bank-transactions:
+    get:
+      operationId: listBankTransactions
+      tags: [bank]
+      summary: List bank transactions for an org
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+        - name: status
+          in: query
+          required: false
+          description: Filter by reconciliation status.
+          schema:
+            type: string
+            enum: [unmatched, matched, all]
+            default: unmatched
+      responses:
+        "200":
+          description: The bank transactions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BankTransactionList"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not a member of this org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /orgs/{orgId}/bank-transactions/{txnId}/categorize:
+    post:
+      operationId: categorizeBankTransaction
+      tags: [bank]
+      summary: Categorize (reconcile) a bank transaction
+      description: >-
+        Matches an unmatched bank transaction to a chart account, posting the
+        correct double-entry through the ledger posting service and linking the
+        transaction to the posted entry. Idempotent per transaction.
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+        - name: txnId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CategorizeInput"
+      responses:
+        "200":
+          description: The reconciled bank transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BankTransaction"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not a member of this org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Transaction not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /orgs/{orgId}/bank/status:
+    get:
+      operationId: getBankStatus
+      tags: [bank]
+      summary: Bank connection and sync status
+      description: >-
+        Whether a bank is connected, the institution, last sync time, count of
+        pending (unreconciled) transactions, and the last sync error if any.
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      responses:
+        "200":
+          description: The bank status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BankStatus"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not a member of this org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /orgs/{orgId}/bank/link-token:
+    post:
+      operationId: createBankLinkToken
+      tags: [bank]
+      summary: Create a Plaid Link token to start bank connection
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      responses:
+        "200":
+          description: The Plaid Link token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BankLinkToken"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not a member of this org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Bank connection is not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /orgs/{orgId}/bank/exchange:
+    post:
+      operationId: exchangeBankToken
+      tags: [bank]
+      summary: Exchange a Plaid public token and connect the account
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BankExchangeInput"
+      responses:
+        "200":
+          description: The connected bank status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BankStatus"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not a member of this org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Bank connection is not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /orgs/{orgId}/bank/sync:
+    post:
+      operationId: syncBank
+      tags: [bank]
+      summary: Pull the latest transactions from the connected bank
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      responses:
+        "200":
+          description: The sync result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BankSyncResult"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not a member of this org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: No bank connected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Bank connection is not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /orgs/{orgId}/invoices:
+    get:
+      operationId: listInvoices
+      tags: [invoices]
+      summary: List invoices for an org
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      responses:
+        "200":
+          description: The invoices
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvoiceList"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not a member of this org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createInvoice
+      tags: [invoices]
+      summary: Create an invoice (posts Dr A/R / Cr revenue)
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvoiceInput"
+      responses:
+        "201":
+          description: The created invoice
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invoice"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not a member of this org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /orgs/{orgId}/invoices/{invoiceId}/send:
+    post:
+      operationId: sendInvoice
+      tags: [invoices]
+      summary: Mark an invoice as sent to the customer
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+        - name: invoiceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The updated invoice
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invoice"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not a member of this org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Invoice not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /orgs/{orgId}/invoices/{invoiceId}/pay:
+    post:
+      operationId: payInvoice
+      tags: [invoices]
+      summary: Record a payment on an invoice (posts Dr cash / Cr A/R)
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+        - name: invoiceId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvoicePaymentInput"
+      responses:
+        "200":
+          description: The updated invoice
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invoice"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not a member of this org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Invoice not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /orgs/{orgId}/tax-estimate:
+    get:
+      operationId: getTaxEstimate
+      tags: [tax]
+      summary: Estimated tax set-aside (estimate only, not tax advice)
+      description: >-
+        A rough set-aside estimate derived from current net income times a
+        set-aside rate. This is an estimate for cash-planning only — not tax
+        advice and not a filing.
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+        - name: rate
+          in: query
+          required: false
+          description: Set-aside rate as a fraction (e.g. 0.25 for 25%). Defaults to 0.25.
+          schema:
+            type: number
+      responses:
+        "200":
+          description: The tax set-aside estimate
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaxEstimate"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not a member of this org
           content:
             application/json:
               schema:
@@ -537,3 +1149,379 @@ components:
                 $ref: "#/components/schemas/PbcRequest"
           required: [total, requested, provided, accepted, open, items]
       required: [period, tasks, pbc]
+    OrgInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+      required: [name]
+    Org:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          nullable: true
+      required: [id, name]
+    OrgList:
+      type: object
+      properties:
+        orgs:
+          type: array
+          items:
+            $ref: "#/components/schemas/Org"
+      required: [orgs]
+    Account:
+      type: object
+      properties:
+        id:
+          type: string
+        code:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        normalBalance:
+          type: string
+      required: [id, code, name, type, normalBalance]
+    AccountList:
+      type: object
+      properties:
+        accounts:
+          type: array
+          items:
+            $ref: "#/components/schemas/Account"
+      required: [accounts]
+    RecentEntry:
+      type: object
+      description: Money fields are decimal strings.
+      properties:
+        id:
+          type: string
+        entryDate:
+          type: string
+        memo:
+          type: string
+          nullable: true
+        source:
+          type: string
+          nullable: true
+        amount:
+          type: string
+      required: [id, entryDate, amount]
+    OrgDashboard:
+      type: object
+      description: Money fields are decimal strings.
+      properties:
+        cash:
+          type: string
+        netIncome:
+          type: string
+        totalDebit:
+          type: string
+        totalCredit:
+          type: string
+        difference:
+          type: string
+        balanced:
+          type: boolean
+        recentActivity:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecentEntry"
+      required:
+        - cash
+        - netIncome
+        - totalDebit
+        - totalCredit
+        - difference
+        - balanced
+        - recentActivity
+    TrialBalanceRow:
+      type: object
+      description: Money fields are decimal strings.
+      properties:
+        accountId:
+          type: string
+        code:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        debit:
+          type: string
+        credit:
+          type: string
+      required: [accountId, code, name, type, debit, credit]
+    TrialBalanceReport:
+      type: object
+      description: Money fields are decimal strings.
+      properties:
+        rows:
+          type: array
+          items:
+            $ref: "#/components/schemas/TrialBalanceRow"
+        totalDebit:
+          type: string
+        totalCredit:
+          type: string
+        difference:
+          type: string
+        balanced:
+          type: boolean
+      required: [rows, totalDebit, totalCredit, difference, balanced]
+    ProfitAndLossLine:
+      type: object
+      description: Money fields are decimal strings.
+      properties:
+        accountId:
+          type: string
+        code:
+          type: string
+        name:
+          type: string
+        amount:
+          type: string
+      required: [accountId, code, name, amount]
+    ProfitAndLossReport:
+      type: object
+      description: Money fields are decimal strings.
+      properties:
+        revenue:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProfitAndLossLine"
+        expenses:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProfitAndLossLine"
+        totalRevenue:
+          type: string
+        totalExpenses:
+          type: string
+        netIncome:
+          type: string
+      required:
+        - revenue
+        - expenses
+        - totalRevenue
+        - totalExpenses
+        - netIncome
+    BalanceSheetLine:
+      type: object
+      description: Money fields are decimal strings.
+      properties:
+        accountId:
+          type: string
+        code:
+          type: string
+        name:
+          type: string
+        amount:
+          type: string
+      required: [accountId, code, name, amount]
+    BalanceSheetReport:
+      type: object
+      description: Money fields are decimal strings.
+      properties:
+        assets:
+          type: array
+          items:
+            $ref: "#/components/schemas/BalanceSheetLine"
+        liabilities:
+          type: array
+          items:
+            $ref: "#/components/schemas/BalanceSheetLine"
+        equity:
+          type: array
+          items:
+            $ref: "#/components/schemas/BalanceSheetLine"
+        totalAssets:
+          type: string
+        totalLiabilities:
+          type: string
+        totalEquity:
+          type: string
+        netIncome:
+          type: string
+        equityWithIncome:
+          type: string
+        balanced:
+          type: boolean
+      required:
+        - assets
+        - liabilities
+        - equity
+        - totalAssets
+        - totalLiabilities
+        - totalEquity
+        - netIncome
+        - equityWithIncome
+        - balanced
+    BankTransaction:
+      type: object
+      description: amount is a signed decimal string (negative = money out).
+      properties:
+        id:
+          type: string
+        txnDate:
+          type: string
+        description:
+          type: string
+          nullable: true
+        amount:
+          type: string
+        matched:
+          type: boolean
+        matchedEntryId:
+          type: string
+          nullable: true
+        accountId:
+          type: string
+          nullable: true
+      required: [id, txnDate, amount, matched]
+    BankTransactionList:
+      type: object
+      properties:
+        transactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/BankTransaction"
+      required: [transactions]
+    CategorizeInput:
+      type: object
+      properties:
+        accountId:
+          type: string
+      required: [accountId]
+    BankStatus:
+      type: object
+      properties:
+        connected:
+          type: boolean
+        institutionName:
+          type: string
+          nullable: true
+        lastSyncedAt:
+          type: string
+          nullable: true
+        pendingCount:
+          type: integer
+        lastSyncError:
+          type: string
+          nullable: true
+        configured:
+          type: boolean
+      required: [connected, pendingCount, configured]
+    BankLinkToken:
+      type: object
+      properties:
+        linkToken:
+          type: string
+      required: [linkToken]
+    BankExchangeInput:
+      type: object
+      properties:
+        publicToken:
+          type: string
+      required: [publicToken]
+    BankSyncResult:
+      type: object
+      properties:
+        added:
+          type: integer
+        status:
+          $ref: "#/components/schemas/BankStatus"
+      required: [added, status]
+    Invoice:
+      type: object
+      description: Money fields are decimal strings.
+      properties:
+        id:
+          type: string
+        customer:
+          type: string
+        invoiceNumber:
+          type: string
+          nullable: true
+        invoiceDate:
+          type: string
+        dueDate:
+          type: string
+        amount:
+          type: string
+        paid:
+          type: string
+        outstanding:
+          type: string
+        status:
+          type: string
+        sentAt:
+          type: string
+          nullable: true
+      required:
+        - id
+        - customer
+        - invoiceDate
+        - dueDate
+        - amount
+        - paid
+        - outstanding
+        - status
+    InvoiceList:
+      type: object
+      properties:
+        invoices:
+          type: array
+          items:
+            $ref: "#/components/schemas/Invoice"
+      required: [invoices]
+    InvoiceInput:
+      type: object
+      description: amount is a decimal string (e.g. "1200.00").
+      properties:
+        customer:
+          type: string
+          minLength: 1
+        invoiceNumber:
+          type: string
+        invoiceDate:
+          type: string
+        dueDate:
+          type: string
+        amount:
+          type: string
+        revenueAccountId:
+          type: string
+      required: [customer, invoiceDate, dueDate, amount]
+    InvoicePaymentInput:
+      type: object
+      description: amount is a decimal string (e.g. "1200.00").
+      properties:
+        amount:
+          type: string
+        paymentDate:
+          type: string
+        cashAccountId:
+          type: string
+      required: [amount, paymentDate]
+    TaxEstimate:
+      type: object
+      description: Money fields are decimal strings. This is an estimate, not tax advice.
+      properties:
+        netIncome:
+          type: string
+        rate:
+          type: number
+        estimatedSetAside:
+          type: string
+        disclaimer:
+          type: string
+      required: [netIncome, rate, estimatedSetAside, disclaimer]

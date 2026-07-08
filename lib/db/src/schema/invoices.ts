@@ -31,6 +31,9 @@ export const invoicesTable = pgTable(
     arAccountId: uuid("ar_account_id").notNull(),
     revenueAccountId: uuid("revenue_account_id").notNull(),
     status: text("status").notNull().default("open"), // "open" | "paid"
+    // When the freelancer marked the invoice as sent to the customer. Null until
+    // sent. Purely a workflow flag — it never affects the ledger.
+    sentAt: timestamp("sent_at", { withTimezone: true }),
     externalId: text("external_id"),
     postedEntryId: uuid("posted_entry_id"),
     createdAt: timestamp("created_at", { withTimezone: true })

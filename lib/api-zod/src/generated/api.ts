@@ -208,3 +208,409 @@ export const GetCloseStatusResponse = zod.object({
 })
 
 
+/**
+ * Returns exactly the orgs the session user has an active membership in. Identity comes from the session — never from the request.
+ * @summary List organizations the authenticated user belongs to
+ */
+export const ListMyOrgsResponse = zod.object({
+  "orgs": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "role": zod.string().nullish()
+}))
+})
+
+
+/**
+ * Creates a new org, seeds the standard chart of accounts, and makes the session user its owner. Identity comes from the session.
+ * @summary Create an organization and seed its starter chart of accounts
+ */
+export const createOrgBodyNameMax = 200;
+
+
+
+export const CreateOrgBody = zod.object({
+  "name": zod.string().min(1).max(createOrgBodyNameMax)
+})
+
+export const CreateOrgResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "role": zod.string().nullish()
+})
+
+
+/**
+ * @summary List the chart of accounts for an org
+ */
+export const ListAccountsParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+export const ListAccountsResponse = zod.object({
+  "accounts": zod.array(zod.object({
+  "id": zod.string(),
+  "code": zod.string(),
+  "name": zod.string(),
+  "type": zod.string(),
+  "normalBalance": zod.string()
+}))
+})
+
+
+/**
+ * Cash position, current net income, trial-balance totals (which always net to zero), and recent ledger activity. Money fields are decimal strings.
+ * @summary Headline dashboard for an org
+ */
+export const GetOrgDashboardParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+export const GetOrgDashboardResponse = zod.object({
+  "cash": zod.string(),
+  "netIncome": zod.string(),
+  "totalDebit": zod.string(),
+  "totalCredit": zod.string(),
+  "difference": zod.string(),
+  "balanced": zod.boolean(),
+  "recentActivity": zod.array(zod.object({
+  "id": zod.string(),
+  "entryDate": zod.string(),
+  "memo": zod.string().nullish(),
+  "source": zod.string().nullish(),
+  "amount": zod.string()
+}).describe('Money fields are decimal strings.'))
+}).describe('Money fields are decimal strings.')
+
+
+/**
+ * @summary Trial balance for an org
+ */
+export const GetTrialBalanceReportParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+export const GetTrialBalanceReportResponse = zod.object({
+  "rows": zod.array(zod.object({
+  "accountId": zod.string(),
+  "code": zod.string(),
+  "name": zod.string(),
+  "type": zod.string(),
+  "debit": zod.string(),
+  "credit": zod.string()
+}).describe('Money fields are decimal strings.')),
+  "totalDebit": zod.string(),
+  "totalCredit": zod.string(),
+  "difference": zod.string(),
+  "balanced": zod.boolean()
+}).describe('Money fields are decimal strings.')
+
+
+/**
+ * @summary Profit and loss for an org
+ */
+export const GetProfitAndLossReportParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+export const GetProfitAndLossReportResponse = zod.object({
+  "revenue": zod.array(zod.object({
+  "accountId": zod.string(),
+  "code": zod.string(),
+  "name": zod.string(),
+  "amount": zod.string()
+}).describe('Money fields are decimal strings.')),
+  "expenses": zod.array(zod.object({
+  "accountId": zod.string(),
+  "code": zod.string(),
+  "name": zod.string(),
+  "amount": zod.string()
+}).describe('Money fields are decimal strings.')),
+  "totalRevenue": zod.string(),
+  "totalExpenses": zod.string(),
+  "netIncome": zod.string()
+}).describe('Money fields are decimal strings.')
+
+
+/**
+ * @summary Balance sheet for an org
+ */
+export const GetBalanceSheetReportParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+export const GetBalanceSheetReportResponse = zod.object({
+  "assets": zod.array(zod.object({
+  "accountId": zod.string(),
+  "code": zod.string(),
+  "name": zod.string(),
+  "amount": zod.string()
+}).describe('Money fields are decimal strings.')),
+  "liabilities": zod.array(zod.object({
+  "accountId": zod.string(),
+  "code": zod.string(),
+  "name": zod.string(),
+  "amount": zod.string()
+}).describe('Money fields are decimal strings.')),
+  "equity": zod.array(zod.object({
+  "accountId": zod.string(),
+  "code": zod.string(),
+  "name": zod.string(),
+  "amount": zod.string()
+}).describe('Money fields are decimal strings.')),
+  "totalAssets": zod.string(),
+  "totalLiabilities": zod.string(),
+  "totalEquity": zod.string(),
+  "netIncome": zod.string(),
+  "equityWithIncome": zod.string(),
+  "balanced": zod.boolean()
+}).describe('Money fields are decimal strings.')
+
+
+/**
+ * @summary List bank transactions for an org
+ */
+export const ListBankTransactionsParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+export const listBankTransactionsQueryStatusDefault = `unmatched`;
+
+export const ListBankTransactionsQueryParams = zod.object({
+  "status": zod.enum(['unmatched', 'matched', 'all']).default(listBankTransactionsQueryStatusDefault).describe('Filter by reconciliation status.')
+})
+
+export const ListBankTransactionsResponse = zod.object({
+  "transactions": zod.array(zod.object({
+  "id": zod.string(),
+  "txnDate": zod.string(),
+  "description": zod.string().nullish(),
+  "amount": zod.string(),
+  "matched": zod.boolean(),
+  "matchedEntryId": zod.string().nullish(),
+  "accountId": zod.string().nullish()
+}).describe('amount is a signed decimal string (negative = money out).'))
+})
+
+
+/**
+ * Matches an unmatched bank transaction to a chart account, posting the correct double-entry through the ledger posting service and linking the transaction to the posted entry. Idempotent per transaction.
+ * @summary Categorize (reconcile) a bank transaction
+ */
+export const CategorizeBankTransactionParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.'),
+  "txnId": zod.coerce.string()
+})
+
+export const CategorizeBankTransactionBody = zod.object({
+  "accountId": zod.string()
+})
+
+export const CategorizeBankTransactionResponse = zod.object({
+  "id": zod.string(),
+  "txnDate": zod.string(),
+  "description": zod.string().nullish(),
+  "amount": zod.string(),
+  "matched": zod.boolean(),
+  "matchedEntryId": zod.string().nullish(),
+  "accountId": zod.string().nullish()
+}).describe('amount is a signed decimal string (negative = money out).')
+
+
+/**
+ * Whether a bank is connected, the institution, last sync time, count of pending (unreconciled) transactions, and the last sync error if any.
+ * @summary Bank connection and sync status
+ */
+export const GetBankStatusParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+export const GetBankStatusResponse = zod.object({
+  "connected": zod.boolean(),
+  "institutionName": zod.string().nullish(),
+  "lastSyncedAt": zod.string().nullish(),
+  "pendingCount": zod.number(),
+  "lastSyncError": zod.string().nullish(),
+  "configured": zod.boolean()
+})
+
+
+/**
+ * @summary Create a Plaid Link token to start bank connection
+ */
+export const CreateBankLinkTokenParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+export const CreateBankLinkTokenResponse = zod.object({
+  "linkToken": zod.string()
+})
+
+
+/**
+ * @summary Exchange a Plaid public token and connect the account
+ */
+export const ExchangeBankTokenParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+export const ExchangeBankTokenBody = zod.object({
+  "publicToken": zod.string()
+})
+
+export const ExchangeBankTokenResponse = zod.object({
+  "connected": zod.boolean(),
+  "institutionName": zod.string().nullish(),
+  "lastSyncedAt": zod.string().nullish(),
+  "pendingCount": zod.number(),
+  "lastSyncError": zod.string().nullish(),
+  "configured": zod.boolean()
+})
+
+
+/**
+ * @summary Pull the latest transactions from the connected bank
+ */
+export const SyncBankParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+export const SyncBankResponse = zod.object({
+  "added": zod.number(),
+  "status": zod.object({
+  "connected": zod.boolean(),
+  "institutionName": zod.string().nullish(),
+  "lastSyncedAt": zod.string().nullish(),
+  "pendingCount": zod.number(),
+  "lastSyncError": zod.string().nullish(),
+  "configured": zod.boolean()
+})
+})
+
+
+/**
+ * @summary List invoices for an org
+ */
+export const ListInvoicesParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+export const ListInvoicesResponse = zod.object({
+  "invoices": zod.array(zod.object({
+  "id": zod.string(),
+  "customer": zod.string(),
+  "invoiceNumber": zod.string().nullish(),
+  "invoiceDate": zod.string(),
+  "dueDate": zod.string(),
+  "amount": zod.string(),
+  "paid": zod.string(),
+  "outstanding": zod.string(),
+  "status": zod.string(),
+  "sentAt": zod.string().nullish()
+}).describe('Money fields are decimal strings.'))
+})
+
+
+/**
+ * @summary Create an invoice (posts Dr A/R / Cr revenue)
+ */
+export const CreateInvoiceParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+
+
+
+export const CreateInvoiceBody = zod.object({
+  "customer": zod.string().min(1),
+  "invoiceNumber": zod.string().optional(),
+  "invoiceDate": zod.string(),
+  "dueDate": zod.string(),
+  "amount": zod.string(),
+  "revenueAccountId": zod.string().optional()
+}).describe('amount is a decimal string (e.g. \"1200.00\").')
+
+export const CreateInvoiceResponse = zod.object({
+  "id": zod.string(),
+  "customer": zod.string(),
+  "invoiceNumber": zod.string().nullish(),
+  "invoiceDate": zod.string(),
+  "dueDate": zod.string(),
+  "amount": zod.string(),
+  "paid": zod.string(),
+  "outstanding": zod.string(),
+  "status": zod.string(),
+  "sentAt": zod.string().nullish()
+}).describe('Money fields are decimal strings.')
+
+
+/**
+ * @summary Mark an invoice as sent to the customer
+ */
+export const SendInvoiceParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.'),
+  "invoiceId": zod.coerce.string()
+})
+
+export const SendInvoiceResponse = zod.object({
+  "id": zod.string(),
+  "customer": zod.string(),
+  "invoiceNumber": zod.string().nullish(),
+  "invoiceDate": zod.string(),
+  "dueDate": zod.string(),
+  "amount": zod.string(),
+  "paid": zod.string(),
+  "outstanding": zod.string(),
+  "status": zod.string(),
+  "sentAt": zod.string().nullish()
+}).describe('Money fields are decimal strings.')
+
+
+/**
+ * @summary Record a payment on an invoice (posts Dr cash / Cr A/R)
+ */
+export const PayInvoiceParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.'),
+  "invoiceId": zod.coerce.string()
+})
+
+export const PayInvoiceBody = zod.object({
+  "amount": zod.string(),
+  "paymentDate": zod.string(),
+  "cashAccountId": zod.string().optional()
+}).describe('amount is a decimal string (e.g. \"1200.00\").')
+
+export const PayInvoiceResponse = zod.object({
+  "id": zod.string(),
+  "customer": zod.string(),
+  "invoiceNumber": zod.string().nullish(),
+  "invoiceDate": zod.string(),
+  "dueDate": zod.string(),
+  "amount": zod.string(),
+  "paid": zod.string(),
+  "outstanding": zod.string(),
+  "status": zod.string(),
+  "sentAt": zod.string().nullish()
+}).describe('Money fields are decimal strings.')
+
+
+/**
+ * A rough set-aside estimate derived from current net income times a set-aside rate. This is an estimate for cash-planning only — not tax advice and not a filing.
+ * @summary Estimated tax set-aside (estimate only, not tax advice)
+ */
+export const GetTaxEstimateParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+export const GetTaxEstimateQueryParams = zod.object({
+  "rate": zod.coerce.number().optional().describe('Set-aside rate as a fraction (e.g. 0.25 for 25%). Defaults to 0.25.')
+})
+
+export const GetTaxEstimateResponse = zod.object({
+  "netIncome": zod.string(),
+  "rate": zod.number(),
+  "estimatedSetAside": zod.string(),
+  "disclaimer": zod.string()
+}).describe('Money fields are decimal strings. This is an estimate, not tax advice.')
+
+

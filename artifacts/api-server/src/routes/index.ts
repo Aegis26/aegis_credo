@@ -3,6 +3,11 @@ import healthRouter from "./health";
 import { createAuthRouter } from "./auth";
 import practiceRouter from "./practice";
 import closeRouter from "./close";
+import orgsRouter from "./orgs";
+import reportsRouter from "./reports";
+import bankRouter from "./bank";
+import invoicesRouter from "./invoices";
+import taxRouter from "./tax";
 import { requireAuth } from "../middlewares/auth";
 
 export interface RouterOptions {
@@ -22,6 +27,11 @@ export function createRouter(options: RouterOptions = {}): IRouter {
   router.use(requireAuth);
   router.use(practiceRouter);
   router.use(closeRouter);
+  router.use(orgsRouter);
+  router.use(reportsRouter);
+  router.use(bankRouter);
+  router.use(invoicesRouter);
+  router.use(taxRouter);
 
   return router;
 }

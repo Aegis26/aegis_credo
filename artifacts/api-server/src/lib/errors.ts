@@ -49,6 +49,18 @@ export class ConflictError extends HttpError {
 }
 
 /**
+ * Bank connection (Plaid) is not configured on the server. Surfaced as 503 so
+ * the UI can show a clear "not set up yet" state instead of failing silently.
+ */
+export class PlaidNotConfiguredError extends HttpError {
+  constructor(
+    message = "Bank connection is not configured on the server. Set PLAID_CLIENT_ID and PLAID_SECRET.",
+  ) {
+    super(503, message);
+  }
+}
+
+/**
  * Map a thrown error to an HTTP response. Explicit HttpErrors win first; then
  * the typed ledger/validation errors are translated into status codes with a
  * uniform `{ error }` body.

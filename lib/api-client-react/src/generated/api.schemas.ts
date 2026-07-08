@@ -167,10 +167,251 @@ export interface CloseStatusSummary {
   pbc: CloseStatusSummaryPbc;
 }
 
+export interface OrgInput {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  name: string;
+}
+
+export interface Org {
+  id: string;
+  name: string;
+  role?: string | null;
+}
+
+export interface OrgList {
+  orgs: Org[];
+}
+
+export interface Account {
+  id: string;
+  code: string;
+  name: string;
+  type: string;
+  normalBalance: string;
+}
+
+export interface AccountList {
+  accounts: Account[];
+}
+
+/**
+ * Money fields are decimal strings.
+ */
+export interface RecentEntry {
+  id: string;
+  entryDate: string;
+  memo?: string | null;
+  source?: string | null;
+  amount: string;
+}
+
+/**
+ * Money fields are decimal strings.
+ */
+export interface OrgDashboard {
+  cash: string;
+  netIncome: string;
+  totalDebit: string;
+  totalCredit: string;
+  difference: string;
+  balanced: boolean;
+  recentActivity: RecentEntry[];
+}
+
+/**
+ * Money fields are decimal strings.
+ */
+export interface TrialBalanceRow {
+  accountId: string;
+  code: string;
+  name: string;
+  type: string;
+  debit: string;
+  credit: string;
+}
+
+/**
+ * Money fields are decimal strings.
+ */
+export interface TrialBalanceReport {
+  rows: TrialBalanceRow[];
+  totalDebit: string;
+  totalCredit: string;
+  difference: string;
+  balanced: boolean;
+}
+
+/**
+ * Money fields are decimal strings.
+ */
+export interface ProfitAndLossLine {
+  accountId: string;
+  code: string;
+  name: string;
+  amount: string;
+}
+
+/**
+ * Money fields are decimal strings.
+ */
+export interface ProfitAndLossReport {
+  revenue: ProfitAndLossLine[];
+  expenses: ProfitAndLossLine[];
+  totalRevenue: string;
+  totalExpenses: string;
+  netIncome: string;
+}
+
+/**
+ * Money fields are decimal strings.
+ */
+export interface BalanceSheetLine {
+  accountId: string;
+  code: string;
+  name: string;
+  amount: string;
+}
+
+/**
+ * Money fields are decimal strings.
+ */
+export interface BalanceSheetReport {
+  assets: BalanceSheetLine[];
+  liabilities: BalanceSheetLine[];
+  equity: BalanceSheetLine[];
+  totalAssets: string;
+  totalLiabilities: string;
+  totalEquity: string;
+  netIncome: string;
+  equityWithIncome: string;
+  balanced: boolean;
+}
+
+/**
+ * amount is a signed decimal string (negative = money out).
+ */
+export interface BankTransaction {
+  id: string;
+  txnDate: string;
+  description?: string | null;
+  amount: string;
+  matched: boolean;
+  matchedEntryId?: string | null;
+  accountId?: string | null;
+}
+
+export interface BankTransactionList {
+  transactions: BankTransaction[];
+}
+
+export interface CategorizeInput {
+  accountId: string;
+}
+
+export interface BankStatus {
+  connected: boolean;
+  institutionName?: string | null;
+  lastSyncedAt?: string | null;
+  pendingCount: number;
+  lastSyncError?: string | null;
+  configured: boolean;
+}
+
+export interface BankLinkToken {
+  linkToken: string;
+}
+
+export interface BankExchangeInput {
+  publicToken: string;
+}
+
+export interface BankSyncResult {
+  added: number;
+  status: BankStatus;
+}
+
+/**
+ * Money fields are decimal strings.
+ */
+export interface Invoice {
+  id: string;
+  customer: string;
+  invoiceNumber?: string | null;
+  invoiceDate: string;
+  dueDate: string;
+  amount: string;
+  paid: string;
+  outstanding: string;
+  status: string;
+  sentAt?: string | null;
+}
+
+export interface InvoiceList {
+  invoices: Invoice[];
+}
+
+/**
+ * amount is a decimal string (e.g. "1200.00").
+ */
+export interface InvoiceInput {
+  /** @minLength 1 */
+  customer: string;
+  invoiceNumber?: string;
+  invoiceDate: string;
+  dueDate: string;
+  amount: string;
+  revenueAccountId?: string;
+}
+
+/**
+ * amount is a decimal string (e.g. "1200.00").
+ */
+export interface InvoicePaymentInput {
+  amount: string;
+  paymentDate: string;
+  cashAccountId?: string;
+}
+
+/**
+ * Money fields are decimal strings. This is an estimate, not tax advice.
+ */
+export interface TaxEstimate {
+  netIncome: string;
+  rate: number;
+  estimatedSetAside: string;
+  disclaimer: string;
+}
+
 export type GetPracticeDashboardParams = {
 /**
  * Restrict to a single practice the user is a member of.
  */
 practiceId?: string;
+};
+
+export type ListBankTransactionsParams = {
+/**
+ * Filter by reconciliation status.
+ */
+status?: ListBankTransactionsStatus;
+};
+
+export type ListBankTransactionsStatus = typeof ListBankTransactionsStatus[keyof typeof ListBankTransactionsStatus];
+
+
+export const ListBankTransactionsStatus = {
+  unmatched: 'unmatched',
+  matched: 'matched',
+  all: 'all',
+} as const;
+
+export type GetTaxEstimateParams = {
+/**
+ * Set-aside rate as a fraction (e.g. 0.25 for 25%). Defaults to 0.25.
+ */
+rate?: number;
 };
 
