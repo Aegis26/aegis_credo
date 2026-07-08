@@ -87,6 +87,37 @@ READ-ONLY over entity ledgers except approvals, which gate an existing money op)
   per (org, budget, account)), and `getBudgetVsActual` — actuals are the ledger's
   natural balance over the budget's period window; variance = actual − budgeted.
 
+Phase 4 adds the accountant / PRACTICE layer ON TOP of client books (all
+READ-ONLY over client ledgers — no direct ledger writes):
+
+- **Practice access + client switcher** (`practice.ts`): `createPractice`,
+  `addPracticeMember` / `revokePracticeMember`, `grantClientAccess` /
+  `revokeClientAccess`, `listClientsForPracticeUser` (the switcher/list),
+  `hasClientAccess` / `assertClientAccess` / `accessibleClients`, and audited
+  `switchToClient`. A user sees a client iff they have an ACTIVE practice
+  membership AND an ACTIVE client grant; both are revocable (append-only
+  `revokedAt`). Grant/revoke/switch are audit-logged against the client org.
+- **Month-end close** (`close.ts`): per-client close periods with a status
+  lifecycle (`open`/`in_progress`/`in_review`/`closed`), checklist tasks
+  (`addCloseTask` / `setCloseTaskStatus`), and a PBC request list the client
+  responds to (`createPbcRequest` → `respondPbcRequest` → `acceptPbcRequest`).
+  `getCloseStatus` derives progress from the tasks; nothing is stored.
+- **Export** (`export.ts`): pure serialization (no DB, no deps). `Sheet` /
+  `Workbook` types, `formatMoney` (BigInt minor units → decimal string), `toCsv`
+  (RFC-4180), `toSpreadsheetXml` (multi-sheet Excel-openable SpreadsheetML), and
+  `serializeWorkbook` (CSV-per-sheet or one Excel file).
+- **Batch ops** (`batch.ts`): `runBatchReport` / `batchExport` run the same
+  report across a book of clients, scoped via `accessibleClients` first (an
+  ungranted client is rejected, or dropped with `skipUnauthorized`). Export is
+  audited per client (`practice.client.export`).
+- **Practice dashboard** (`dashboard.ts`): `getPracticeDashboard` — cross-client
+  close progress + headline financials for every granted client.
+- **API** (`artifacts/api-server`): `/practice/clients`, `/practice/dashboard`,
+  `/practice/batch-export`, `/clients/:orgId/close-periods[/:periodId/status]`.
+  Contract-first via `lib/api-spec/openapi.yaml` → codegen. Money is serialized
+  as decimal strings at the API boundary (JSON has no BigInt). Demo:
+  `pnpm --filter @workspace/ledger run demo:practice`.
+
 ## User preferences
 
 _Populate as you build — explicit user instructions worth remembering across sessions._
@@ -124,6 +155,26 @@ _Populate as you build — explicit user instructions worth remembering across s
   `runSavedReport` both call `assertDefinitionScope` and throw `ForbiddenError`
   otherwise. Never bypass this — the stored `definition.orgId/groupId` is
   attacker-controllable and would otherwise read another tenant's ledger.
+
+- **Practice access is two independent revocable gates.** A practice user sees a
+  client iff they have an ACTIVE `practice_members` row AND an ACTIVE
+  `practice_clients` grant. Both are append-only (`revokedAt`), never deleted.
+  Revoking either hides the client. Every practice-layer read/action over a
+  client's books must call `assertClientAccess` / `accessibleClients` first — the
+  ledger core performs NO auth. Batch paths filter via `accessibleClients` before
+  touching any client.
+
+- **The HTTP API takes `userId` as caller-supplied identity, by design.** Like
+  the RBAC gotcha above, this project has no authentication system: the API layer
+  is a thin demonstration over the library, and binding `userId` to a verified
+  session/token is the responsibility of whatever real auth layer eventually
+  fronts it. Do NOT treat the current endpoints as production-authenticated —
+  they enforce tenant *scoping* given an identity, not identity itself.
+
+- **Money crosses the API/CSV boundary as a decimal string, never a JS number.**
+  JSON and JS `number` cannot carry BigInt safely, so `formatMoney` renders minor
+  units to a fixed 2-decimal string at every serialization boundary (API
+  responses, CSV, Excel). Never `Number()` a monetary BigInt to emit it.
 
 ## Pointers
 

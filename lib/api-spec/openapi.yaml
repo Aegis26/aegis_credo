@@ -10,6 +10,10 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: practice
+    description: Accounting practice layer — cross-client access, dashboard, batch export
+  - name: close
+    description: Month-end close management per client
 paths:
   /healthz:
     get:
@@ -24,7 +28,143 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /practice/clients:
+    get:
+      operationId: listPracticeClients
+      tags: [practice]
+      summary: List a practice user's clients
+      description: >-
+        Returns exactly the client orgs the practice user has been explicitly
+        granted (the client switcher/list). Ungranted clients never appear.
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: The user's granted clients
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientList"
+  /practice/dashboard:
+    get:
+      operationId: getPracticeDashboard
+      tags: [practice]
+      summary: Practice-level dashboard across all granted clients
+      description: >-
+        Read-only cross-client status: latest close progress and headline
+        financials for every client the user was granted. Money fields are
+        decimal strings.
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+        - name: practiceId
+          in: query
+          required: false
+          description: Restrict to a single practice the user is a member of.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The practice dashboard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PracticeDashboard"
+  /practice/batch-export:
+    post:
+      operationId: batchExportReports
+      tags: [practice]
+      summary: Run and export a report across a book of clients
+      description: >-
+        Runs the same report across the requested clients (restricted to the
+        ones the user was granted) and serializes them to CSV (one file per
+        client) or a single multi-sheet Excel workbook. Rejects the request if
+        it references a client the user was not granted, unless skipUnauthorized
+        is set.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BatchExportRequest"
+      responses:
+        "200":
+          description: The exported files
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BatchExportResponse"
+        "403":
+          description: The request referenced an ungranted client
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /clients/{orgId}/close-periods:
+    get:
+      operationId: listClosePeriods
+      tags: [close]
+      summary: List a client's close periods
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: The client's close periods
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClosePeriodList"
+        "403":
+          description: The user was not granted this client
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /clients/{orgId}/close-periods/{periodId}/status:
+    get:
+      operationId: getCloseStatus
+      tags: [close]
+      summary: Derived status of one close period
+      description: >-
+        Checklist progress and PBC request state for a close period. Progress is
+        derived from the tasks, never stored.
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+        - name: periodId
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: The close period status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CloseStatusSummary"
+        "403":
+          description: The user was not granted this client
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
+  parameters:
+    UserId:
+      name: userId
+      in: query
+      required: true
+      description: The acting practice user; access is scoped to this user's grants.
+      schema:
+        type: string
+    OrgId:
+      name: orgId
+      in: path
+      required: true
+      description: The client organization id.
+      schema:
+        type: string
   schemas:
     HealthStatus:
       type: object
@@ -33,4 +173,220 @@ components:
           type: string
       required:
         - status
-
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+    ClientRef:
+      type: object
+      properties:
+        orgId:
+          type: string
+        name:
+          type: string
+        practiceId:
+          type: string
+      required: [orgId, name, practiceId]
+    ClientList:
+      type: object
+      properties:
+        clients:
+          type: array
+          items:
+            $ref: "#/components/schemas/ClientRef"
+      required: [clients]
+    DashboardClientClose:
+      type: object
+      properties:
+        period:
+          type: string
+          nullable: true
+        status:
+          type: string
+          nullable: true
+        tasksDone:
+          type: integer
+        tasksTotal:
+          type: integer
+        progress:
+          type: number
+        openPbc:
+          type: integer
+      required: [period, status, tasksDone, tasksTotal, progress, openPbc]
+    DashboardClientFinancials:
+      type: object
+      description: Money fields are decimal strings (e.g. "1234.56").
+      properties:
+        netIncome:
+          type: string
+        assets:
+          type: string
+        liabilities:
+          type: string
+        balanced:
+          type: boolean
+      required: [netIncome, assets, liabilities, balanced]
+    DashboardClient:
+      type: object
+      properties:
+        orgId:
+          type: string
+        name:
+          type: string
+        close:
+          $ref: "#/components/schemas/DashboardClientClose"
+        financials:
+          $ref: "#/components/schemas/DashboardClientFinancials"
+      required: [orgId, name, close, financials]
+    PracticeDashboard:
+      type: object
+      properties:
+        generatedAt:
+          type: string
+        clientCount:
+          type: integer
+        clients:
+          type: array
+          items:
+            $ref: "#/components/schemas/DashboardClient"
+      required: [generatedAt, clientCount, clients]
+    BatchExportRequest:
+      type: object
+      properties:
+        userId:
+          type: string
+        orgIds:
+          type: array
+          items:
+            type: string
+        kind:
+          type: string
+          enum: [trialBalance, profitAndLoss, balanceSheet]
+        format:
+          type: string
+          enum: [csv, excel]
+          default: csv
+        skipUnauthorized:
+          type: boolean
+          default: false
+      required: [userId, orgIds, kind]
+    ExportFile:
+      type: object
+      properties:
+        name:
+          type: string
+        contentType:
+          type: string
+        content:
+          type: string
+      required: [name, contentType, content]
+    BatchExportResponse:
+      type: object
+      properties:
+        kind:
+          type: string
+        format:
+          type: string
+        clients:
+          type: array
+          items:
+            type: object
+            properties:
+              orgId:
+                type: string
+              name:
+                type: string
+            required: [orgId, name]
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExportFile"
+      required: [kind, format, clients, files]
+    ClosePeriod:
+      type: object
+      properties:
+        id:
+          type: string
+        period:
+          type: string
+        status:
+          type: string
+      required: [id, period, status]
+    ClosePeriodList:
+      type: object
+      properties:
+        periods:
+          type: array
+          items:
+            $ref: "#/components/schemas/ClosePeriod"
+      required: [periods]
+    CloseTask:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        status:
+          type: string
+        sortOrder:
+          type: integer
+      required: [id, title, status, sortOrder]
+    PbcRequest:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        status:
+          type: string
+        detail:
+          type: string
+          nullable: true
+      required: [id, title, status]
+    CloseStatusSummary:
+      type: object
+      properties:
+        period:
+          $ref: "#/components/schemas/ClosePeriod"
+        tasks:
+          type: object
+          properties:
+            total:
+              type: integer
+            done:
+              type: integer
+            inProgress:
+              type: integer
+            pending:
+              type: integer
+            progress:
+              type: number
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/CloseTask"
+          required: [total, done, inProgress, pending, progress, items]
+        pbc:
+          type: object
+          properties:
+            total:
+              type: integer
+            requested:
+              type: integer
+            provided:
+              type: integer
+            accepted:
+              type: integer
+            open:
+              type: integer
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/PbcRequest"
+          required: [total, requested, provided, accepted, open, items]
+      required: [period, tasks, pbc]

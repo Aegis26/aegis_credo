@@ -5,6 +5,7 @@ import {
   pool,
   journalEntriesTable,
   journalLinesTable,
+  auditLogTable,
 } from "@workspace/db";
 import {
   seedOrganization,
@@ -52,6 +53,28 @@ import {
   createBudget,
   setBudgetLine,
   getBudgetVsActual,
+  createPractice,
+  addPracticeMember,
+  revokePracticeMember,
+  grantClientAccess,
+  revokeClientAccess,
+  listClientsForPracticeUser,
+  hasClientAccess,
+  assertClientAccess,
+  switchToClient,
+  createClosePeriod,
+  addCloseTask,
+  setCloseTaskStatus,
+  setClosePeriodStatus,
+  createPbcRequest,
+  respondPbcRequest,
+  acceptPbcRequest,
+  getCloseStatus,
+  runBatchReport,
+  batchExport,
+  getPracticeDashboard,
+  toCsv,
+  formatMoney,
 } from "./index";
 import type { SeededOrg } from "./seed";
 
@@ -1223,5 +1246,357 @@ describe("budget vs actual (Phase 3)", () => {
     expect(byAccount.get("4000")?.variance).toBe(20_000n);
     expect(byAccount.get("5100")?.actual).toBe(30_000n); // out-of-period excluded
     expect(byAccount.get("5100")?.variance).toBe(-10_000n);
+  });
+});
+
+// Post a simple cash sale so a client's ledger has activity to report on.
+async function postSale(seeded: SeededOrg, amount: bigint, key: string) {
+  await postJournalEntry(
+    seeded.organization.id,
+    {
+      entryDate: "2026-01-15",
+      memo: "Cash sale",
+      source: "manual",
+      lines: [
+        { accountId: seeded.byCode["1000"].id, debit: amount },
+        { accountId: seeded.byCode["4000"].id, credit: amount },
+      ],
+    },
+    { idempotencyKey: key },
+  );
+}
+
+describe("export serialization (Phase 4)", () => {
+  it("formats integer minor units as decimal strings", () => {
+    expect(formatMoney(0n)).toBe("0.00");
+    expect(formatMoney(5n)).toBe("0.05");
+    expect(formatMoney(12345n)).toBe("123.45");
+    expect(formatMoney(-12345n)).toBe("-123.45");
+  });
+
+  it("quotes CSV fields per RFC-4180", () => {
+    const csv = toCsv({
+      name: "S",
+      columns: ["Name", "Amount", "Note"],
+      rows: [
+        ["Plain", 100, "ok"],
+        ['Has "quote"', 200, "a,b"],
+        ["Newline\nhere", 300n, null],
+      ],
+    });
+    const lines = csv.split("\r\n");
+    expect(lines[0]).toBe("Name,Amount,Note");
+    expect(lines[1]).toBe("Plain,100,ok");
+    expect(lines[2]).toBe('"Has ""quote""",200,"a,b"');
+    // Embedded newline stays inside the quoted field.
+    expect(csv).toContain('"Newline\nhere",300,');
+  });
+});
+
+describe("practice layer: access control (Phase 4)", () => {
+  it("a practice user only ever sees clients they were granted", async () => {
+    const practice = await createPractice("Ledgerline CPA");
+    const accountant = await upsertUser(
+      `acct-${Date.now()}@ledgerline.test`,
+      "Practice Accountant",
+    );
+    await addPracticeMember(practice.id, accountant.id, { role: "owner" });
+
+    const clientA = await seedOrganization("Acme Retail");
+    const clientB = await seedOrganization("Bravo Foods");
+    const clientC = await seedOrganization("Citrus Design");
+    // An org that exists but is never granted to this practice.
+    const ungranted = await seedOrganization("Ungranted Co");
+
+    await grantClientAccess(practice.id, clientA.organization.id, {
+      grantedBy: accountant.id,
+    });
+    await grantClientAccess(practice.id, clientB.organization.id, {
+      grantedBy: accountant.id,
+    });
+    await grantClientAccess(practice.id, clientC.organization.id, {
+      grantedBy: accountant.id,
+    });
+
+    const clients = await listClientsForPracticeUser(accountant.id);
+    const ids = clients.map((c) => c.orgId).sort();
+    expect(ids).toEqual(
+      [
+        clientA.organization.id,
+        clientB.organization.id,
+        clientC.organization.id,
+      ].sort(),
+    );
+    expect(ids).not.toContain(ungranted.organization.id);
+
+    // Access checks reflect the grants.
+    expect(await hasClientAccess(accountant.id, clientA.organization.id)).toBe(
+      true,
+    );
+    expect(
+      await hasClientAccess(accountant.id, ungranted.organization.id),
+    ).toBe(false);
+
+    // Switching into a granted client works and returns the org.
+    const switched = await switchToClient(
+      accountant.id,
+      clientB.organization.id,
+    );
+    expect(switched.id).toBe(clientB.organization.id);
+
+    // Switching into an ungranted client is forbidden.
+    await expect(
+      switchToClient(accountant.id, ungranted.organization.id),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(
+      assertClientAccess(accountant.id, ungranted.organization.id),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
+  it("revoking a client grant removes access", async () => {
+    const practice = await createPractice("Revoke Test CPA");
+    const user = await upsertUser(`rev-${Date.now()}@x.test`);
+    await addPracticeMember(practice.id, user.id);
+    const client = await seedOrganization("Temp Client");
+
+    await grantClientAccess(practice.id, client.organization.id);
+    expect(await hasClientAccess(user.id, client.organization.id)).toBe(true);
+
+    await revokeClientAccess(practice.id, client.organization.id);
+    expect(await hasClientAccess(user.id, client.organization.id)).toBe(false);
+    expect(await listClientsForPracticeUser(user.id)).toHaveLength(0);
+  });
+
+  it("revoking a practice member removes access to all clients", async () => {
+    const practice = await createPractice("Member Revoke CPA");
+    const user = await upsertUser(`mrev-${Date.now()}@x.test`);
+    await addPracticeMember(practice.id, user.id);
+    const client = await seedOrganization("Member Client");
+    await grantClientAccess(practice.id, client.organization.id);
+    expect(await hasClientAccess(user.id, client.organization.id)).toBe(true);
+
+    await revokePracticeMember(practice.id, user.id);
+    expect(await hasClientAccess(user.id, client.organization.id)).toBe(false);
+    expect(await listClientsForPracticeUser(user.id)).toHaveLength(0);
+  });
+
+  it("audit-logs client access grants against the client org", async () => {
+    const practice = await createPractice("Audit CPA");
+    const user = await upsertUser(`aud-${Date.now()}@x.test`);
+    await addPracticeMember(practice.id, user.id);
+    const client = await seedOrganization("Audited Client");
+    const orgId = client.organization.id;
+
+    await grantClientAccess(practice.id, orgId, { actor: "auditor" });
+    await switchToClient(user.id, orgId, { actor: "auditor" });
+
+    const rows = await db
+      .select()
+      .from(auditLogTable)
+      .where(eq(auditLogTable.orgId, orgId));
+    const actions = rows.map((r) => r.action);
+    expect(actions).toContain("practice.client.grant");
+    expect(actions).toContain("practice.client.access");
+  });
+});
+
+describe("practice layer: month-end close (Phase 4)", () => {
+  it("tracks close status and checklist progress per client", async () => {
+    const client = await seedOrganization("Close Co");
+    const orgId = client.organization.id;
+
+    const period = await createClosePeriod(orgId, "2026-01");
+    const t1 = await addCloseTask(orgId, period.id, "Reconcile bank", {
+      sortOrder: 1,
+    });
+    const t2 = await addCloseTask(orgId, period.id, "Review AR aging", {
+      sortOrder: 2,
+    });
+    await addCloseTask(orgId, period.id, "Post accruals", { sortOrder: 3 });
+
+    let status = await getCloseStatus(orgId, period.id);
+    expect(status.tasks.total).toBe(3);
+    expect(status.tasks.done).toBe(0);
+    expect(status.tasks.progress).toBe(0);
+
+    await setCloseTaskStatus(orgId, t1.id, "done");
+    await setCloseTaskStatus(orgId, t2.id, "done");
+    status = await getCloseStatus(orgId, period.id);
+    expect(status.tasks.done).toBe(2);
+    expect(status.tasks.progress).toBeCloseTo(2 / 3);
+
+    await setClosePeriodStatus(orgId, period.id, "in_progress");
+    status = await getCloseStatus(orgId, period.id);
+    expect(status.period.status).toBe("in_progress");
+  });
+
+  it("runs the PBC request lifecycle the client can respond to", async () => {
+    const client = await seedOrganization("PBC Co");
+    const orgId = client.organization.id;
+    const period = await createClosePeriod(orgId, "2026-02");
+
+    const req = await createPbcRequest(orgId, period.id, "Send bank statement", {
+      detail: "January PDF",
+    });
+    let status = await getCloseStatus(orgId, period.id);
+    expect(status.pbc.total).toBe(1);
+    expect(status.pbc.open).toBe(1);
+
+    // Client responds.
+    const responded = await respondPbcRequest(
+      orgId,
+      req.id,
+      "Uploaded to portal",
+      { actor: "client" },
+    );
+    expect(responded.status).toBe("provided");
+
+    // Practice accepts.
+    await acceptPbcRequest(orgId, req.id);
+    status = await getCloseStatus(orgId, period.id);
+    expect(status.pbc.accepted).toBe(1);
+    expect(status.pbc.open).toBe(0);
+  });
+});
+
+describe("practice layer: batch + dashboard end-to-end (Phase 4)", () => {
+  it("a practice user with three clients switches, batch-exports, tracks close, and is walled off from ungranted clients", async () => {
+    const practice = await createPractice("Fullflow CPA");
+    const accountant = await upsertUser(
+      `flow-${Date.now()}@fullflow.test`,
+      "Flow Accountant",
+    );
+    await addPracticeMember(practice.id, accountant.id, { role: "owner" });
+
+    const acme = await seedOrganization("Acme Books");
+    const bravo = await seedOrganization("Bravo Books");
+    const citrus = await seedOrganization("Citrus Books");
+    const outsider = await seedOrganization("Outsider Books");
+
+    for (const c of [acme, bravo, citrus]) {
+      await grantClientAccess(practice.id, c.organization.id, {
+        grantedBy: accountant.id,
+      });
+    }
+
+    // Ledger activity in each client (distinct amounts to tell them apart).
+    await postSale(acme, 100_000n, "flow-acme");
+    await postSale(bravo, 60_000n, "flow-bravo");
+    await postSale(citrus, 40_000n, "flow-citrus");
+
+    // (1) Switch between the three granted clients.
+    for (const c of [acme, bravo, citrus]) {
+      const org = await switchToClient(accountant.id, c.organization.id);
+      expect(org.id).toBe(c.organization.id);
+    }
+
+    // (2) Track close status per client.
+    for (const c of [acme, bravo, citrus]) {
+      const p = await createClosePeriod(c.organization.id, "2026-01");
+      const task = await addCloseTask(
+        c.organization.id,
+        p.id,
+        "Reconcile bank",
+      );
+      await setCloseTaskStatus(c.organization.id, task.id, "done");
+      const status = await getCloseStatus(c.organization.id, p.id);
+      expect(status.tasks.done).toBe(1);
+    }
+
+    // (3) Run a batch export across the whole book of clients.
+    const bundle = await batchExport(
+      accountant.id,
+      [
+        acme.organization.id,
+        bravo.organization.id,
+        citrus.organization.id,
+      ],
+      "trialBalance",
+      "csv",
+    );
+    expect(bundle.clients).toHaveLength(3);
+    expect(bundle.files).toHaveLength(3);
+    // Each client's CSV carries the standard trial-balance header and its data.
+    const acmeFile = bundle.files.find((f) => f.name.startsWith("Acme"));
+    expect(acmeFile).toBeDefined();
+    expect(acmeFile!.content).toContain(
+      "Code,Account,Type,Debit,Credit,Balance",
+    );
+    expect(acmeFile!.content).toContain("1000");
+    expect(acmeFile!.content).toContain("1000.00"); // 100_000 minor units
+
+    // A single-file Excel export bundles every client as a sheet.
+    const excel = await batchExport(
+      accountant.id,
+      [acme.organization.id, bravo.organization.id, citrus.organization.id],
+      "profitAndLoss",
+      "excel",
+    );
+    expect(excel.files).toHaveLength(1);
+    expect(excel.files[0].content).toContain('ss:Name="Acme Books"');
+    expect(excel.files[0].content).toContain('ss:Name="Bravo Books"');
+
+    // (4) Never see / touch a client that wasn't granted.
+    await expect(
+      batchExport(
+        accountant.id,
+        [acme.organization.id, outsider.organization.id],
+        "trialBalance",
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+
+    // Strict batch throws; skipUnauthorized silently drops the outsider.
+    const skipped = await runBatchReport(
+      accountant.id,
+      [acme.organization.id, outsider.organization.id],
+      "trialBalance",
+      { skipUnauthorized: true },
+    );
+    expect(skipped.map((e) => e.orgId)).toEqual([acme.organization.id]);
+
+    // (5) The practice dashboard shows exactly the three granted clients.
+    const dash = await getPracticeDashboard(accountant.id, practice.id);
+    expect(dash.clientCount).toBe(3);
+    const names = dash.clients.map((c) => c.name).sort();
+    expect(names).toEqual(["Acme Books", "Bravo Books", "Citrus Books"]);
+    expect(names).not.toContain("Outsider Books");
+    const acmeRow = dash.clients.find((c) => c.name === "Acme Books")!;
+    expect(acmeRow.close.tasksDone).toBe(1);
+    expect(acmeRow.close.tasksTotal).toBe(1);
+    expect(acmeRow.financials.netIncome).toBe(100_000n);
+    expect(acmeRow.financials.balanced).toBe(true);
+  });
+
+  it("audit-logs a batch export against each exported client org", async () => {
+    const practice = await createPractice("Export Audit CPA");
+    const user = await upsertUser(`exp-${Date.now()}@x.test`);
+    await addPracticeMember(practice.id, user.id, { role: "owner" });
+    const acme = await seedOrganization("Export Acme");
+    const bravo = await seedOrganization("Export Bravo");
+    await grantClientAccess(practice.id, acme.organization.id);
+    await grantClientAccess(practice.id, bravo.organization.id);
+    await postSale(acme, 10_000n, "exp-acme");
+    await postSale(bravo, 20_000n, "exp-bravo");
+
+    await batchExport(
+      user.id,
+      [acme.organization.id, bravo.organization.id],
+      "trialBalance",
+      "csv",
+    );
+
+    for (const orgId of [acme.organization.id, bravo.organization.id]) {
+      const rows = await db
+        .select()
+        .from(auditLogTable)
+        .where(
+          and(
+            eq(auditLogTable.orgId, orgId),
+            eq(auditLogTable.action, "practice.client.export"),
+          ),
+        );
+      expect(rows).toHaveLength(1);
+      expect(rows[0].actor).toBe(user.id);
+    }
   });
 });
