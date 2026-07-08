@@ -5,13 +5,8 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { UserIdParameter } from './userIdParameter';
 
 export type GetPracticeDashboardParams = {
-/**
- * The acting practice user; access is scoped to this user's grants.
- */
-userId: UserIdParameter;
 /**
  * Restrict to a single practice the user is a member of.
  */

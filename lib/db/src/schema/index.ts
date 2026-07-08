@@ -7,6 +7,8 @@ export * from "./journal-lines";
 export * from "./bank-transactions";
 export * from "./audit-log";
 export * from "./users";
+export * from "./auth-events";
+export * from "./session";
 export * from "./memberships";
 export * from "./import-batches";
 export * from "./bills";

@@ -20,18 +20,18 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AuthSession,
   BatchExportRequest,
   BatchExportResponse,
   ClientList,
   ClosePeriodList,
   CloseStatusSummary,
   ErrorResponse,
-  GetCloseStatusParams,
   GetPracticeDashboardParams,
   HealthStatus,
-  ListClosePeriodsParams,
-  ListPracticeClientsParams,
-  PracticeDashboard
+  LoginRequest,
+  PracticeDashboard,
+  SignupRequest
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -139,28 +139,233 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
 
 
 
-export const getListPracticeClientsUrl = (params: ListPracticeClientsParams,) => {
-  const normalizedParams = new URLSearchParams();
+export const getSignupUrl = () => {
 
-  Object.entries(params || {}).forEach(([key, value]) => {
 
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : String(value))
-    }
-  });
 
-  const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/api/practice/clients?${stringifiedParams}` : `/api/practice/clients`
+  return `/api/auth/signup`
 }
 
 /**
- * Returns exactly the client orgs the practice user has been explicitly granted (the client switcher/list). Ungranted clients never appear.
- * @summary List a practice user's clients
+ * @summary Create an account and start a session
  */
-export const listPracticeClients = async (params: ListPracticeClientsParams, options?: RequestInit): Promise<ClientList> => {
+export const signup = async (signupRequest: SignupRequest, options?: RequestInit): Promise<AuthSession> => {
 
-  return customFetch<ClientList>(getListPracticeClientsUrl(params),
+  return customFetch<AuthSession>(getSignupUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(signupRequest)
+  }
+);}
+
+
+
+
+
+export const getSignupMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof signup>>, TError,{data: BodyType<SignupRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof signup>>, TError,{data: BodyType<SignupRequest>}, TContext> => {
+
+const mutationKey = ['signup'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof signup>>, {data: BodyType<SignupRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  signup(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SignupMutationResult = NonNullable<Awaited<ReturnType<typeof signup>>>
+    export type SignupMutationBody = BodyType<SignupRequest>
+    export type SignupMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Create an account and start a session
+ */
+export const useSignup = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof signup>>, TError,{data: BodyType<SignupRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof signup>>,
+        TError,
+        {data: BodyType<SignupRequest>},
+        TContext
+      > => {
+      return useMutation(getSignupMutationOptions(options));
+    }
+
+export const getLoginUrl = () => {
+
+
+
+
+  return `/api/auth/login`
+}
+
+/**
+ * @summary Authenticate and start a session
+ */
+export const login = async (loginRequest: LoginRequest, options?: RequestInit): Promise<AuthSession> => {
+
+  return customFetch<AuthSession>(getLoginUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(loginRequest)
+  }
+);}
+
+
+
+
+
+export const getLoginMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof login>>, TError,{data: BodyType<LoginRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof login>>, TError,{data: BodyType<LoginRequest>}, TContext> => {
+
+const mutationKey = ['login'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof login>>, {data: BodyType<LoginRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  login(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LoginMutationResult = NonNullable<Awaited<ReturnType<typeof login>>>
+    export type LoginMutationBody = BodyType<LoginRequest>
+    export type LoginMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Authenticate and start a session
+ */
+export const useLogin = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof login>>, TError,{data: BodyType<LoginRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof login>>,
+        TError,
+        {data: BodyType<LoginRequest>},
+        TContext
+      > => {
+      return useMutation(getLoginMutationOptions(options));
+    }
+
+export const getLogoutUrl = () => {
+
+
+
+
+  return `/api/auth/logout`
+}
+
+/**
+ * @summary End the current session
+ */
+export const logout = async ( options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getLogoutUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getLogoutMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logout>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof logout>>, TError,void, TContext> => {
+
+const mutationKey = ['logout'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof logout>>, void> = () => {
+
+
+          return  logout(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LogoutMutationResult = NonNullable<Awaited<ReturnType<typeof logout>>>
+
+    export type LogoutMutationError = ErrorType<unknown>
+
+    /**
+ * @summary End the current session
+ */
+export const useLogout = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logout>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof logout>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getLogoutMutationOptions(options));
+    }
+
+export const getGetSessionUrl = () => {
+
+
+
+
+  return `/api/auth/session`
+}
+
+/**
+ * @summary Return the currently authenticated user
+ */
+export const getSession = async ( options?: RequestInit): Promise<AuthSession> => {
+
+  return customFetch<AuthSession>(getGetSessionUrl(),
   {
     ...options,
     method: 'GET'
@@ -173,45 +378,45 @@ export const listPracticeClients = async (params: ListPracticeClientsParams, opt
 
 
 
-export const getListPracticeClientsQueryKey = (params?: ListPracticeClientsParams,) => {
+export const getGetSessionQueryKey = () => {
     return [
-    `/api/practice/clients`, ...(params ? [params] : [])
+    `/api/auth/session`
     ] as const;
     }
 
 
-export const getListPracticeClientsQueryOptions = <TData = Awaited<ReturnType<typeof listPracticeClients>>, TError = ErrorType<unknown>>(params: ListPracticeClientsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPracticeClients>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetSessionQueryOptions = <TData = Awaited<ReturnType<typeof getSession>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSession>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListPracticeClientsQueryKey(params);
+  const queryKey =  queryOptions?.queryKey ?? getGetSessionQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPracticeClients>>> = ({ signal }) => listPracticeClients(params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSession>>> = ({ signal }) => getSession({ signal, ...requestOptions });
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPracticeClients>>, TError, TData> & { queryKey: QueryKey }
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSession>>, TError, TData> & { queryKey: QueryKey }
 }
 
-export type ListPracticeClientsQueryResult = NonNullable<Awaited<ReturnType<typeof listPracticeClients>>>
-export type ListPracticeClientsQueryError = ErrorType<unknown>
+export type GetSessionQueryResult = NonNullable<Awaited<ReturnType<typeof getSession>>>
+export type GetSessionQueryError = ErrorType<ErrorResponse>
 
 
 /**
- * @summary List a practice user's clients
+ * @summary Return the currently authenticated user
  */
 
-export function useListPracticeClients<TData = Awaited<ReturnType<typeof listPracticeClients>>, TError = ErrorType<unknown>>(
- params: ListPracticeClientsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPracticeClients>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export function useGetSession<TData = Awaited<ReturnType<typeof getSession>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSession>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListPracticeClientsQueryOptions(params,options)
+  const queryOptions = getGetSessionQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -224,7 +429,85 @@ export function useListPracticeClients<TData = Awaited<ReturnType<typeof listPra
 
 
 
-export const getGetPracticeDashboardUrl = (params: GetPracticeDashboardParams,) => {
+export const getListPracticeClientsUrl = () => {
+
+
+
+
+  return `/api/practice/clients`
+}
+
+/**
+ * Returns exactly the client orgs the practice user has been explicitly granted (the client switcher/list). Ungranted clients never appear. Identity comes from the authenticated session, not the request.
+ * @summary List a practice user's clients
+ */
+export const listPracticeClients = async ( options?: RequestInit): Promise<ClientList> => {
+
+  return customFetch<ClientList>(getListPracticeClientsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPracticeClientsQueryKey = () => {
+    return [
+    `/api/practice/clients`
+    ] as const;
+    }
+
+
+export const getListPracticeClientsQueryOptions = <TData = Awaited<ReturnType<typeof listPracticeClients>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPracticeClients>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPracticeClientsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPracticeClients>>> = ({ signal }) => listPracticeClients({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPracticeClients>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPracticeClientsQueryResult = NonNullable<Awaited<ReturnType<typeof listPracticeClients>>>
+export type ListPracticeClientsQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List a practice user's clients
+ */
+
+export function useListPracticeClients<TData = Awaited<ReturnType<typeof listPracticeClients>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPracticeClients>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPracticeClientsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetPracticeDashboardUrl = (params?: GetPracticeDashboardParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
@@ -240,10 +523,10 @@ export const getGetPracticeDashboardUrl = (params: GetPracticeDashboardParams,) 
 }
 
 /**
- * Read-only cross-client status: latest close progress and headline financials for every client the user was granted. Money fields are decimal strings.
+ * Read-only cross-client status: latest close progress and headline financials for every client the user was granted. Money fields are decimal strings. Identity comes from the authenticated session.
  * @summary Practice-level dashboard across all granted clients
  */
-export const getPracticeDashboard = async (params: GetPracticeDashboardParams, options?: RequestInit): Promise<PracticeDashboard> => {
+export const getPracticeDashboard = async (params?: GetPracticeDashboardParams, options?: RequestInit): Promise<PracticeDashboard> => {
 
   return customFetch<PracticeDashboard>(getGetPracticeDashboardUrl(params),
   {
@@ -265,7 +548,7 @@ export const getGetPracticeDashboardQueryKey = (params?: GetPracticeDashboardPar
     }
 
 
-export const getGetPracticeDashboardQueryOptions = <TData = Awaited<ReturnType<typeof getPracticeDashboard>>, TError = ErrorType<unknown>>(params: GetPracticeDashboardParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPracticeDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetPracticeDashboardQueryOptions = <TData = Awaited<ReturnType<typeof getPracticeDashboard>>, TError = ErrorType<ErrorResponse>>(params?: GetPracticeDashboardParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPracticeDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -284,15 +567,15 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetPracticeDashboardQueryResult = NonNullable<Awaited<ReturnType<typeof getPracticeDashboard>>>
-export type GetPracticeDashboardQueryError = ErrorType<unknown>
+export type GetPracticeDashboardQueryError = ErrorType<ErrorResponse>
 
 
 /**
  * @summary Practice-level dashboard across all granted clients
  */
 
-export function useGetPracticeDashboard<TData = Awaited<ReturnType<typeof getPracticeDashboard>>, TError = ErrorType<unknown>>(
- params: GetPracticeDashboardParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPracticeDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export function useGetPracticeDashboard<TData = Awaited<ReturnType<typeof getPracticeDashboard>>, TError = ErrorType<ErrorResponse>>(
+ params?: GetPracticeDashboardParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPracticeDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
@@ -381,29 +664,20 @@ export const useBatchExportReports = <TError = ErrorType<ErrorResponse>,
       return useMutation(getBatchExportReportsMutationOptions(options));
     }
 
-export const getListClosePeriodsUrl = (orgId: string,
-    params: ListClosePeriodsParams,) => {
-  const normalizedParams = new URLSearchParams();
+export const getListClosePeriodsUrl = (orgId: string,) => {
 
-  Object.entries(params || {}).forEach(([key, value]) => {
 
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : String(value))
-    }
-  });
 
-  const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/api/clients/${orgId}/close-periods?${stringifiedParams}` : `/api/clients/${orgId}/close-periods`
+  return `/api/clients/${orgId}/close-periods`
 }
 
 /**
  * @summary List a client's close periods
  */
-export const listClosePeriods = async (orgId: string,
-    params: ListClosePeriodsParams, options?: RequestInit): Promise<ClosePeriodList> => {
+export const listClosePeriods = async (orgId: string, options?: RequestInit): Promise<ClosePeriodList> => {
 
-  return customFetch<ClosePeriodList>(getListClosePeriodsUrl(orgId,params),
+  return customFetch<ClosePeriodList>(getListClosePeriodsUrl(orgId),
   {
     ...options,
     method: 'GET'
@@ -416,25 +690,23 @@ export const listClosePeriods = async (orgId: string,
 
 
 
-export const getListClosePeriodsQueryKey = (orgId: string,
-    params?: ListClosePeriodsParams,) => {
+export const getListClosePeriodsQueryKey = (orgId: string,) => {
     return [
-    `/api/clients/${orgId}/close-periods`, ...(params ? [params] : [])
+    `/api/clients/${orgId}/close-periods`
     ] as const;
     }
 
 
-export const getListClosePeriodsQueryOptions = <TData = Awaited<ReturnType<typeof listClosePeriods>>, TError = ErrorType<ErrorResponse>>(orgId: string,
-    params: ListClosePeriodsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listClosePeriods>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListClosePeriodsQueryOptions = <TData = Awaited<ReturnType<typeof listClosePeriods>>, TError = ErrorType<ErrorResponse>>(orgId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listClosePeriods>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListClosePeriodsQueryKey(orgId,params);
+  const queryKey =  queryOptions?.queryKey ?? getListClosePeriodsQueryKey(orgId);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listClosePeriods>>> = ({ signal }) => listClosePeriods(orgId,params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listClosePeriods>>> = ({ signal }) => listClosePeriods(orgId, { signal, ...requestOptions });
 
 
 
@@ -452,12 +724,11 @@ export type ListClosePeriodsQueryError = ErrorType<ErrorResponse>
  */
 
 export function useListClosePeriods<TData = Awaited<ReturnType<typeof listClosePeriods>>, TError = ErrorType<ErrorResponse>>(
- orgId: string,
-    params: ListClosePeriodsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listClosePeriods>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ orgId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listClosePeriods>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListClosePeriodsQueryOptions(orgId,params,options)
+  const queryOptions = getListClosePeriodsQueryOptions(orgId,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -471,20 +742,12 @@ export function useListClosePeriods<TData = Awaited<ReturnType<typeof listCloseP
 
 
 export const getGetCloseStatusUrl = (orgId: string,
-    periodId: string,
-    params: GetCloseStatusParams,) => {
-  const normalizedParams = new URLSearchParams();
+    periodId: string,) => {
 
-  Object.entries(params || {}).forEach(([key, value]) => {
 
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : String(value))
-    }
-  });
 
-  const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/api/clients/${orgId}/close-periods/${periodId}/status?${stringifiedParams}` : `/api/clients/${orgId}/close-periods/${periodId}/status`
+  return `/api/clients/${orgId}/close-periods/${periodId}/status`
 }
 
 /**
@@ -492,10 +755,9 @@ export const getGetCloseStatusUrl = (orgId: string,
  * @summary Derived status of one close period
  */
 export const getCloseStatus = async (orgId: string,
-    periodId: string,
-    params: GetCloseStatusParams, options?: RequestInit): Promise<CloseStatusSummary> => {
+    periodId: string, options?: RequestInit): Promise<CloseStatusSummary> => {
 
-  return customFetch<CloseStatusSummary>(getGetCloseStatusUrl(orgId,periodId,params),
+  return customFetch<CloseStatusSummary>(getGetCloseStatusUrl(orgId,periodId),
   {
     ...options,
     method: 'GET'
@@ -509,26 +771,24 @@ export const getCloseStatus = async (orgId: string,
 
 
 export const getGetCloseStatusQueryKey = (orgId: string,
-    periodId: string,
-    params?: GetCloseStatusParams,) => {
+    periodId: string,) => {
     return [
-    `/api/clients/${orgId}/close-periods/${periodId}/status`, ...(params ? [params] : [])
+    `/api/clients/${orgId}/close-periods/${periodId}/status`
     ] as const;
     }
 
 
 export const getGetCloseStatusQueryOptions = <TData = Awaited<ReturnType<typeof getCloseStatus>>, TError = ErrorType<ErrorResponse>>(orgId: string,
-    periodId: string,
-    params: GetCloseStatusParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCloseStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+    periodId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCloseStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetCloseStatusQueryKey(orgId,periodId,params);
+  const queryKey =  queryOptions?.queryKey ?? getGetCloseStatusQueryKey(orgId,periodId);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCloseStatus>>> = ({ signal }) => getCloseStatus(orgId,periodId,params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCloseStatus>>> = ({ signal }) => getCloseStatus(orgId,periodId, { signal, ...requestOptions });
 
 
 
@@ -547,12 +807,11 @@ export type GetCloseStatusQueryError = ErrorType<ErrorResponse>
 
 export function useGetCloseStatus<TData = Awaited<ReturnType<typeof getCloseStatus>>, TError = ErrorType<ErrorResponse>>(
  orgId: string,
-    periodId: string,
-    params: GetCloseStatusParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCloseStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+    periodId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCloseStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getGetCloseStatusQueryOptions(orgId,periodId,params,options)
+  const queryOptions = getGetCloseStatusQueryOptions(orgId,periodId,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

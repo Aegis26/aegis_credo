@@ -13,6 +13,28 @@ export interface ErrorResponse {
   error: string;
 }
 
+export interface AuthUser {
+  id: string;
+  email: string;
+  name: string | null;
+}
+
+export interface AuthSession {
+  user: AuthUser;
+}
+
+export interface SignupRequest {
+  email: string;
+  /** @minLength 8 */
+  password: string;
+  name?: string;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
 export interface ClientRef {
   orgId: string;
   name: string;
@@ -73,7 +95,6 @@ export const BatchExportRequestFormat = {
 } as const;
 
 export interface BatchExportRequest {
-  userId: string;
   orgIds: string[];
   kind: BatchExportRequestKind;
   format?: BatchExportRequestFormat;
@@ -146,40 +167,10 @@ export interface CloseStatusSummary {
   pbc: CloseStatusSummaryPbc;
 }
 
-/**
- * The acting practice user; access is scoped to this user's grants.
- */
-export type UserIdParameter = string;
-
-export type ListPracticeClientsParams = {
-/**
- * The acting practice user; access is scoped to this user's grants.
- */
-userId: UserIdParameter;
-};
-
 export type GetPracticeDashboardParams = {
-/**
- * The acting practice user; access is scoped to this user's grants.
- */
-userId: UserIdParameter;
 /**
  * Restrict to a single practice the user is a member of.
  */
 practiceId?: string;
-};
-
-export type ListClosePeriodsParams = {
-/**
- * The acting practice user; access is scoped to this user's grants.
- */
-userId: UserIdParameter;
-};
-
-export type GetCloseStatusParams = {
-/**
- * The acting practice user; access is scoped to this user's grants.
- */
-userId: UserIdParameter;
 };
 

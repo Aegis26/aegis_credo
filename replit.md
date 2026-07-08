@@ -9,7 +9,10 @@ A multi-tenant, double-entry ledger engine: schema, a balancing posting service,
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- `pnpm --filter @workspace/api-server run test` — run the API auth test suite (vitest + supertest)
+- `pnpm --filter @workspace/ledger run test` — run the ledger test suite
+- Required env: `DATABASE_URL` — Postgres connection string; `SESSION_SECRET` — session cookie signing secret (required in production)
+- Optional env: `AUTH_RATE_LIMIT_MAX` — max auth requests per IP per 15-min window (default 50)
 
 ## Stack
 
@@ -35,6 +38,18 @@ A multi-tenant, double-entry ledger engine: schema, a balancing posting service,
 - Balance sheet only closes when current-period net income is folded into equity (`equityWithIncome`), since revenue/expense accounts are not yet closed to retained earnings.
 
 ## Product
+
+- **Authentication** (`artifacts/api-server`): real, server-verified auth over
+  the HTTP API. `/auth/signup`, `/auth/login`, `/auth/logout`, `/auth/session`.
+  Passwords are hashed with argon2id (`src/lib/auth-service.ts`); sessions live
+  in Postgres (`connect-pg-simple`, `session` table) behind an httpOnly + Secure
+  (prod) + SameSite=lax cookie named `sid` (`express-session`). `requireAuth`
+  (`src/middlewares/auth.ts`) gates every non-auth route with a `401`. Login has
+  per-IP rate limiting (`express-rate-limit`) and per-account lockout (5 failures
+  → 15-min lock). Every auth event (signup/login/logout/failed/locked) is written
+  to the `auth_events` table. `createApp({ authRateLimitMax })` is a factory so
+  tests can inject a low rate limit. Tests: `src/app.test.ts` (session gate,
+  IDOR regression, lockout, rate limit, audit).
 
 Built on the Phase 1 ledger core, the engine now offers:
 
@@ -164,12 +179,15 @@ _Populate as you build — explicit user instructions worth remembering across s
   ledger core performs NO auth. Batch paths filter via `accessibleClients` before
   touching any client.
 
-- **The HTTP API takes `userId` as caller-supplied identity, by design.** Like
-  the RBAC gotcha above, this project has no authentication system: the API layer
-  is a thin demonstration over the library, and binding `userId` to a verified
-  session/token is the responsibility of whatever real auth layer eventually
-  fronts it. Do NOT treat the current endpoints as production-authenticated —
-  they enforce tenant *scoping* given an identity, not identity itself.
+- **The HTTP API authenticates via server-side sessions; identity is NEVER
+  client-supplied.** `requireAuth` rejects any request without a valid session
+  (`401`) before handlers run, and route handlers read the caller via
+  `getSessionUserId(req)` (from `req.session.userId`, set server-side at
+  login/signup). No endpoint accepts a `userId` param/body field — the OpenAPI
+  spec has none, so a spoofed `?userId=` is simply ignored and the session
+  identity wins. The ledger core still performs NO auth: the API layer is the
+  gate, and tenant scoping (`assertClientAccess`, `accessibleClients`) runs on
+  top of the authenticated identity, not instead of it.
 
 - **Money crosses the API/CSV boundary as a decimal string, never a JS number.**
   JSON and JS `number` cannot carry BigInt safely, so `formatMoney` renders minor

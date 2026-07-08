@@ -1,10 +1,8 @@
 import { Router, type IRouter } from "express";
 import {
   ListClosePeriodsParams,
-  ListClosePeriodsQueryParams,
   ListClosePeriodsResponse,
   GetCloseStatusParams,
-  GetCloseStatusQueryParams,
   GetCloseStatusResponse,
 } from "@workspace/api-zod";
 import {
@@ -13,13 +11,14 @@ import {
   getCloseStatus,
 } from "@workspace/ledger";
 import { sendLedgerError } from "../lib/errors";
+import { getSessionUserId } from "../middlewares/auth";
 
 const router: IRouter = Router();
 
 router.get("/clients/:orgId/close-periods", async (req, res) => {
   try {
     const { orgId } = ListClosePeriodsParams.parse(req.params);
-    const { userId } = ListClosePeriodsQueryParams.parse(req.query);
+    const userId = getSessionUserId(req);
     // Access is caller-enforced: the ledger core performs no auth.
     await assertClientAccess(userId, orgId);
     const periods = await listClosePeriods(orgId);
@@ -42,7 +41,7 @@ router.get(
   async (req, res) => {
     try {
       const { orgId, periodId } = GetCloseStatusParams.parse(req.params);
-      const { userId } = GetCloseStatusQueryParams.parse(req.query);
+      const userId = getSessionUserId(req);
       await assertClientAccess(userId, orgId);
       const status = await getCloseStatus(orgId, periodId);
       res.json(

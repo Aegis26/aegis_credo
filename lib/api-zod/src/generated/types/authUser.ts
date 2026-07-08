@@ -6,7 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-/**
- * The acting practice user; access is scoped to this user's grants.
- */
-export type UserIdParameter = string;
+export interface AuthUser {
+  id: string;
+  email: string;
+  name: string | null;
+}

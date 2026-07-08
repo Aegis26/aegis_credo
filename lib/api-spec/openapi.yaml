@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication — signup, login, logout, session
   - name: practice
     description: Accounting practice layer — cross-client access, dashboard, batch export
   - name: close
@@ -28,6 +30,98 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /auth/signup:
+    post:
+      operationId: signup
+      tags: [auth]
+      summary: Create an account and start a session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignupRequest"
+      responses:
+        "201":
+          description: Account created; session established
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSession"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Too many requests
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Authenticate and start a session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Authenticated; session established
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSession"
+        "401":
+          description: Invalid credentials (also returned for a locked account, to avoid leaking account existence)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Too many requests
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: End the current session
+      responses:
+        "204":
+          description: Session ended
+  /auth/session:
+    get:
+      operationId: getSession
+      tags: [auth]
+      summary: Return the currently authenticated user
+      responses:
+        "200":
+          description: The authenticated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSession"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /practice/clients:
     get:
       operationId: listPracticeClients
@@ -36,8 +130,7 @@ paths:
       description: >-
         Returns exactly the client orgs the practice user has been explicitly
         granted (the client switcher/list). Ungranted clients never appear.
-      parameters:
-        - $ref: "#/components/parameters/UserId"
+        Identity comes from the authenticated session, not the request.
       responses:
         "200":
           description: The user's granted clients
@@ -45,6 +138,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ClientList"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /practice/dashboard:
     get:
       operationId: getPracticeDashboard
@@ -53,9 +152,8 @@ paths:
       description: >-
         Read-only cross-client status: latest close progress and headline
         financials for every client the user was granted. Money fields are
-        decimal strings.
+        decimal strings. Identity comes from the authenticated session.
       parameters:
-        - $ref: "#/components/parameters/UserId"
         - name: practiceId
           in: query
           required: false
@@ -69,6 +167,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PracticeDashboard"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /practice/batch-export:
     post:
       operationId: batchExportReports
@@ -93,6 +197,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BatchExportResponse"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "403":
           description: The request referenced an ungranted client
           content:
@@ -106,7 +216,6 @@ paths:
       summary: List a client's close periods
       parameters:
         - $ref: "#/components/parameters/OrgId"
-        - $ref: "#/components/parameters/UserId"
       responses:
         "200":
           description: The client's close periods
@@ -114,6 +223,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ClosePeriodList"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "403":
           description: The user was not granted this client
           content:
@@ -135,7 +250,6 @@ paths:
           required: true
           schema:
             type: string
-        - $ref: "#/components/parameters/UserId"
       responses:
         "200":
           description: The close period status
@@ -143,6 +257,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CloseStatusSummary"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "403":
           description: The user was not granted this client
           content:
@@ -151,13 +271,6 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
 components:
   parameters:
-    UserId:
-      name: userId
-      in: query
-      required: true
-      description: The acting practice user; access is scoped to this user's grants.
-      schema:
-        type: string
     OrgId:
       name: orgId
       in: path
@@ -180,6 +293,42 @@ components:
           type: string
       required:
         - error
+    AuthUser:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        name:
+          type: string
+          nullable: true
+      required: [id, email, name]
+    AuthSession:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/AuthUser"
+      required: [user]
+    SignupRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+          minLength: 8
+        name:
+          type: string
+      required: [email, password]
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required: [email, password]
     ClientRef:
       type: object
       properties:
@@ -256,8 +405,6 @@ components:
     BatchExportRequest:
       type: object
       properties:
-        userId:
-          type: string
         orgIds:
           type: array
           items:
@@ -272,7 +419,7 @@ components:
         skipUnauthorized:
           type: boolean
           default: false
-      required: [userId, orgIds, kind]
+      required: [orgIds, kind]
     ExportFile:
       type: object
       properties:

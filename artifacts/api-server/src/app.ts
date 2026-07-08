@@ -1,34 +1,81 @@
 import express, { type Express } from "express";
 import cors from "cors";
+import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
 import pinoHttp from "pino-http";
-import router from "./routes";
+import { pool } from "@workspace/db";
+import { createRouter } from "./routes";
 import { logger } from "./lib/logger";
 
-const app: Express = express();
+export interface AppOptions {
+  /** Max auth requests per IP per window. Overridable for tests. */
+  authRateLimitMax?: number;
+}
 
-app.use(
-  pinoHttp({
-    logger,
-    serializers: {
-      req(req) {
-        return {
-          id: req.id,
-          method: req.method,
-          url: req.url?.split("?")[0],
-        };
+export function createApp(options: AppOptions = {}): Express {
+  const app: Express = express();
+  const isProduction = process.env.NODE_ENV === "production";
+
+  const secret = process.env.SESSION_SECRET;
+  if (!secret && isProduction) {
+    throw new Error(
+      "SESSION_SECRET environment variable is required in production.",
+    );
+  }
+
+  // Behind Replit's reverse proxy: trust one hop so req.ip and Secure cookies
+  // reflect the real client and the TLS-terminated origin.
+  app.set("trust proxy", 1);
+
+  app.use(
+    pinoHttp({
+      logger,
+      serializers: {
+        req(req) {
+          return {
+            id: req.id,
+            method: req.method,
+            url: req.url?.split("?")[0],
+          };
+        },
+        res(res) {
+          return {
+            statusCode: res.statusCode,
+          };
+        },
       },
-      res(res) {
-        return {
-          statusCode: res.statusCode,
-        };
+    }),
+  );
+  app.use(cors());
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
+
+  const PgStore = connectPgSimple(session);
+  app.use(
+    session({
+      name: "sid",
+      store: new PgStore({
+        pool,
+        tableName: "session",
+        createTableIfMissing: false,
+      }),
+      secret: secret ?? "insecure-dev-secret-do-not-use-in-production",
+      resave: false,
+      saveUninitialized: false,
+      rolling: true,
+      cookie: {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: "lax",
+        maxAge: 1000 * 60 * 60 * 24 * 7,
       },
-    },
-  }),
-);
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+    }),
+  );
 
-app.use("/api", router);
+  app.use("/api", createRouter({ authRateLimitMax: options.authRateLimitMax }));
 
+  return app;
+}
+
+const app = createApp();
 export default app;

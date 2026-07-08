@@ -1,0 +1,39 @@
+The project is currently headless with NO authentication: every endpoint trusts
+a caller-supplied userId. This task adds real authentication and makes identity
+server-verified everywhere. Do NOT rebuild the ledger or any business logic —
+this is an identity and access task. All existing tests must stay green.
+
+HARD RULES:
+1. Do NOT hand-roll authentication or cryptography. Use a well-established,
+   actively maintained auth solution — either a hosted provider (e.g. Clerk,
+   WorkOS) or a mature, maintained auth library. Never invent your own session
+   or password crypto.
+2. Identity is ALWAYS derived server-side from the authenticated session. The
+   client can never supply or override userId. Remove every caller-supplied
+   userId from every endpoint (Phases 1–4 included) and replace it with the
+   verified session identity.
+3. A request without a valid session is rejected with 401 before any handler
+   runs. Existing authorization (grants, RBAC, per-client scoping) then runs
+   against the verified identity — authorization stays, but now sits on top of
+   real authentication.
+4. Sessions live in httpOnly, Secure, SameSite cookies (or are fully managed by
+   the chosen provider). If passwords are used, hash with argon2id or bcrypt.
+5. Rate-limit auth endpoints and apply backoff/lockout on repeated failures.
+6. Audit-log auth events (signup, login, logout, failed login).
+
+BUILD:
+- Signup, login, logout, and session verification.
+- Auth middleware that resolves the session to a verified userId and attaches it
+  to the request; all routes require it unless explicitly public.
+- Refactor every existing route across Phases 1–4 to take identity from the
+  session instead of the request body/query.
+
+DEFINITION OF DONE (tests):
+- A request with no/invalid session is rejected with 401.
+- No endpoint anywhere accepts a caller-supplied userId; a regression test proves
+  the previous IDOR is closed (calling as another user with a valid session for
+  yourself cannot reach their data).
+- All prior phase tests still pass unchanged.
+- Auth events appear in the audit log; auth endpoints are rate-limited.
+
+Show me the passing tests, including the IDOR-closed regression test.

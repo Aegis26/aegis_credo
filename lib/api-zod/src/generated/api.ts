@@ -18,13 +18,66 @@ export const HealthCheckResponse = zod.object({
 
 
 /**
- * Returns exactly the client orgs the practice user has been explicitly granted (the client switcher/list). Ungranted clients never appear.
- * @summary List a practice user's clients
+ * @summary Create an account and start a session
  */
-export const ListPracticeClientsQueryParams = zod.object({
-  "userId": zod.coerce.string().describe('The acting practice user; access is scoped to this user\'s grants.')
+export const signupBodyPasswordMin = 8;
+
+
+
+export const SignupBody = zod.object({
+  "email": zod.string(),
+  "password": zod.string().min(signupBodyPasswordMin),
+  "name": zod.string().optional()
 })
 
+export const SignupResponse = zod.object({
+  "user": zod.object({
+  "id": zod.string(),
+  "email": zod.string(),
+  "name": zod.string().nullable()
+})
+})
+
+
+/**
+ * @summary Authenticate and start a session
+ */
+export const LoginBody = zod.object({
+  "email": zod.string(),
+  "password": zod.string()
+})
+
+export const LoginResponse = zod.object({
+  "user": zod.object({
+  "id": zod.string(),
+  "email": zod.string(),
+  "name": zod.string().nullable()
+})
+})
+
+
+/**
+ * @summary End the current session
+ */
+export const LogoutResponse = zod.void()
+
+
+/**
+ * @summary Return the currently authenticated user
+ */
+export const GetSessionResponse = zod.object({
+  "user": zod.object({
+  "id": zod.string(),
+  "email": zod.string(),
+  "name": zod.string().nullable()
+})
+})
+
+
+/**
+ * Returns exactly the client orgs the practice user has been explicitly granted (the client switcher/list). Ungranted clients never appear. Identity comes from the authenticated session, not the request.
+ * @summary List a practice user's clients
+ */
 export const ListPracticeClientsResponse = zod.object({
   "clients": zod.array(zod.object({
   "orgId": zod.string(),
@@ -35,11 +88,10 @@ export const ListPracticeClientsResponse = zod.object({
 
 
 /**
- * Read-only cross-client status: latest close progress and headline financials for every client the user was granted. Money fields are decimal strings.
+ * Read-only cross-client status: latest close progress and headline financials for every client the user was granted. Money fields are decimal strings. Identity comes from the authenticated session.
  * @summary Practice-level dashboard across all granted clients
  */
 export const GetPracticeDashboardQueryParams = zod.object({
-  "userId": zod.coerce.string().describe('The acting practice user; access is scoped to this user\'s grants.'),
   "practiceId": zod.coerce.string().optional().describe('Restrict to a single practice the user is a member of.')
 })
 
@@ -75,7 +127,6 @@ export const batchExportReportsBodyFormatDefault = `csv`;
 export const batchExportReportsBodySkipUnauthorizedDefault = false;
 
 export const BatchExportReportsBody = zod.object({
-  "userId": zod.string(),
   "orgIds": zod.array(zod.string()),
   "kind": zod.enum(['trialBalance', 'profitAndLoss', 'balanceSheet']),
   "format": zod.enum(['csv', 'excel']).default(batchExportReportsBodyFormatDefault),
@@ -104,10 +155,6 @@ export const ListClosePeriodsParams = zod.object({
   "orgId": zod.coerce.string().describe('The client organization id.')
 })
 
-export const ListClosePeriodsQueryParams = zod.object({
-  "userId": zod.coerce.string().describe('The acting practice user; access is scoped to this user\'s grants.')
-})
-
 export const ListClosePeriodsResponse = zod.object({
   "periods": zod.array(zod.object({
   "id": zod.string(),
@@ -124,10 +171,6 @@ export const ListClosePeriodsResponse = zod.object({
 export const GetCloseStatusParams = zod.object({
   "orgId": zod.coerce.string().describe('The client organization id.'),
   "periodId": zod.coerce.string()
-})
-
-export const GetCloseStatusQueryParams = zod.object({
-  "userId": zod.coerce.string().describe('The acting practice user; access is scoped to this user\'s grants.')
 })
 
 export const GetCloseStatusResponse = zod.object({

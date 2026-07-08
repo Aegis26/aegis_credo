@@ -9,7 +9,6 @@ import type { BatchExportRequestFormat } from './batchExportRequestFormat';
 import type { BatchExportRequestKind } from './batchExportRequestKind';
 
 export interface BatchExportRequest {
-  userId: string;
   orgIds: string[];
   kind: BatchExportRequestKind;
   format?: BatchExportRequestFormat;
