@@ -1,0 +1,52 @@
+You are building the accounting core for a multi-tenant accounting SaaS.
+Stack: TypeScript, Express, Drizzle ORM, PostgreSQL.
+
+In THIS task, build ONLY the ledger engine: the data model, the posting
+service, the reporting queries, and an automated test suite. Do NOT build
+any UI, invoicing, or bank integration in this task. Stop when the tests pass.
+
+HARD RULES (these are invariants — never violate them, and write tests that
+prove each one holds):
+1. Money is stored as integer minor units (cents) in bigint columns. Never use
+   float, double, or JS number for monetary values. Do all math in integers.
+2. Every posted journal entry must balance: sum of debit line amounts equals
+   sum of credit line amounts. Reject any attempt to post an unbalanced entry.
+3. Posted journal entries are immutable. Never UPDATE or DELETE a posted entry
+   or its lines. Corrections are made only by posting a new reversing entry
+   that references the original.
+4. All lines of an entry commit atomically in a single DB transaction. If any
+   line fails, the whole entry rolls back.
+5. Account balances are always derived by summing journal lines. Do NOT store a
+   mutable balance column as a source of truth.
+6. Every table has an orgId column and every query is scoped by orgId. No query
+   may read across tenants.
+7. The ledger is append-only. Every write is recorded in an audit_log table
+   (actor, action, entity, before/after, timestamp).
+
+USE THIS SCHEMA (Drizzle):
+[PASTE THE SCHEMA BLOCK FROM SECTION 3.2 HERE]
+
+BUILD:
+- The Drizzle schema above (organizations, accounts, journalEntries,
+  journalLines, bankTransactions [schema only], auditLog).
+- A posting service with one entry point:
+  postJournalEntry(orgId, { entryDate, memo, source, lines[] }) that validates
+  balancing, writes the entry plus its lines in one transaction, and writes an
+  audit_log row.
+- reverseJournalEntry(orgId, entryId, reason) that creates a balanced reversing
+  entry and leaves the original untouched.
+- Ledger-derived reporting queries: account balance, trial balance, P&L,
+  balance sheet.
+- A seed function that creates an org with a standard starter chart of accounts.
+
+DEFINITION OF DONE — all of these must pass as automated tests before you stop:
+1. Posting an unbalanced entry is rejected.
+2. A posted entry cannot be edited or deleted; reversing it creates a new entry
+   and the original is unchanged.
+3. Posting N random balanced entries yields a trial balance that sums to zero.
+4. Assets == Liabilities + Equity holds after arbitrary posted entries.
+5. A query scoped to Org A never returns Org B's rows.
+6. No float or JS number appears anywhere in a monetary code path.
+
+When done, show me the schema, the posting service, and the passing test
+output. Do NOT proceed to any UI.

@@ -1,6 +1,6 @@
-# [Project name]
+# Accounting Core (Ledger Engine)
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A multi-tenant, double-entry ledger engine: schema, a balancing posting service, immutable reversing corrections, ledger-derived reports, and an automated test suite. No UI in this task.
 
 ## Run & Operate
 
@@ -22,11 +22,17 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- DB schema (source of truth): `lib/db/src/schema/` — `organizations`, `accounts`, `journal-entries`, `journal-lines`, `bank-transactions`, `audit-log`.
+- Ledger engine: `lib/ledger/src/` — `posting.ts` (postJournalEntry), `reversal.ts` (reverseJournalEntry), `reporting.ts` (account balance, trial balance, P&L, balance sheet), `seed.ts` (starter chart of accounts), `money.ts` (BigInt helpers + normal-balance rules).
+- Tests: `lib/ledger/src/ledger.test.ts` — run with `pnpm --filter @workspace/ledger run test`.
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Money is integer minor units in `bigint` columns, surfaced as native JS `BigInt` (`mode: "bigint"`). No float/JS number ever touches a monetary path; inputs that are JS numbers are rejected at runtime.
+- Journal entries are immutable and append-only. Corrections are new reversing entries that swap debit/credit and set `reverses_entry_id`; the original is never UPDATEd/DELETEd. Reversal state is derived from that column, not a mutable flag.
+- Account balances are always derived by summing journal lines — there is no stored balance column.
+- Every table carries `org_id` and every query is scoped by it for tenant isolation. Entry + lines + audit row commit in one DB transaction.
+- Balance sheet only closes when current-period net income is folded into equity (`equityWithIncome`), since revenue/expense accounts are not yet closed to retained earnings.
 
 ## Product
 

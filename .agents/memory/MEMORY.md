@@ -1,0 +1,1 @@
+- [drizzle-kit composite constraints](drizzle-kit-composite-constraints.md) — bigint defaults break push snapshots; composite FKs must be added by hand (uniques before FKs).
