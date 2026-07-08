@@ -1,1 +1,1 @@
-- [drizzle-kit composite constraints](drizzle-kit-composite-constraints.md) — bigint defaults break push snapshots; composite FKs must be added by hand (uniques before FKs).
+- [Ledger money-path invariants](ledger-money-paths.md) — idempotency is mandatory & race-safe, AP/AR/payroll flows atomic via threaded tx, RBAC is caller-side, reconciliation is source-vs-ledger.

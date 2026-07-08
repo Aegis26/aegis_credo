@@ -21,6 +21,11 @@ export const journalEntriesTable = pgTable(
     entryDate: date("entry_date", { mode: "string" }).notNull(),
     memo: text("memo"),
     source: text("source").notNull(),
+    // Optional caller-supplied key that makes a posting idempotent within an
+    // org. When set, re-posting with the same key returns the existing entry
+    // instead of creating a duplicate. Every automated money path (imports,
+    // bill pay, invoicing, payroll) supplies one.
+    idempotencyKey: text("idempotency_key"),
     // When this entry reverses another, this points at the original entry.
     // The original is never mutated; reversal state is derived from this column.
     reversesEntryId: uuid("reverses_entry_id").references(
@@ -37,6 +42,12 @@ export const journalEntriesTable = pgTable(
     // Enables composite (org_id, id) foreign keys from journal_lines so a line
     // can never reference an entry belonging to another tenant.
     unique("journal_entries_org_id_unique").on(t.orgId, t.id),
+    // Idempotency guard: at most one entry per (org, idempotency_key). NULL
+    // keys are unconstrained (manual entries need not supply a key).
+    unique("journal_entries_org_idempotency_unique").on(
+      t.orgId,
+      t.idempotencyKey,
+    ),
   ],
 );
 

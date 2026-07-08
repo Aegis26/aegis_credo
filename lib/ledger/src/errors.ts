@@ -19,3 +19,9 @@ export class NotFoundError extends LedgerError {}
 
 /** Thrown when attempting to reverse an entry that has already been reversed. */
 export class AlreadyReversedError extends LedgerError {}
+
+/** Thrown when a user/actor lacks permission for an action in an org. */
+export class ForbiddenError extends LedgerError {}
+
+/** Thrown when import/source data is malformed or internally inconsistent. */
+export class ImportError extends LedgerError {}

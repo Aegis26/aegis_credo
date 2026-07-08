@@ -8,7 +8,8 @@
   },
   "scripts": {
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "demo:reconcile": "tsx ./src/demo-reconcile.ts"
   },
   "dependencies": {
     "@workspace/db": "workspace:*",
@@ -17,6 +18,7 @@
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "tsx": "catalog:",
     "vitest": "^3.2.4"
   }
 }

@@ -19,6 +19,15 @@ export function assertNonNegativeMoney(value: unknown, label: string): Money {
   return value;
 }
 
+/** Guard: value must be a strictly positive BigInt (rejects JS number/float). */
+export function assertPositiveMoney(value: unknown, label: string): Money {
+  const v = assertNonNegativeMoney(value, label);
+  if (v === 0n) {
+    throw new RangeError(`${label} must be greater than zero`);
+  }
+  return v;
+}
+
 /** The side on which each account type normally carries a positive balance. */
 export function normalBalanceFor(type: AccountType): NormalBalance {
   switch (type) {
