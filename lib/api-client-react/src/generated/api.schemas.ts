@@ -287,6 +287,7 @@ export interface BalanceSheetReport {
   totalEquity: string;
   netIncome: string;
   equityWithIncome: string;
+  totalLiabilitiesAndEquity: string;
   balanced: boolean;
 }
 

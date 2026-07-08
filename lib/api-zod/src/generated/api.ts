@@ -363,6 +363,7 @@ export const GetBalanceSheetReportResponse = zod.object({
   "totalEquity": zod.string(),
   "netIncome": zod.string(),
   "equityWithIncome": zod.string(),
+  "totalLiabilitiesAndEquity": zod.string(),
   "balanced": zod.boolean()
 }).describe('Money fields are decimal strings.')
 

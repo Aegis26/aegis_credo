@@ -115,6 +115,7 @@ router.get("/orgs/:orgId/reports/balance-sheet", async (req, res) => {
         totalEquity: formatMoney(totalEquity),
         netIncome: formatMoney(netIncome),
         equityWithIncome: formatMoney(equityWithIncome),
+        totalLiabilitiesAndEquity: formatMoney(totalLiabilities + equityWithIncome),
         balanced: totalAssets === totalLiabilities + equityWithIncome,
       }),
     );

@@ -133,6 +133,29 @@ READ-ONLY over client ledgers — no direct ledger writes):
   as decimal strings at the API boundary (JSON has no BigInt). Demo:
   `pnpm --filter @workspace/ledger run demo:practice`.
 
+Phase 5B adds a freelancer-facing web UI (`artifacts/books`, previewPath `/`)
+on top of the authenticated API — the UI holds NO accounting logic, only calls
+session-authenticated, org-scoped endpoints:
+
+- **UI** (`artifacts/books`): React + Vite + wouter + TanStack Query, forest-green
+  theme. Screens: login/signup, onboarding (create org + seed COA), dashboard,
+  bank connect (Plaid Link sandbox), reconciliation, invoicing, reports
+  (P&L/BS/TB), tax estimator. Current-org is a shared React Context
+  (`hooks/use-current-org.tsx`, `CurrentOrgProvider` inside the auth guard) — never
+  per-component `useState`, or isolated instances read `orgId=null`. The generated
+  client already prefixes `/api` (OpenAPI `servers.url:/api`); do NOT `setBaseUrl`.
+  Books is same-origin with the API so the `sid` session cookie is auto-sent.
+- **Thin API wrappers** (`artifacts/api-server`): `/orgs` (list/create+seed),
+  `/orgs/:orgId/{dashboard,accounts,invoices,reports/*,tax-estimate,bank/*}`.
+  Every route gates on `requireAuth` + `requirePermission` (reports.read for reads,
+  ledger.post for money ops); identity is session-derived, never client-supplied.
+  Money serialized as decimal strings. Invoice state is `open|paid` plus a separate
+  `sentAt` timestamp (there is no `draft`/`sent` status enum). Balance sheet
+  response includes `totalLiabilitiesAndEquity` so the UI never sums money itself.
+- **Plaid is optional**: without `PLAID_CLIENT_ID`/`PLAID_SECRET`, `bank/status`
+  returns `configured:false` and `bank/link-token` returns 503; the UI degrades to
+  a "not set up" message.
+
 ## User preferences
 
 _Populate as you build — explicit user instructions worth remembering across sessions._

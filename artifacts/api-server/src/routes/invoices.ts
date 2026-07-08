@@ -113,13 +113,13 @@ router.post("/orgs/:orgId/invoices", async (req, res) => {
 
     const ar = await accountByCode(orgId, "1100");
     const revenueAccountId =
-      body.revenueAccountId ?? (await accountByCode(orgId, "4100")).id;
+      body.revenueAccountId || (await accountByCode(orgId, "4100")).id;
 
     const { invoice } = await createInvoice(
       orgId,
       {
         customer: body.customer,
-        invoiceNumber: body.invoiceNumber ?? undefined,
+        invoiceNumber: body.invoiceNumber || undefined,
         invoiceDate: body.invoiceDate,
         dueDate: body.dueDate,
         amount: parseMoney(body.amount, "invoice.amount"),

@@ -1353,6 +1353,8 @@ components:
           type: string
         equityWithIncome:
           type: string
+        totalLiabilitiesAndEquity:
+          type: string
         balanced:
           type: boolean
       required:
@@ -1364,6 +1366,7 @@ components:
         - totalEquity
         - netIncome
         - equityWithIncome
+        - totalLiabilitiesAndEquity
         - balanced
     BankTransaction:
       type: object

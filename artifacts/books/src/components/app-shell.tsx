@@ -1,0 +1,221 @@
+import { useState } from "react";
+import { Link, useLocation } from "wouter";
+import { 
+  useGetSession, 
+  useLogout 
+} from "@workspace/api-client-react";
+import { useCurrentOrg } from "@/hooks/use-current-org";
+import { Button } from "@/components/ui/button";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Spinner } from "@/components/ui/spinner";
+import {
+  LayoutDashboard,
+  Landmark,
+  FileCheck,
+  FileText,
+  LineChart,
+  Calculator,
+  LogOut,
+  Menu,
+} from "lucide-react";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+
+export function AppShell({ children }: { children: React.ReactNode }) {
+  const [location] = useLocation();
+  const { data: session } = useGetSession();
+  const { orgId, setOrg, orgs, isLoading: isLoadingOrgs } = useCurrentOrg();
+  const logout = useLogout();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // If loading orgs, show spinner
+  if (isLoadingOrgs) {
+    return (
+      <div className="flex items-center justify-center min-h-[100dvh] bg-background">
+        <Spinner className="w-8 h-8 text-primary" />
+      </div>
+    );
+  }
+
+  const navigation = [
+    { name: "Dashboard", href: "/", icon: LayoutDashboard },
+    { name: "Bank", href: "/bank", icon: Landmark },
+    { name: "Reconcile", href: "/reconcile", icon: FileCheck },
+    { name: "Invoices", href: "/invoices", icon: FileText },
+    { name: "Reports", href: "/reports", icon: LineChart },
+    { name: "Taxes", href: "/taxes", icon: Calculator },
+  ];
+
+  const handleLogout = () => {
+    logout.mutate(undefined, {
+      onSuccess: () => {
+        window.location.href = "/login";
+      }
+    });
+  };
+
+  const NavLinks = () => (
+    <>
+      {navigation.map((item) => {
+        const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
+        return (
+          <Link 
+            key={item.name} 
+            href={item.href}
+            onClick={() => setMobileMenuOpen(false)}
+            className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              isActive 
+                ? "bg-primary text-primary-foreground" 
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+          >
+            <item.icon className="w-4 h-4" />
+            {item.name}
+          </Link>
+        );
+      })}
+    </>
+  );
+
+  return (
+    <div className="min-h-[100dvh] flex flex-col md:flex-row bg-background">
+      {/* Sidebar for desktop */}
+      <aside className="hidden md:flex flex-col w-64 border-r border-border bg-card">
+        <div className="p-4 border-b border-border flex items-center justify-between">
+          <div className="flex items-center gap-2 font-serif text-xl font-semibold text-primary">
+            Books
+          </div>
+        </div>
+        
+        {orgs.length > 0 && (
+          <div className="p-4 border-b border-border">
+            <Select value={orgId || ""} onValueChange={setOrg}>
+              <SelectTrigger className="w-full bg-background">
+                <SelectValue placeholder="Select Organization" />
+              </SelectTrigger>
+              <SelectContent>
+                {orgs.map((org) => (
+                  <SelectItem key={org.id} value={org.id}>
+                    {org.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+          <NavLinks />
+        </nav>
+
+        <div className="p-4 border-t border-border">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="w-full justify-start gap-2 px-2">
+                <Avatar className="w-6 h-6">
+                  <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                    {session?.user?.name?.charAt(0).toUpperCase() || session?.user?.email?.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 text-left truncate text-sm">
+                  {session?.user?.name || session?.user?.email}
+                </div>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">{session?.user?.name}</p>
+                  <p className="text-xs leading-none text-muted-foreground">{session?.user?.email}</p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive cursor-pointer">
+                <LogOut className="w-4 h-4 mr-2" />
+                Log out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </aside>
+
+      {/* Mobile header */}
+      <header className="md:hidden flex items-center justify-between p-4 border-b border-border bg-card">
+        <div className="flex items-center gap-2 font-serif text-xl font-semibold text-primary">
+          Books
+        </div>
+        <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <Menu className="w-5 h-5" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-64 p-0 flex flex-col">
+            <div className="p-4 border-b border-border">
+              <div className="font-serif text-xl font-semibold text-primary mb-4">
+                Books
+              </div>
+              {orgs.length > 0 && (
+                <Select value={orgId || ""} onValueChange={setOrg}>
+                  <SelectTrigger className="w-full bg-background">
+                    <SelectValue placeholder="Select Organization" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {orgs.map((org) => (
+                      <SelectItem key={org.id} value={org.id}>
+                        {org.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+            
+            <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+              <NavLinks />
+            </nav>
+
+            <div className="p-4 border-t border-border">
+              <div className="flex items-center gap-2 mb-4 px-2">
+                <Avatar className="w-8 h-8">
+                  <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                    {session?.user?.name?.charAt(0).toUpperCase() || session?.user?.email?.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 text-left truncate text-sm">
+                  <p className="font-medium">{session?.user?.name}</p>
+                  <p className="text-xs text-muted-foreground">{session?.user?.email}</p>
+                </div>
+              </div>
+              <Button variant="destructive" className="w-full justify-start" onClick={handleLogout}>
+                <LogOut className="w-4 h-4 mr-2" />
+                Log out
+              </Button>
+            </div>
+          </SheetContent>
+        </Sheet>
+      </header>
+
+      {/* Main content */}
+      <main className="flex-1 overflow-y-auto">
+        <div className="max-w-6xl mx-auto p-4 md:p-8">
+          {children}
+        </div>
+      </main>
+    </div>
+  );
+}

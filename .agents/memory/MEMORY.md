@@ -2,3 +2,4 @@
 - [Orval params collision](orval-params-collision.md) — endpoints with BOTH path+query params make `<Op>Params` collide across zod client & types; fix with explicit re-export in the api-zod barrel.
 - [drizzle-kit composite constraints](drizzle-kit-composite-constraints.md) — declare composite `(org_id,id)` uniques as `.on(t.id,t.orgId)` (table-ordinal order) or `push` false-diffs & prompts to truncate forever; BigInt default snapshot bug too.
 - [Orval zod string-format pitfall](orval-zod-string-formats.md) — never use `format: email` in openapi.yaml; orval emits zod v4 `zod.email()` which breaks against the repo's resolved zod v3. minLength/maxLength are safe.
+- [RHF empty-string defaults](rhf-empty-string-defaults.md) — react-hook-form sends blank optionals as `""`; server `??` fallbacks don't catch them → 500. Use `||`. UI-only bug curl can't repro = empty form fields.
