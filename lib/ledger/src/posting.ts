@@ -2,6 +2,8 @@ import { and, eq, inArray } from "drizzle-orm";
 import {
   db,
   accountsTable,
+  organizationsTable,
+  dimensionsTable,
   journalEntriesTable,
   journalLinesTable,
   auditLogTable,
@@ -22,6 +24,16 @@ export interface JournalLineInput {
   debit?: Money;
   credit?: Money;
   memo?: string;
+  /** Optional reporting dimensions (must belong to the org and match their kind). */
+  classId?: string;
+  departmentId?: string;
+  locationId?: string;
+  /**
+   * Set when this line represents activity with another entity in the same
+   * parent group (intercompany). Must be a different org that shares this org's
+   * group. Consolidation eliminates these lines so they net to zero on the group.
+   */
+  counterpartyOrgId?: string;
 }
 
 export interface JournalEntryInput {
@@ -63,6 +75,10 @@ interface NormalizedLine {
   debit: Money;
   credit: Money;
   memo?: string;
+  classId?: string;
+  departmentId?: string;
+  locationId?: string;
+  counterpartyOrgId?: string;
 }
 
 /** Validate and normalize input lines, enforcing balancing and integer money. */
@@ -94,7 +110,16 @@ function validateLines(lines: JournalLineInput[]): NormalizedLine[] {
 
     totalDebit += debit;
     totalCredit += credit;
-    normalized.push({ accountId: line.accountId, debit, credit, memo: line.memo });
+    normalized.push({
+      accountId: line.accountId,
+      debit,
+      credit,
+      memo: line.memo,
+      classId: line.classId,
+      departmentId: line.departmentId,
+      locationId: line.locationId,
+      counterpartyOrgId: line.counterpartyOrgId,
+    });
   }
 
   if (totalDebit !== totalCredit) {
@@ -178,6 +203,9 @@ export async function postJournalEntry(
       );
     }
 
+    await validateDimensions(tx, orgId, normalized);
+    await validateCounterparties(tx, orgId, normalized);
+
     const inserted = await tx
       .insert(journalEntriesTable)
       .values({
@@ -214,6 +242,10 @@ export async function postJournalEntry(
           debit: l.debit,
           credit: l.credit,
           memo: l.memo,
+          classId: l.classId,
+          departmentId: l.departmentId,
+          locationId: l.locationId,
+          counterpartyOrgId: l.counterpartyOrgId,
         })),
       )
       .returning();
@@ -232,6 +264,99 @@ export async function postJournalEntry(
   };
 
   return options.tx ? run(options.tx) : db.transaction(run);
+}
+
+/**
+ * Validate any dimension tags on the lines: each referenced dimension must
+ * belong to this org and match the kind of the slot it was placed in (a class
+ * id in classId, a department id in departmentId, a location id in locationId).
+ * Only runs when at least one dimension is set, keeping the common path cheap.
+ */
+async function validateDimensions(
+  tx: LedgerTx,
+  orgId: string,
+  lines: NormalizedLine[],
+): Promise<void> {
+  const wanted = new Map<string, "class" | "department" | "location">();
+  for (const l of lines) {
+    if (l.classId) wanted.set(l.classId, "class");
+    if (l.departmentId) wanted.set(l.departmentId, "department");
+    if (l.locationId) wanted.set(l.locationId, "location");
+  }
+  if (wanted.size === 0) return;
+
+  const rows = await tx
+    .select({ id: dimensionsTable.id, type: dimensionsTable.type })
+    .from(dimensionsTable)
+    .where(
+      and(
+        eq(dimensionsTable.orgId, orgId),
+        inArray(dimensionsTable.id, [...wanted.keys()]),
+      ),
+    );
+  const found = new Map(rows.map((r) => [r.id, r.type]));
+
+  for (const [id, expected] of wanted) {
+    const actual = found.get(id);
+    if (!actual) {
+      throw new NotFoundError(`Dimension ${id} does not exist for this org.`);
+    }
+    if (actual !== expected) {
+      throw new InvalidLineError(
+        `Dimension ${id} is a "${actual}" but was used as a "${expected}".`,
+      );
+    }
+  }
+}
+
+/**
+ * Validate intercompany counterparties: a counterparty must be a different org
+ * that shares this org's parent group. Enforcing "same group" keeps the
+ * intercompany tag meaningful so consolidation can eliminate against it.
+ */
+async function validateCounterparties(
+  tx: LedgerTx,
+  orgId: string,
+  lines: NormalizedLine[],
+): Promise<void> {
+  const counterparties = new Set<string>();
+  for (const l of lines) {
+    if (l.counterpartyOrgId) counterparties.add(l.counterpartyOrgId);
+  }
+  if (counterparties.size === 0) return;
+
+  if (counterparties.has(orgId)) {
+    throw new InvalidLineError(
+      "counterpartyOrgId must be a different org (an entity cannot transact with itself).",
+    );
+  }
+
+  const ids = [orgId, ...counterparties];
+  const rows = await tx
+    .select({ id: organizationsTable.id, groupId: organizationsTable.groupId })
+    .from(organizationsTable)
+    .where(inArray(organizationsTable.id, ids));
+  const groupOf = new Map(rows.map((r) => [r.id, r.groupId]));
+
+  const ourGroup = groupOf.get(orgId);
+  if (!ourGroup) {
+    throw new InvalidLineError(
+      "Intercompany lines require this org to belong to a group.",
+    );
+  }
+  for (const cp of counterparties) {
+    const theirGroup = groupOf.get(cp);
+    if (theirGroup == null) {
+      throw new NotFoundError(
+        `Counterparty org ${cp} does not exist or is not in a group.`,
+      );
+    }
+    if (theirGroup !== ourGroup) {
+      throw new InvalidLineError(
+        `Counterparty org ${cp} is not in the same group as ${orgId}.`,
+      );
+    }
+  }
 }
 
 /** Load an entry + its lines by idempotency key within a transaction. */

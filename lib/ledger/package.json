@@ -9,7 +9,8 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "demo:reconcile": "tsx ./src/demo-reconcile.ts"
+    "demo:reconcile": "tsx ./src/demo-reconcile.ts",
+    "demo:consolidate": "tsx ./src/demo-consolidate.ts"
   },
   "dependencies": {
     "@workspace/db": "workspace:*",

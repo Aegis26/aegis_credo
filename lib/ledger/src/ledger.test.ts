@@ -35,6 +35,23 @@ import {
   postPayrollRun,
   importFile,
   type ImportFile,
+  ApprovalRequiredError,
+  createApprovalRule,
+  decideApproval,
+  createGroup,
+  addOrgToGroup,
+  listOrgsInGroup,
+  getConsolidatedTrialBalance,
+  getConsolidatedProfitAndLoss,
+  getConsolidatedBalanceSheet,
+  createDimension,
+  listDimensions,
+  runReport,
+  saveReportDefinition,
+  runSavedReport,
+  createBudget,
+  setBudgetLine,
+  getBudgetVsActual,
 } from "./index";
 import type { SeededOrg } from "./seed";
 
@@ -814,5 +831,397 @@ describe("QBO/Xero importer + reconciliation (DoD: reproduces trial balance exac
 
     expect(entriesAfterSecond.length).toBe(entriesAfterFirst.length);
     expect(report.matched).toBe(true);
+  });
+});
+
+describe("configurable approval workflows (Phase 3)", () => {
+  it("lets small bills through and blocks/allows large bills by rule", async () => {
+    const local = await seedOrganization("Approval Co");
+    const orgId = local.organization.id;
+    const { byCode } = local;
+
+    await createApprovalRule(orgId, {
+      entityType: "bill",
+      threshold: 100_000n,
+    });
+
+    // Below threshold: no approval required, pays straight through.
+    const small = await createBill(orgId, {
+      vendor: "Small Vendor",
+      billDate: "2026-01-05",
+      dueDate: "2026-02-05",
+      amount: 50_000n,
+      apAccountId: byCode["2000"].id,
+      expenseAccountId: byCode["5100"].id,
+    });
+    expect(small.approval).toBeUndefined();
+    await expect(
+      payBill(orgId, {
+        billId: small.bill.id,
+        paymentDate: "2026-01-10",
+        amount: 50_000n,
+        cashAccountId: byCode["1000"].id,
+      }),
+    ).resolves.toBeDefined();
+
+    // At/above threshold: pending approval created, payment blocked.
+    const big = await createBill(orgId, {
+      vendor: "Big Vendor",
+      billDate: "2026-01-06",
+      dueDate: "2026-02-06",
+      amount: 250_000n,
+      apAccountId: byCode["2000"].id,
+      expenseAccountId: byCode["5100"].id,
+    });
+    expect(big.approval).toBeDefined();
+    expect(big.approval?.status).toBe("pending");
+
+    await expect(
+      payBill(orgId, {
+        billId: big.bill.id,
+        paymentDate: "2026-01-11",
+        amount: 250_000n,
+        cashAccountId: byCode["1000"].id,
+      }),
+    ).rejects.toBeInstanceOf(ApprovalRequiredError);
+
+    // After approval, payment succeeds.
+    await decideApproval(orgId, big.approval!.id, "approved", {
+      decidedBy: undefined,
+    });
+    await expect(
+      payBill(orgId, {
+        billId: big.bill.id,
+        paymentDate: "2026-01-12",
+        amount: 250_000n,
+        cashAccountId: byCode["1000"].id,
+      }),
+    ).resolves.toBeDefined();
+  });
+
+  it("keeps blocking a rejected bill", async () => {
+    const local = await seedOrganization("Reject Co");
+    const orgId = local.organization.id;
+    const { byCode } = local;
+
+    await createApprovalRule(orgId, {
+      entityType: "bill",
+      threshold: 10_000n,
+    });
+    const bill = await createBill(orgId, {
+      vendor: "Rejected Vendor",
+      billDate: "2026-03-01",
+      dueDate: "2026-04-01",
+      amount: 20_000n,
+      apAccountId: byCode["2000"].id,
+      expenseAccountId: byCode["5100"].id,
+    });
+    await decideApproval(orgId, bill.approval!.id, "rejected");
+
+    await expect(
+      payBill(orgId, {
+        billId: bill.bill.id,
+        paymentDate: "2026-03-05",
+        amount: 20_000n,
+        cashAccountId: byCode["1000"].id,
+      }),
+    ).rejects.toBeInstanceOf(ApprovalRequiredError);
+  });
+});
+
+describe("multi-entity consolidation with intercompany elimination (Phase 3)", () => {
+  it("consolidates parent + 2 children and eliminates intercompany activity", async () => {
+    const parent = await seedOrganization("Parent Co");
+    const child1 = await seedOrganization("Child One");
+    const child2 = await seedOrganization("Child Two");
+
+    const group = await createGroup("Acme Group");
+    await addOrgToGroup(group.id, parent.organization.id);
+    await addOrgToGroup(group.id, child1.organization.id);
+    await addOrgToGroup(group.id, child2.organization.id);
+
+    expect((await listOrgsInGroup(group.id)).sort()).toEqual(
+      [
+        parent.organization.id,
+        child1.organization.id,
+        child2.organization.id,
+      ].sort(),
+    );
+
+    // External revenue in each entity (cash sales). Total = 200,000.
+    await postJournalEntry(
+      parent.organization.id,
+      {
+        entryDate: "2026-01-15",
+        memo: "External sale",
+        source: "manual",
+        lines: [
+          { accountId: parent.byCode["1000"].id, debit: 100_000n },
+          { accountId: parent.byCode["4000"].id, credit: 100_000n },
+        ],
+      },
+      { idempotencyKey: "p-ext" },
+    );
+    await postJournalEntry(
+      child1.organization.id,
+      {
+        entryDate: "2026-01-15",
+        memo: "External sale",
+        source: "manual",
+        lines: [
+          { accountId: child1.byCode["1000"].id, debit: 60_000n },
+          { accountId: child1.byCode["4000"].id, credit: 60_000n },
+        ],
+      },
+      { idempotencyKey: "c1-ext" },
+    );
+    await postJournalEntry(
+      child2.organization.id,
+      {
+        entryDate: "2026-01-15",
+        memo: "External sale",
+        source: "manual",
+        lines: [
+          { accountId: child2.byCode["1000"].id, debit: 40_000n },
+          { accountId: child2.byCode["4000"].id, credit: 40_000n },
+        ],
+      },
+      { idempotencyKey: "c2-ext" },
+    );
+
+    // Intercompany: parent bills child1 for a 50,000 service. Both sides tagged
+    // with the counterparty so consolidation can eliminate them.
+    await postJournalEntry(
+      parent.organization.id,
+      {
+        entryDate: "2026-01-20",
+        memo: "Intercompany service to Child One",
+        source: "manual",
+        lines: [
+          {
+            accountId: parent.byCode["1900"].id,
+            debit: 50_000n,
+            counterpartyOrgId: child1.organization.id,
+          },
+          {
+            accountId: parent.byCode["4100"].id,
+            credit: 50_000n,
+            counterpartyOrgId: child1.organization.id,
+          },
+        ],
+      },
+      { idempotencyKey: "p-ic" },
+    );
+    await postJournalEntry(
+      child1.organization.id,
+      {
+        entryDate: "2026-01-20",
+        memo: "Intercompany service from Parent",
+        source: "manual",
+        lines: [
+          {
+            accountId: child1.byCode["5100"].id,
+            debit: 50_000n,
+            counterpartyOrgId: parent.organization.id,
+          },
+          {
+            accountId: child1.byCode["2900"].id,
+            credit: 50_000n,
+            counterpartyOrgId: parent.organization.id,
+          },
+        ],
+      },
+      { idempotencyKey: "c1-ic" },
+    );
+
+    const tb = await getConsolidatedTrialBalance(group.id);
+    expect(tb.entities).toHaveLength(3);
+    // Consolidated trial balance still balances.
+    expect(tb.totalDebit).toBe(tb.totalCredit);
+    expect(tb.difference).toBe(0n);
+    // Intercompany accounts fully eliminated.
+    const con = new Map(tb.consolidated.map((r) => [r.code, r]));
+    expect(con.get("1900")?.balance ?? 0n).toBe(0n);
+    expect(con.get("2900")?.balance ?? 0n).toBe(0n);
+    expect(con.get("4100")?.balance ?? 0n).toBe(0n);
+    // The combined (pre-elimination) view still shows the intercompany 50,000.
+    const combined = new Map(tb.combined.map((r) => [r.code, r]));
+    expect(combined.get("1900")?.balance).toBe(50_000n);
+    expect(tb.eliminations.length).toBeGreaterThan(0);
+
+    const pl = await getConsolidatedProfitAndLoss(group.id);
+    // Only external revenue survives; intercompany revenue & expense removed.
+    expect(pl.revenue).toBe(200_000n);
+    expect(pl.expenses).toBe(0n);
+    expect(pl.netIncome).toBe(200_000n);
+
+    const bs = await getConsolidatedBalanceSheet(group.id);
+    expect(bs.assets).toBe(200_000n); // cash only; IC receivable eliminated
+    expect(bs.liabilities).toBe(0n); // IC payable eliminated
+    expect(bs.equityWithIncome).toBe(200_000n);
+    expect(bs.balances).toBe(true);
+  });
+});
+
+describe("reporting dimensions + custom report builder (Phase 3)", () => {
+  it("groups and filters by dimension and reconciles to the trial balance", async () => {
+    const local = await seedOrganization("Dimension Co");
+    const orgId = local.organization.id;
+    const { byCode } = local;
+
+    const west = await createDimension(orgId, "location", "West");
+    const east = await createDimension(orgId, "location", "East");
+    const sales = await createDimension(orgId, "department", "Sales");
+    // Idempotent create returns the same row.
+    const westAgain = await createDimension(orgId, "location", "West");
+    expect(westAgain.id).toBe(west.id);
+    expect(await listDimensions(orgId, "location")).toHaveLength(2);
+
+    await postJournalEntry(
+      orgId,
+      {
+        entryDate: "2026-02-01",
+        memo: "West sale",
+        source: "manual",
+        lines: [
+          {
+            accountId: byCode["1000"].id,
+            debit: 30_000n,
+            locationId: west.id,
+            departmentId: sales.id,
+          },
+          {
+            accountId: byCode["4000"].id,
+            credit: 30_000n,
+            locationId: west.id,
+            departmentId: sales.id,
+          },
+        ],
+      },
+      { idempotencyKey: "dim-west" },
+    );
+    await postJournalEntry(
+      orgId,
+      {
+        entryDate: "2026-02-02",
+        memo: "East sale",
+        source: "manual",
+        lines: [
+          {
+            accountId: byCode["1000"].id,
+            debit: 20_000n,
+            locationId: east.id,
+          },
+          {
+            accountId: byCode["4000"].id,
+            credit: 20_000n,
+            locationId: east.id,
+          },
+        ],
+      },
+      { idempotencyKey: "dim-east" },
+    );
+
+    const tb = await getTrialBalance(orgId);
+    const report = await runReport({ orgId, groupBy: ["location"] });
+    // Every line is counted exactly once, so totals reconcile to trial balance.
+    expect(report.totalDebit).toBe(tb.totalDebit);
+    expect(report.totalCredit).toBe(tb.totalCredit);
+    expect(report.rows).toHaveLength(2);
+
+    // Filter to a single location.
+    const westOnly = await runReport({
+      orgId,
+      groupBy: ["location"],
+      filters: { locationIds: [west.id] },
+    });
+    expect(westOnly.rows).toHaveLength(1);
+    expect(westOnly.rows[0].keys.location).toBe("West");
+    expect(westOnly.totalDebit).toBe(30_000n);
+
+    // Saved definitions round-trip and re-run.
+    const def = await saveReportDefinition(orgId, "By location", {
+      orgId,
+      groupBy: ["location"],
+    });
+    const rerun = await runSavedReport(orgId, def.id);
+    expect(rerun.totalDebit).toBe(tb.totalDebit);
+  });
+
+  it("rejects a report definition that points at another tenant", async () => {
+    const orgA = await seedOrganization("Report Tenant A");
+    const orgB = await seedOrganization("Report Tenant B");
+    await expect(
+      saveReportDefinition(orgA.organization.id, "Leak", {
+        orgId: orgB.organization.id,
+        groupBy: ["account"],
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+  });
+});
+
+describe("budget vs actual (Phase 3)", () => {
+  it("compares planned figures against ledger-derived actuals", async () => {
+    const local = await seedOrganization("Budget Co");
+    const orgId = local.organization.id;
+    const { byCode } = local;
+
+    const budget = await createBudget(orgId, {
+      name: "2026 Q1",
+      periodStart: "2026-01-01",
+      periodEnd: "2026-03-31",
+    });
+    await setBudgetLine(orgId, budget.id, byCode["4000"].id, 100_000n);
+    await setBudgetLine(orgId, budget.id, byCode["5100"].id, 40_000n);
+
+    // Actuals inside the window.
+    await postJournalEntry(
+      orgId,
+      {
+        entryDate: "2026-02-10",
+        memo: "Revenue",
+        source: "manual",
+        lines: [
+          { accountId: byCode["1000"].id, debit: 120_000n },
+          { accountId: byCode["4000"].id, credit: 120_000n },
+        ],
+      },
+      { idempotencyKey: "bud-rev" },
+    );
+    await postJournalEntry(
+      orgId,
+      {
+        entryDate: "2026-02-15",
+        memo: "Rent",
+        source: "manual",
+        lines: [
+          { accountId: byCode["5100"].id, debit: 30_000n },
+          { accountId: byCode["1000"].id, credit: 30_000n },
+        ],
+      },
+      { idempotencyKey: "bud-rent" },
+    );
+    // Outside the window — must not count.
+    await postJournalEntry(
+      orgId,
+      {
+        entryDate: "2026-05-01",
+        memo: "Out of period",
+        source: "manual",
+        lines: [
+          { accountId: byCode["5100"].id, debit: 99_999n },
+          { accountId: byCode["1000"].id, credit: 99_999n },
+        ],
+      },
+      { idempotencyKey: "bud-out" },
+    );
+
+    const bva = await getBudgetVsActual(orgId, budget.id);
+    const byAccount = new Map(bva.rows.map((r) => [r.code, r]));
+    expect(byAccount.get("4000")?.budgeted).toBe(100_000n);
+    expect(byAccount.get("4000")?.actual).toBe(120_000n);
+    expect(byAccount.get("4000")?.variance).toBe(20_000n);
+    expect(byAccount.get("5100")?.actual).toBe(30_000n); // out-of-period excluded
+    expect(byAccount.get("5100")?.variance).toBe(-10_000n);
   });
 });

@@ -14,6 +14,11 @@ import {
   type PostedEntry,
   type LedgerTx,
 } from "./posting";
+import { evaluateApproval, requireApproved, getApproval } from "./approvals";
+import type { Approval } from "@workspace/db";
+
+/** The entity type used for bill approval rules. */
+export const BILL_APPROVAL_ENTITY = "bill";
 
 export interface CreateBillInput {
   vendor: string;
@@ -32,6 +37,8 @@ export interface CreateBillInput {
 export interface CreatedBill {
   bill: Bill;
   posted: PostedEntry;
+  /** Present when an approval rule requires sign-off before this bill is paid. */
+  approval?: Approval;
 }
 
 /**
@@ -64,7 +71,13 @@ export async function createBill(
           throw new NotFoundError("Bill has no posted entry.");
         }
         const posted = await loadPostedEntry(orgId, existing.postedEntryId, tx);
-        return { bill: existing, posted };
+        const approval = await getApproval(
+          orgId,
+          BILL_APPROVAL_ENTITY,
+          existing.id,
+          tx,
+        );
+        return { bill: existing, posted, approval };
       }
     }
 
@@ -104,7 +117,17 @@ export async function createBill(
       .where(eq(billsTable.id, bill.id))
       .returning();
 
-    return { bill: updated, posted };
+    // If an approval rule applies to a bill of this size, create a pending
+    // approval atomically with the bill. payBill blocks until it is granted.
+    const { approval } = await evaluateApproval(
+      orgId,
+      BILL_APPROVAL_ENTITY,
+      bill.id,
+      amount,
+      { actor, tx },
+    );
+
+    return { bill: updated, posted, approval };
   });
 }
 
@@ -144,6 +167,10 @@ export async function payBill(
     if (!bill) {
       throw new NotFoundError(`Bill ${input.billId} not found for org.`);
     }
+
+    // Block payment when a rule requires approval that has not been granted.
+    // Passes silently when no rule applied to this bill.
+    await requireApproved(orgId, BILL_APPROVAL_ENTITY, bill.id, tx);
 
     if (input.externalId) {
       const [existing] = await tx

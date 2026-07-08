@@ -1,5 +1,7 @@
+export * from "./groups";
 export * from "./organizations";
 export * from "./accounts";
+export * from "./dimensions";
 export * from "./journal-entries";
 export * from "./journal-lines";
 export * from "./bank-transactions";
@@ -10,3 +12,6 @@ export * from "./import-batches";
 export * from "./bills";
 export * from "./invoices";
 export * from "./payroll-runs";
+export * from "./approvals";
+export * from "./budgets";
+export * from "./report-definitions";

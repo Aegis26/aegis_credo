@@ -25,3 +25,9 @@ export class ForbiddenError extends LedgerError {}
 
 /** Thrown when import/source data is malformed or internally inconsistent. */
 export class ImportError extends LedgerError {}
+
+/**
+ * Thrown when an action is blocked because a configured approval rule requires
+ * sign-off that has not been granted (e.g. paying a bill over the threshold).
+ */
+export class ApprovalRequiredError extends LedgerError {}
