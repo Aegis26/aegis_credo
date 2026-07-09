@@ -17,4 +17,5 @@ export interface BankTransaction {
   matched: boolean;
   matchedEntryId?: string | null;
   accountId?: string | null;
+  suggestedAccountCode?: string | null;
 }

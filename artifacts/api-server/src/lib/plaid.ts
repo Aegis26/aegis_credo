@@ -78,6 +78,27 @@ export async function getInstitutionName(
   }
 }
 
+export interface PlaidAccountBalance {
+  /** Plaid account type, e.g. "depository", "credit". */
+  type: string;
+  /** Current balance as Plaid reports it (a JS number), or null if unknown. */
+  current: number | null;
+}
+
+/**
+ * Fetch each connected account's current balance. The caller decides which
+ * accounts count toward opening cash and converts the numbers to minor units.
+ */
+export async function getAccountBalances(
+  accessToken: string,
+): Promise<PlaidAccountBalance[]> {
+  const res = await plaid().accountsBalanceGet({ access_token: accessToken });
+  return res.data.accounts.map((a) => ({
+    type: String(a.type),
+    current: a.balances.current ?? null,
+  }));
+}
+
 export interface SyncedTransactions {
   /** Newly added transactions since the cursor. */
   added: Transaction[];

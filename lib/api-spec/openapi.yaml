@@ -1389,6 +1389,9 @@ components:
         accountId:
           type: string
           nullable: true
+        suggestedAccountCode:
+          type: string
+          nullable: true
       required: [id, txnDate, amount, matched]
     BankTransactionList:
       type: object

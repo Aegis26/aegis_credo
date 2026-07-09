@@ -42,9 +42,8 @@ export default function Reconcile() {
   const categorize = useCategorizeBankTransaction();
   const [selectedAccounts, setSelectedAccounts] = useState<Record<string, string>>({});
 
-  const handleCategorize = async (txnId: string) => {
+  const handleCategorize = async (txnId: string, accountId: string) => {
     if (!orgId) return;
-    const accountId = selectedAccounts[txnId];
     if (!accountId) return;
 
     try {
@@ -112,7 +111,23 @@ export default function Reconcile() {
               {transactions.map((txn) => {
                 const isNegative = txn.amount.startsWith("-");
                 const absAmount = txn.amount.replace("-", "");
-                
+
+                // Money out is categorized against an expense; money in against
+                // revenue. Cash / A/R / A/P etc. are never a "category" here.
+                const categoryAccounts = accounts.filter((acc) =>
+                  isNegative ? acc.type === "expense" : acc.type === "revenue",
+                );
+
+                // Pre-select the suggested account (by code) unless the user has
+                // already picked one for this row.
+                const suggestedId = txn.suggestedAccountCode
+                  ? categoryAccounts.find(
+                      (acc) => acc.code === txn.suggestedAccountCode,
+                    )?.id ?? ""
+                  : "";
+                const effectiveAccountId =
+                  selectedAccounts[txn.id] ?? suggestedId;
+
                 return (
                   <div key={txn.id} className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-lg border border-border bg-card/50 transition-colors hover:bg-card">
                     <div className="flex-1">
@@ -126,14 +141,14 @@ export default function Reconcile() {
 
                     <div className="flex items-center gap-2 sm:w-80">
                       <Select 
-                        value={selectedAccounts[txn.id] || ""} 
+                        value={effectiveAccountId} 
                         onValueChange={(val) => setSelectedAccounts({ ...selectedAccounts, [txn.id]: val })}
                       >
                         <SelectTrigger className="w-full bg-background h-9 text-sm">
                           <SelectValue placeholder="Select account..." />
                         </SelectTrigger>
                         <SelectContent>
-                          {accounts.map((acc) => (
+                          {categoryAccounts.map((acc) => (
                             <SelectItem key={acc.id} value={acc.id}>
                               {acc.code} - {acc.name}
                             </SelectItem>
@@ -142,8 +157,8 @@ export default function Reconcile() {
                       </Select>
                       <Button 
                         size="sm"
-                        disabled={!selectedAccounts[txn.id] || categorize.isPending}
-                        onClick={() => handleCategorize(txn.id)}
+                        disabled={!effectiveAccountId || categorize.isPending}
+                        onClick={() => handleCategorize(txn.id, effectiveAccountId)}
                         className="h-9 w-9 p-0"
                       >
                         <ChevronRight className="w-4 h-4" />

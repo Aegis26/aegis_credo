@@ -19,4 +19,5 @@ export * from "./close";
 export * from "./export";
 export * from "./batch";
 export * from "./dashboard";
+export * from "./plaid-category-map";
 export { serializeForAudit } from "./audit";

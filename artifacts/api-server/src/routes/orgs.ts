@@ -133,8 +133,11 @@ router.get("/orgs/:orgId/dashboard", async (req, res) => {
     }
     const netIncome = revenue - expenses;
 
-    // Recent ledger activity: latest entries with the entry's total debit as a
-    // single representative amount (debits == credits for a balanced entry).
+    // Recent ledger activity. The representative amount is the entry's SIGNED
+    // impact on cash (cash debits − cash credits) when the entry touches cash —
+    // so money out reads as a negative outflow and money in as a positive inflow
+    // instead of every entry showing an always-positive total debit. Entries
+    // that don't touch cash (e.g. an invoice) fall back to the total debit.
     const entries = await db
       .select({
         id: journalEntriesTable.id,
@@ -147,15 +150,24 @@ router.get("/orgs/:orgId/dashboard", async (req, res) => {
       .orderBy(desc(journalEntriesTable.postedAt))
       .limit(8);
 
-    const totals = new Map<string, bigint>();
+    const activity = new Map<string, bigint>();
     if (entries.length > 0) {
       const ids = entries.map((e) => e.id);
       const sums = await db
         .select({
           entryId: journalLinesTable.entryId,
-          total: sql<string>`COALESCE(SUM(${journalLinesTable.debit}), 0)`,
+          totalDebit: sql<string>`COALESCE(SUM(${journalLinesTable.debit}), 0)`,
+          cashNet: sql<string>`COALESCE(SUM(CASE WHEN ${accountsTable.code} = '1000' THEN ${journalLinesTable.debit} - ${journalLinesTable.credit} ELSE 0 END), 0)`,
+          cashLines: sql<string>`COALESCE(SUM(CASE WHEN ${accountsTable.code} = '1000' THEN 1 ELSE 0 END), 0)`,
         })
         .from(journalLinesTable)
+        .innerJoin(
+          accountsTable,
+          and(
+            eq(accountsTable.id, journalLinesTable.accountId),
+            eq(accountsTable.orgId, journalLinesTable.orgId),
+          ),
+        )
         .where(
           and(
             eq(journalLinesTable.orgId, orgId),
@@ -163,7 +175,13 @@ router.get("/orgs/:orgId/dashboard", async (req, res) => {
           ),
         )
         .groupBy(journalLinesTable.entryId);
-      for (const s of sums) totals.set(s.entryId, BigInt(s.total));
+      for (const s of sums) {
+        const touchesCash = BigInt(s.cashLines) > 0n;
+        activity.set(
+          s.entryId,
+          touchesCash ? BigInt(s.cashNet) : BigInt(s.totalDebit),
+        );
+      }
     }
 
     res.json(
@@ -179,7 +197,7 @@ router.get("/orgs/:orgId/dashboard", async (req, res) => {
           entryDate: e.entryDate,
           memo: e.memo,
           source: e.source,
-          amount: formatMoney(totals.get(e.id) ?? 0n),
+          amount: formatMoney(activity.get(e.id) ?? 0n),
         })),
       }),
     );

@@ -389,7 +389,8 @@ export const ListBankTransactionsResponse = zod.object({
   "amount": zod.string(),
   "matched": zod.boolean(),
   "matchedEntryId": zod.string().nullish(),
-  "accountId": zod.string().nullish()
+  "accountId": zod.string().nullish(),
+  "suggestedAccountCode": zod.string().nullish()
 }).describe('amount is a signed decimal string (negative = money out).'))
 })
 
@@ -414,7 +415,8 @@ export const CategorizeBankTransactionResponse = zod.object({
   "amount": zod.string(),
   "matched": zod.boolean(),
   "matchedEntryId": zod.string().nullish(),
-  "accountId": zod.string().nullish()
+  "accountId": zod.string().nullish(),
+  "suggestedAccountCode": zod.string().nullish()
 }).describe('amount is a signed decimal string (negative = money out).')
 
 

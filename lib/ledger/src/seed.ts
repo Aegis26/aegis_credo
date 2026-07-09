@@ -34,6 +34,10 @@ export const STARTER_CHART_OF_ACCOUNTS: StarterAccount[] = [
   { code: "5100", name: "Rent Expense", type: "expense" },
   { code: "5200", name: "Salaries Expense", type: "expense" },
   { code: "5300", name: "Utilities Expense", type: "expense" },
+  { code: "5400", name: "Meals & Entertainment", type: "expense" },
+  { code: "5500", name: "Travel", type: "expense" },
+  { code: "5600", name: "Software & Subscriptions", type: "expense" },
+  { code: "5700", name: "Bank Fees & Charges", type: "expense" },
 ];
 
 export interface SeededOrg {

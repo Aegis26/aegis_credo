@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { and, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import {
   db,
   accountsTable,
@@ -27,9 +27,11 @@ import {
   requirePermission,
   postJournalEntry,
   formatMoney,
+  mapPlaidCategoryToAccountCode,
   NotFoundError,
 } from "@workspace/ledger";
 import { sendLedgerError, HttpError } from "../lib/errors";
+import { parsePlaidAmount } from "../lib/money";
 import { getSessionUserId } from "../middlewares/auth";
 import { accountByCode } from "./orgs";
 import {
@@ -37,6 +39,7 @@ import {
   createLinkToken,
   exchangePublicToken,
   getInstitutionName,
+  getAccountBalances,
   syncTransactions,
 } from "../lib/plaid";
 
@@ -53,7 +56,20 @@ function toBankTxn(txn: BankTxnRow) {
     matched: txn.matchedEntryId != null,
     matchedEntryId: txn.matchedEntryId,
     accountId: txn.accountId,
+    suggestedAccountCode: txn.suggestedAccountCode,
   };
+}
+
+/**
+ * Content-based idempotency key for an imported transaction. Plaid mints a fresh
+ * transaction id whenever a bank is re-linked (new Item), so keying dedup on the
+ * id alone would re-import everything on reconnect. Date + signed minor units +
+ * normalised name is stable across links, so `onConflictDoNothing` collapses the
+ * same economic transaction to one row.
+ */
+function makeDedupKey(date: string, amount: bigint, name: string | null): string {
+  const normName = (name ?? "").trim().toUpperCase().replace(/\s+/g, " ");
+  return `${date}|${amount.toString()}|${normName}`;
 }
 
 /** Assemble the connection + reconciliation status for an org. */
@@ -218,7 +234,10 @@ router.post("/orgs/:orgId/bank/exchange", async (req, res) => {
     const { accessToken, itemId } = await exchangePublicToken(publicToken);
     const institutionName = await getInstitutionName(accessToken);
 
-    await db
+    // Upsert the connection. On re-link the cursor is reset (the new Plaid Item
+    // has its own cursor) but openingBalanceEntryId is deliberately NOT in the
+    // update set, so the one-time opening balance is preserved across reconnects.
+    const [connection] = await db
       .insert(bankConnectionsTable)
       .values({
         orgId,
@@ -237,7 +256,49 @@ router.post("/orgs/:orgId/bank/exchange", async (req, res) => {
           cursor: null,
           lastSyncError: null,
         },
-      });
+      })
+      .returning();
+
+    // Post the opening balance exactly once per org connection. Guarded by the
+    // stored entry id AND an idempotency key so concurrent/repeat exchanges and
+    // re-links never double-post.
+    if (connection && connection.openingBalanceEntryId == null) {
+      const balances = await getAccountBalances(accessToken);
+      let opening = 0n;
+      for (const b of balances) {
+        if (b.type === "depository" && b.current != null) {
+          opening += parsePlaidAmount(b.current);
+        }
+      }
+
+      if (opening > 0n) {
+        const cash = await accountByCode(orgId, "1000");
+        const equity = await accountByCode(orgId, "3000");
+        await db.transaction(async (tx) => {
+          const posted = await postJournalEntry(
+            orgId,
+            {
+              entryDate: new Date().toISOString().slice(0, 10),
+              memo: "Opening bank balance",
+              source: "bank_opening_balance",
+              lines: [
+                { accountId: cash.id, debit: opening },
+                { accountId: equity.id, credit: opening },
+              ],
+            },
+            {
+              actor: userId,
+              idempotencyKey: `bankopening:${orgId}`,
+              tx,
+            },
+          );
+          await tx
+            .update(bankConnectionsTable)
+            .set({ openingBalanceEntryId: posted.entry.id })
+            .where(eq(bankConnectionsTable.orgId, orgId));
+        });
+      }
+    }
 
     res.json(ExchangeBankTokenResponse.parse(await bankStatus(orgId)));
   } catch (err) {
@@ -265,36 +326,45 @@ router.post("/orgs/:orgId/bank/sync", async (req, res) => {
         connection.cursor,
       );
 
-      // Dedup on the Plaid transaction id so re-syncing never re-imports.
-      const externalIds = result.added.map((t) => t.transaction_id);
-      const existing =
-        externalIds.length > 0
-          ? await db
-              .select({ externalId: bankTransactionsTable.externalId })
-              .from(bankTransactionsTable)
-              .where(
-                and(
-                  eq(bankTransactionsTable.orgId, orgId),
-                  inArray(bankTransactionsTable.externalId, externalIds),
-                ),
-              )
-          : [];
-      const seen = new Set(existing.map((e) => e.externalId));
-
-      const toInsert = result.added
-        .filter((t) => !seen.has(t.transaction_id))
-        .map((t) => ({
+      const toInsert = result.added.map((t) => {
+        // Plaid: positive = money out. Our convention: negative = money out.
+        // parsePlaidAmount stringifies the number so no JS float touches cents.
+        const amount = -parsePlaidAmount(t.amount);
+        const direction = amount < 0n ? "out" : "in";
+        const pfcPrimary = t.personal_finance_category?.primary ?? null;
+        const pfcDetailed = t.personal_finance_category?.detailed ?? null;
+        return {
           orgId,
           txnDate: t.date,
-          // Plaid: positive = money out. Our convention: negative = money out.
-          amount: -BigInt(Math.round(t.amount * 100)),
+          amount,
           description: t.name,
           externalId: t.transaction_id,
-        }));
+          dedupKey: makeDedupKey(t.date, amount, t.name),
+          pfcPrimary,
+          pfcDetailed,
+          suggestedAccountCode: mapPlaidCategoryToAccountCode({
+            primary: pfcPrimary,
+            detailed: pfcDetailed,
+            name: t.name,
+            direction,
+          }),
+        };
+      });
 
       if (toInsert.length > 0) {
-        await db.insert(bankTransactionsTable).values(toInsert);
-        added = toInsert.length;
+        // Content-based dedup: re-linking (fresh Plaid ids) never re-imports the
+        // same economic transaction.
+        const inserted = await db
+          .insert(bankTransactionsTable)
+          .values(toInsert)
+          .onConflictDoNothing({
+            target: [
+              bankTransactionsTable.orgId,
+              bankTransactionsTable.dedupKey,
+            ],
+          })
+          .returning({ id: bankTransactionsTable.id });
+        added = inserted.length;
       }
 
       await db

@@ -24,3 +24,18 @@ export function parseMoney(input: unknown, label = "amount"): bigint {
   const frac = (match[3] ?? "").padEnd(2, "0");
   return sign * (whole * 100n + BigInt(frac));
 }
+
+/**
+ * Convert a Plaid amount (a JS number, the ONLY place Plaid hands us money) into
+ * integer minor units without ever doing float arithmetic on the cents. The
+ * number is stringified to a fixed 2-decimal form and then run through the same
+ * decimal parser as every other money boundary, so no JS number touches the
+ * BigInt path. Plaid amounts are in the account's currency with 2 fraction
+ * digits; more precision is rounded at this boundary (documented, deliberate).
+ */
+export function parsePlaidAmount(amount: number, label = "Plaid amount"): bigint {
+  if (typeof amount !== "number" || !Number.isFinite(amount)) {
+    throw new HttpError(400, `${label} must be a finite number.`);
+  }
+  return parseMoney(amount.toFixed(2), label);
+}
