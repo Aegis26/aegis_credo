@@ -47,6 +47,8 @@ import type {
   GetTaxEstimateParams,
   HealthStatus,
   ImportFileInput,
+  ImportPreviewInput,
+  ImportPreviewResult,
   Invoice,
   InvoiceInput,
   InvoiceList,
@@ -2308,6 +2310,79 @@ export const useImportAccountingFile = <TError = ErrorType<ErrorResponse>,
         TContext
       > => {
       return useMutation(getImportAccountingFileMutationOptions(options));
+    }
+
+export const getPreviewImportUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/import/preview`
+}
+
+/**
+ * Dry-run adapter step. Translates a raw vendor export (currently a QuickBooks Online "Trial Balance" CSV or XLSX) into the canonical import draft WITHOUT posting anything to the ledger. Returns the resolved accounts (with account-type resolution flagged when ambiguous) and the canonical draft the client confirms and then posts to /orgs/{orgId}/import.
+ * @summary Preview a vendor export (CSV/XLSX) before importing
+ */
+export const previewImport = async (orgId: string,
+    importPreviewInput: ImportPreviewInput, options?: RequestInit): Promise<ImportPreviewResult> => {
+
+  return customFetch<ImportPreviewResult>(getPreviewImportUrl(orgId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(importPreviewInput)
+  }
+);}
+
+
+
+
+
+export const getPreviewImportMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewImport>>, TError,{orgId: string;data: BodyType<ImportPreviewInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof previewImport>>, TError,{orgId: string;data: BodyType<ImportPreviewInput>}, TContext> => {
+
+const mutationKey = ['previewImport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof previewImport>>, {orgId: string;data: BodyType<ImportPreviewInput>}> = (props) => {
+          const {orgId,data} = props ?? {};
+
+          return  previewImport(orgId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PreviewImportMutationResult = NonNullable<Awaited<ReturnType<typeof previewImport>>>
+    export type PreviewImportMutationBody = BodyType<ImportPreviewInput>
+    export type PreviewImportMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Preview a vendor export (CSV/XLSX) before importing
+ */
+export const usePreviewImport = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewImport>>, TError,{orgId: string;data: BodyType<ImportPreviewInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof previewImport>>,
+        TError,
+        {orgId: string;data: BodyType<ImportPreviewInput>},
+        TContext
+      > => {
+      return useMutation(getPreviewImportMutationOptions(options));
     }
 
 export const getListBillsUrl = (orgId: string,) => {

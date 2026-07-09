@@ -469,6 +469,106 @@ export interface ImportFileInput {
 }
 
 /**
+ * Which vendor report/adapter to apply.
+ */
+export type ImportPreviewInputReport = typeof ImportPreviewInputReport[keyof typeof ImportPreviewInputReport];
+
+
+export const ImportPreviewInputReport = {
+  qbo_trial_balance: 'qbo_trial_balance',
+} as const;
+
+/**
+ * Encoding of `content` — CSV text, or base64-encoded XLSX.
+ */
+export type ImportPreviewInputContentType = typeof ImportPreviewInputContentType[keyof typeof ImportPreviewInputContentType];
+
+
+export const ImportPreviewInputContentType = {
+  csv: 'csv',
+  xlsx: 'xlsx',
+} as const;
+
+/**
+ * A raw vendor export to translate into the canonical draft.
+ */
+export interface ImportPreviewInput {
+  /** Which vendor report/adapter to apply. */
+  report: ImportPreviewInputReport;
+  /** Encoding of `content` — CSV text, or base64-encoded XLSX. */
+  contentType: ImportPreviewInputContentType;
+  /** The file body (CSV text, or base64 for xlsx). */
+  content: string;
+  filename?: string;
+}
+
+export type ImportPreviewAccountType = typeof ImportPreviewAccountType[keyof typeof ImportPreviewAccountType];
+
+
+export const ImportPreviewAccountType = {
+  asset: 'asset',
+  liability: 'liability',
+  equity: 'equity',
+  revenue: 'revenue',
+  expense: 'expense',
+} as const;
+
+export type ImportPreviewAccountTypeSource = typeof ImportPreviewAccountTypeSource[keyof typeof ImportPreviewAccountTypeSource];
+
+
+export const ImportPreviewAccountTypeSource = {
+  mapped: 'mapped',
+  ambiguous: 'ambiguous',
+} as const;
+
+export type ImportPreviewAccountCandidateTypesItem = typeof ImportPreviewAccountCandidateTypesItem[keyof typeof ImportPreviewAccountCandidateTypesItem];
+
+
+export const ImportPreviewAccountCandidateTypesItem = {
+  asset: 'asset',
+  liability: 'liability',
+  equity: 'equity',
+  revenue: 'revenue',
+  expense: 'expense',
+} as const;
+
+/**
+ * A resolved account from the vendor export. Money fields (debit/credit) are integer minor units as strings (e.g. "120100" = $1,201.00), matching the canonical import format. `typeSource=ambiguous` means the type could not be determined from the account name and must be confirmed in Review.
+ */
+export interface ImportPreviewAccount {
+  code: string;
+  name: string;
+  type: ImportPreviewAccountType;
+  typeSource: ImportPreviewAccountTypeSource;
+  candidateTypes: ImportPreviewAccountCandidateTypesItem[];
+  debit: string;
+  credit: string;
+}
+
+export type ImportPreviewResultSource = typeof ImportPreviewResultSource[keyof typeof ImportPreviewResultSource];
+
+
+export const ImportPreviewResultSource = {
+  quickbooks: 'quickbooks',
+  xero: 'xero',
+} as const;
+
+/**
+ * The parsed preview plus the canonical draft to confirm and post. No ledger posting has occurred. Money totals are integer minor units as strings (e.g. "350100" = $3,501.00), matching the import format.
+ */
+export interface ImportPreviewResult {
+  source: ImportPreviewResultSource;
+  companyName?: string;
+  asOf?: string;
+  accounts: ImportPreviewAccount[];
+  totalDebit: string;
+  totalCredit: string;
+  balanced: boolean;
+  ambiguousCount: number;
+  draft: ImportFileInput;
+}
+
+/**
  * Money fields are decimal strings.
  */
 export interface ReconciliationAccountRow {

@@ -1,5 +1,6 @@
 import { describe, it, expect, afterAll } from "vitest";
 import request from "supertest";
+import ExcelJS from "exceljs";
 import { and, eq } from "drizzle-orm";
 import { db, pool, journalEntriesTable } from "@workspace/db";
 import { createApp } from "./app";
@@ -137,6 +138,148 @@ describe("migration-in import (content-hash idempotent, reconciles)", () => {
     expect(aging.status).toBe(200);
     expect(aging.body.total).toBe("2000.00");
     expect(aging.body.buckets["1-30"]).toBe("2000.00");
+  });
+});
+
+describe("QBO Trial Balance CSV adapter (preview → post → reconcile)", () => {
+  it("previews a real QBO TB CSV, surfaces ambiguous accounts, posts the draft, reconciles, and re-import posts zero", async () => {
+    const { agent } = await newUser("qbo-owner");
+    const orgId = await newOrg(agent, `QBO ${nonce}`);
+
+    // A real-shaped QBO "Trial Balance" export: company/date preamble, a header
+    // row, account rows (one amount thousands-separated + quoted to prove the
+    // comma path), an unmapped account ("Ask My Accountant"), and a Total line.
+    const csv = [
+      "Craig's Design and Landscaping Services",
+      "Trial Balance",
+      "As of July 9, 2026",
+      "",
+      "Account,Debit,Credit",
+      'Checking,"1,201.00",',
+      "Accounts Receivable,2000.00,",
+      "Ask My Accountant,300.00,",
+      "Accounts Payable,,500.00",
+      "Sales,,3001.00",
+      "Total,3501.00,3501.00",
+    ].join("\n");
+
+    const preview = await agent
+      .post(`/api/orgs/${orgId}/import/preview`)
+      .send({ report: "qbo_trial_balance", contentType: "csv", content: csv });
+    expect(preview.status).toBe(200);
+    expect(preview.body.source).toBe("quickbooks");
+    expect(preview.body.companyName).toBe(
+      "Craig's Design and Landscaping Services",
+    );
+    expect(preview.body.balanced).toBe(true);
+    // "1,201.00" → 120100 minor units (no float), summed to the file total.
+    expect(preview.body.totalDebit).toBe("350100");
+    expect(preview.body.totalCredit).toBe("350100");
+
+    // "Ask My Accountant" is not in the name map → surfaced for Review, never
+    // silently guessed. Mapped accounts (Checking, Sales…) are not.
+    expect(preview.body.ambiguousCount).toBe(1);
+    const ambiguous = preview.body.accounts.find(
+      (a: { name: string }) => a.name === "Ask My Accountant",
+    );
+    expect(ambiguous.typeSource).toBe("ambiguous");
+    expect(ambiguous.candidateTypes).toContain("expense");
+    const checking = preview.body.accounts.find(
+      (a: { name: string }) => a.name === "Checking",
+    );
+    expect(checking.typeSource).toBe("mapped");
+    expect(checking.type).toBe("asset");
+    expect(checking.debit).toBe("120100");
+
+    // The returned draft is the canonical import body — post it to the frozen
+    // POST /import and it must reconcile to the source TB exactly.
+    const draft = preview.body.draft;
+    expect(draft.source).toBe("quickbooks");
+
+    const first = await agent.post(`/api/orgs/${orgId}/import`).send(draft);
+    expect(first.status).toBe(200);
+    expect(first.body.matched).toBe(true);
+    expect(first.body.sourceBalanced).toBe(true);
+    expect(first.body.sourceTotalDebit).toBe(first.body.ledgerTotalDebit);
+    expect(first.body.sourceTotalCredit).toBe(first.body.ledgerTotalCredit);
+
+    const countEntries = async () => {
+      const rows = await db
+        .select({ id: journalEntriesTable.id })
+        .from(journalEntriesTable)
+        .where(eq(journalEntriesTable.orgId, orgId));
+      return rows.length;
+    };
+    const afterFirst = await countEntries();
+    expect(afterFirst).toBeGreaterThan(0);
+
+    // Re-posting the identical draft is idempotent (server hashes content).
+    const second = await agent.post(`/api/orgs/${orgId}/import`).send(draft);
+    expect(second.status).toBe(200);
+    expect(second.body.ref).toBe(first.body.ref);
+    expect(second.body.matched).toBe(true);
+    const afterSecond = await countEntries();
+    expect(afterSecond).toBe(afterFirst);
+  });
+
+  it("parses an XLSX export with numeric amount cells to exact minor units (no float)", async () => {
+    const { agent } = await newUser("qbo-xlsx");
+    const orgId = await newOrg(agent, `QBO XLSX ${nonce}`);
+
+    // Build a real .xlsx whose amounts are stored as native spreadsheet NUMBERS
+    // (not text), to exercise the numeric-cell path end to end.
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet("Trial Balance");
+    ws.addRow(["Craig's Design and Landscaping Services"]);
+    ws.addRow(["Trial Balance"]);
+    ws.addRow(["As of July 9, 2026"]);
+    ws.addRow([]);
+    ws.addRow(["Account", "Debit", "Credit"]);
+    ws.addRow(["Checking", 1201, null]);
+    ws.addRow(["Accounts Receivable", 2000.5, null]);
+    ws.addRow(["Accounts Payable", null, 3201.5]);
+    const buffer = await wb.xlsx.writeBuffer();
+    const content = Buffer.from(buffer).toString("base64");
+
+    const preview = await agent
+      .post(`/api/orgs/${orgId}/import/preview`)
+      .send({ report: "qbo_trial_balance", contentType: "xlsx", content });
+    expect(preview.status).toBe(200);
+    expect(preview.body.balanced).toBe(true);
+    // 1201 → 120100, 2000.50 → 200050; total debit 320150 = total credit.
+    expect(preview.body.totalDebit).toBe("320150");
+    expect(preview.body.totalCredit).toBe("320150");
+    const checking = preview.body.accounts.find(
+      (a: { name: string }) => a.name === "Checking",
+    );
+    expect(checking.debit).toBe("120100");
+    const ar = preview.body.accounts.find(
+      (a: { name: string }) => a.name === "Accounts Receivable",
+    );
+    expect(ar.debit).toBe("200050");
+
+    // The XLSX-derived draft posts and reconciles exactly, same as CSV.
+    const posted = await agent
+      .post(`/api/orgs/${orgId}/import`)
+      .send(preview.body.draft);
+    expect(posted.status).toBe(200);
+    expect(posted.body.matched).toBe(true);
+    expect(posted.body.sourceTotalDebit).toBe(posted.body.ledgerTotalDebit);
+  });
+
+  it("returns a friendly 400 when the file is not a recognisable TB export", async () => {
+    const { agent } = await newUser("qbo-badfile");
+    const orgId = await newOrg(agent, `QBO Bad ${nonce}`);
+    const res = await agent
+      .post(`/api/orgs/${orgId}/import/preview`)
+      .send({
+        report: "qbo_trial_balance",
+        contentType: "csv",
+        content: "just,some,random\ncsv,without,headers",
+      });
+    expect(res.status).toBe(400);
+    expect(typeof res.body.error).toBe("string");
+    expect(res.body.error.length).toBeGreaterThan(0);
   });
 });
 

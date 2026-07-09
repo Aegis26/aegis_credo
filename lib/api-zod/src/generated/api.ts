@@ -694,6 +694,84 @@ export const ImportAccountingFileResponse = zod.object({
 
 
 /**
+ * Dry-run adapter step. Translates a raw vendor export (currently a QuickBooks Online "Trial Balance" CSV or XLSX) into the canonical import draft WITHOUT posting anything to the ledger. Returns the resolved accounts (with account-type resolution flagged when ambiguous) and the canonical draft the client confirms and then posts to /orgs/{orgId}/import.
+ * @summary Preview a vendor export (CSV/XLSX) before importing
+ */
+export const PreviewImportParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+export const PreviewImportBody = zod.object({
+  "report": zod.enum(['qbo_trial_balance']).describe('Which vendor report\/adapter to apply.'),
+  "contentType": zod.enum(['csv', 'xlsx']).describe('Encoding of `content` — CSV text, or base64-encoded XLSX.'),
+  "content": zod.string().describe('The file body (CSV text, or base64 for xlsx).'),
+  "filename": zod.string().optional()
+}).describe('A raw vendor export to translate into the canonical draft.')
+
+export const PreviewImportResponse = zod.object({
+  "source": zod.enum(['quickbooks', 'xero']),
+  "companyName": zod.string().optional(),
+  "asOf": zod.string().optional(),
+  "accounts": zod.array(zod.object({
+  "code": zod.string(),
+  "name": zod.string(),
+  "type": zod.enum(['asset', 'liability', 'equity', 'revenue', 'expense']),
+  "typeSource": zod.enum(['mapped', 'ambiguous']),
+  "candidateTypes": zod.array(zod.enum(['asset', 'liability', 'equity', 'revenue', 'expense'])),
+  "debit": zod.string(),
+  "credit": zod.string()
+}).describe('A resolved account from the vendor export. Money fields (debit\/credit) are integer minor units as strings (e.g. \"120100\" = $1,201.00), matching the canonical import format. `typeSource=ambiguous` means the type could not be determined from the account name and must be confirmed in Review.')),
+  "totalDebit": zod.string(),
+  "totalCredit": zod.string(),
+  "balanced": zod.boolean(),
+  "ambiguousCount": zod.number(),
+  "draft": zod.object({
+  "source": zod.enum(['quickbooks', 'xero']),
+  "accounts": zod.array(zod.object({
+  "code": zod.string(),
+  "name": zod.string(),
+  "type": zod.enum(['asset', 'liability', 'equity', 'revenue', 'expense'])
+})),
+  "openingBalances": zod.array(zod.object({
+  "accountCode": zod.string(),
+  "debit": zod.string().optional(),
+  "credit": zod.string().optional()
+}).describe('debit \/ credit are integer minor-unit strings (e.g. \"150000\").')).optional(),
+  "transactions": zod.array(zod.object({
+  "id": zod.string(),
+  "date": zod.string(),
+  "memo": zod.string().optional(),
+  "lines": zod.array(zod.object({
+  "accountCode": zod.string(),
+  "debit": zod.string().optional(),
+  "credit": zod.string().optional()
+}).describe('debit \/ credit are integer minor-unit strings (e.g. \"150000\").'))
+})).optional(),
+  "openInvoices": zod.array(zod.object({
+  "id": zod.string(),
+  "customer": zod.string(),
+  "invoiceNumber": zod.string().optional(),
+  "invoiceDate": zod.string(),
+  "dueDate": zod.string(),
+  "amount": zod.string(),
+  "arAccountCode": zod.string(),
+  "revenueAccountCode": zod.string()
+}).describe('amount is an integer minor-unit string.')).optional(),
+  "openBills": zod.array(zod.object({
+  "id": zod.string(),
+  "vendor": zod.string(),
+  "billNumber": zod.string().optional(),
+  "billDate": zod.string(),
+  "dueDate": zod.string(),
+  "amount": zod.string(),
+  "apAccountCode": zod.string(),
+  "expenseAccountCode": zod.string()
+}).describe('amount is an integer minor-unit string.')).optional()
+}).describe('A normalized QBO\/Xero export. All monetary amounts are integer minor-unit strings. The server computes a content hash for idempotency — no client-supplied ref is used.')
+}).describe('The parsed preview plus the canonical draft to confirm and post. No ledger posting has occurred. Money totals are integer minor units as strings (e.g. \"350100\" = $3,501.00), matching the import format.')
+
+
+/**
  * @summary List bills for an org
  */
 export const ListBillsParams = zod.object({

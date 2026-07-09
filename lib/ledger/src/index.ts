@@ -9,6 +9,7 @@ export * from "./ap";
 export * from "./ar";
 export * from "./payroll";
 export * from "./import";
+export * from "./import-adapters/qbo-trial-balance";
 export * from "./approvals";
 export * from "./consolidation";
 export * from "./dimensions";

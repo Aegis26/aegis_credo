@@ -9,6 +9,7 @@ import bankRouter from "./bank";
 import invoicesRouter from "./invoices";
 import taxRouter from "./tax";
 import importRouter from "./import";
+import importPreviewRouter from "./import-preview";
 import billsRouter from "./bills";
 import payrollRouter from "./payroll";
 import membersRouter from "./members";
@@ -36,6 +37,7 @@ export function createRouter(options: RouterOptions = {}): IRouter {
   router.use(bankRouter);
   router.use(invoicesRouter);
   router.use(taxRouter);
+  router.use(importPreviewRouter);
   router.use(importRouter);
   router.use(billsRouter);
   router.use(payrollRouter);

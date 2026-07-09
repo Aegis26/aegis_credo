@@ -2,29 +2,98 @@ import { useState, useRef } from "react";
 import { useCurrentOrg } from "@/hooks/use-current-org";
 import {
   useImportAccountingFile,
+  usePreviewImport,
   getGetOrgDashboardQueryKey,
   getListInvoicesQueryKey,
   getGetArAgingQueryKey,
   getListBillsQueryKey,
   type ReconciliationReport,
+  type ImportPreviewResult,
+  type ImportFileInput,
+  type ImportPreviewAccountType,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { UploadCloud, FileJson, CheckCircle2, AlertCircle, ArrowRight, RotateCcw } from "lucide-react";
+import {
+  UploadCloud,
+  FileSpreadsheet,
+  CheckCircle2,
+  AlertCircle,
+  ArrowRight,
+  RotateCcw,
+} from "lucide-react";
 
 type Step = "upload" | "review" | "done";
 
-interface ParsedFile {
-  source?: string;
-  accounts?: unknown[];
-  openingBalances?: unknown[];
-  transactions?: unknown[];
-  openInvoices?: unknown[];
-  openBills?: unknown[];
+/** The two ways we get a canonical draft: a raw JSON export, or a parsed CSV/XLSX preview. */
+interface JsonSource {
+  kind: "json";
+  draft: ImportFileInput;
+  counts: {
+    accounts: number;
+    opening: number;
+    transactions: number;
+    invoices: number;
+    bills: number;
+  };
+  sourceLabel: string;
+}
+interface AdapterSource {
+  kind: "adapter";
+  preview: ImportPreviewResult;
+}
+type ReviewSource = JsonSource | AdapterSource;
+
+const ACCOUNT_TYPES: ImportPreviewAccountType[] = [
+  "asset",
+  "liability",
+  "equity",
+  "revenue",
+  "expense",
+];
+
+/** Integer-safe minor units (as string) → decimal string. Never touches float. */
+function minorToDecimal(minor: string): string {
+  if (!minor) return "0.00";
+  const neg = minor.startsWith("-");
+  const digits = (neg ? minor.slice(1) : minor).replace(/[^0-9]/g, "").padStart(3, "0");
+  const whole = digits.slice(0, -2).replace(/^0+(?=\d)/, "");
+  const frac = digits.slice(-2);
+  return `${neg ? "-" : ""}${whole}.${frac}`;
+}
+
+/** Read a File as base64 (used for binary .xlsx uploads). */
+function readAsBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result);
+      const comma = result.indexOf(",");
+      resolve(comma >= 0 ? result.slice(comma + 1) : result);
+    };
+    reader.onerror = () => reject(new Error("Could not read this file."));
+    reader.readAsDataURL(file);
+  });
+}
+
+function readAsText(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("Could not read this file."));
+    reader.readAsText(file);
+  });
 }
 
 export default function ImportPage() {
@@ -34,47 +103,114 @@ export default function ImportPage() {
   const fileInput = useRef<HTMLInputElement>(null);
 
   const [raw, setRaw] = useState("");
-  const [parsed, setParsed] = useState<ParsedFile | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
   const [step, setStep] = useState<Step>("upload");
+  const [source, setSource] = useState<ReviewSource | null>(null);
   const [report, setReport] = useState<ReconciliationReport | null>(null);
+  // Per-account type confirmations from the Review step, keyed by account name.
+  const [typeChoices, setTypeChoices] = useState<Record<string, ImportPreviewAccountType>>({});
 
   const importFile = useImportAccountingFile();
+  const previewImport = usePreviewImport();
 
-  const tryParse = (text: string) => {
+  const tryParseJson = (text: string) => {
     setRaw(text);
     setParseError(null);
     if (!text.trim()) {
-      setParsed(null);
+      setSource(null);
       return;
     }
     try {
-      const obj = JSON.parse(text) as ParsedFile;
+      const obj = JSON.parse(text) as ImportFileInput & {
+        transactions?: unknown[];
+        openInvoices?: unknown[];
+        openBills?: unknown[];
+      };
       if (!obj.source || !Array.isArray(obj.accounts)) {
         throw new Error("File must have a 'source' and an 'accounts' array.");
       }
-      setParsed(obj);
+      setSource({
+        kind: "json",
+        draft: obj,
+        sourceLabel: obj.source,
+        counts: {
+          accounts: obj.accounts?.length ?? 0,
+          opening: obj.openingBalances?.length ?? 0,
+          transactions: obj.transactions?.length ?? 0,
+          invoices: obj.openInvoices?.length ?? 0,
+          bills: obj.openBills?.length ?? 0,
+        },
+      });
       setStep("review");
     } catch (e) {
-      setParsed(null);
+      setSource(null);
       setParseError(e instanceof Error ? e.message : "Invalid JSON file.");
     }
   };
 
-  const onFile = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = () => tryParse(String(reader.result));
-    reader.readAsText(file);
+  const runPreview = async (
+    contentType: "csv" | "xlsx",
+    content: string,
+    filename?: string,
+  ) => {
+    if (!orgId) return;
+    setParseError(null);
+    try {
+      const preview = await previewImport.mutateAsync({
+        orgId,
+        data: { report: "qbo_trial_balance", contentType, content, filename },
+      });
+      setSource({ kind: "adapter", preview });
+      // Seed the Review selectors with the adapter's best guess for every account.
+      const seeded: Record<string, ImportPreviewAccountType> = {};
+      for (const a of preview.accounts) seeded[a.name] = a.type;
+      setTypeChoices(seeded);
+      setStep("review");
+    } catch (e) {
+      setSource(null);
+      setParseError(
+        e instanceof Error ? e.message : "We couldn't read this file.",
+      );
+    }
+  };
+
+  const onFile = async (file: File) => {
+    setParseError(null);
+    const name = file.name.toLowerCase();
+    try {
+      if (name.endsWith(".json")) {
+        tryParseJson(await readAsText(file));
+      } else if (name.endsWith(".xlsx")) {
+        await runPreview("xlsx", await readAsBase64(file), file.name);
+      } else {
+        // Treat everything else (.csv, .txt) as CSV text.
+        await runPreview("csv", await readAsText(file), file.name);
+      }
+    } catch (e) {
+      setParseError(e instanceof Error ? e.message : "Could not read this file.");
+    }
+  };
+
+  /** Apply the user's Review-step type choices to an adapter draft before posting. */
+  const draftWithChoices = (preview: ImportPreviewResult): ImportFileInput => {
+    const nameToChoice = typeChoices;
+    return {
+      ...preview.draft,
+      accounts: preview.draft.accounts.map((a) => {
+        // Match the draft account back to the preview account by code, then name.
+        const previewAcc = preview.accounts.find((p) => p.code === a.code);
+        const chosen = previewAcc ? nameToChoice[previewAcc.name] : undefined;
+        return chosen ? { ...a, type: chosen } : a;
+      }),
+    };
   };
 
   const runImport = async () => {
-    if (!orgId || !parsed) return;
+    if (!orgId || !source) return;
+    const draft =
+      source.kind === "json" ? source.draft : draftWithChoices(source.preview);
     try {
-      const result = await importFile.mutateAsync({
-        orgId,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        data: parsed as any,
-      });
+      const result = await importFile.mutateAsync({ orgId, data: draft });
       setReport(result);
       setStep("done");
       queryClient.invalidateQueries({ queryKey: getGetOrgDashboardQueryKey(orgId) });
@@ -93,31 +229,25 @@ export default function ImportPage() {
 
   const reset = () => {
     setRaw("");
-    setParsed(null);
+    setSource(null);
     setParseError(null);
     setReport(null);
+    setTypeChoices({});
     setStep("upload");
   };
 
   if (!orgId) return null;
 
-  const counts = parsed
-    ? {
-        accounts: parsed.accounts?.length ?? 0,
-        opening: parsed.openingBalances?.length ?? 0,
-        transactions: parsed.transactions?.length ?? 0,
-        invoices: parsed.openInvoices?.length ?? 0,
-        bills: parsed.openBills?.length ?? 0,
-      }
-    : null;
+  const previewing = previewImport.isPending;
 
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
         <h1 className="text-3xl font-serif font-semibold tracking-tight text-primary">Migrate your books</h1>
         <p className="text-muted-foreground mt-1">
-          Bring your history over from QuickBooks or Xero. Every transaction posts through the
-          double-entry ledger and we prove the numbers reconcile — exactly.
+          Bring your history over from QuickBooks or Xero. Upload a Trial Balance (CSV or Excel)
+          or a normalized JSON export — every balance posts through the double-entry ledger and we
+          prove the numbers reconcile, exactly.
         </p>
       </div>
 
@@ -154,12 +284,15 @@ export default function ImportPage() {
           <CardHeader>
             <CardTitle>Upload your export file</CardTitle>
             <CardDescription>
-              A normalized QuickBooks/Xero JSON export. All amounts are integer minor units.
+              A QuickBooks "Trial Balance" export (.csv or .xlsx), or a normalized QuickBooks/Xero
+              JSON file.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div
-              className="border-2 border-dashed border-border rounded-lg p-10 text-center cursor-pointer hover:bg-muted/30 transition-colors"
+              className={`border-2 border-dashed border-border rounded-lg p-10 text-center cursor-pointer hover:bg-muted/30 transition-colors ${
+                previewing ? "opacity-60 pointer-events-none" : ""
+              }`}
               onClick={() => fileInput.current?.click()}
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => {
@@ -169,12 +302,14 @@ export default function ImportPage() {
               }}
             >
               <UploadCloud className="w-10 h-10 mx-auto mb-3 text-primary/60" />
-              <p className="font-medium">Drop your export here, or click to browse</p>
-              <p className="text-sm text-muted-foreground mt-1">.json files only</p>
+              <p className="font-medium">
+                {previewing ? "Reading your file…" : "Drop your export here, or click to browse"}
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">.csv, .xlsx or .json</p>
               <input
                 ref={fileInput}
                 type="file"
-                accept="application/json,.json"
+                accept=".csv,.xlsx,.json,text/csv,application/json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 className="hidden"
                 onChange={(e) => {
                   const f = e.target.files?.[0];
@@ -191,9 +326,9 @@ export default function ImportPage() {
               </div>
             </div>
             <Textarea
-              placeholder='{"source":"quickbooks","accounts":[...],"transactions":[...]}'
+              placeholder='{"source":"quickbooks","accounts":[...],"openingBalances":[...]}'
               value={raw}
-              onChange={(e) => tryParse(e.target.value)}
+              onChange={(e) => tryParseJson(e.target.value)}
               className="font-mono text-xs h-40"
             />
             {parseError && (
@@ -206,12 +341,12 @@ export default function ImportPage() {
         </Card>
       )}
 
-      {step === "review" && counts && (
+      {step === "review" && source?.kind === "json" && (
         <Card className="shadow-sm border-border">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <FileJson className="w-5 h-5 text-primary" />
-              Review — {parsed?.source}
+              <FileSpreadsheet className="w-5 h-5 text-primary" />
+              Review — {source.sourceLabel}
             </CardTitle>
             <CardDescription>
               Here's what we'll import. Re-importing the same file is safe: nothing posts twice.
@@ -220,11 +355,11 @@ export default function ImportPage() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
               {[
-                ["Accounts", counts.accounts],
-                ["Opening", counts.opening],
-                ["Transactions", counts.transactions],
-                ["Invoices", counts.invoices],
-                ["Bills", counts.bills],
+                ["Accounts", source.counts.accounts],
+                ["Opening", source.counts.opening],
+                ["Transactions", source.counts.transactions],
+                ["Invoices", source.counts.invoices],
+                ["Bills", source.counts.bills],
               ].map(([label, n]) => (
                 <div key={label} className="rounded-lg border border-border p-4 text-center">
                   <div className="text-2xl font-serif text-primary">{n}</div>
@@ -244,6 +379,17 @@ export default function ImportPage() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {step === "review" && source?.kind === "adapter" && (
+        <AdapterReview
+          preview={source.preview}
+          typeChoices={typeChoices}
+          setTypeChoices={setTypeChoices}
+          onImport={runImport}
+          onReset={reset}
+          importing={importFile.isPending}
+        />
       )}
 
       {step === "done" && report && (
@@ -329,5 +475,131 @@ export default function ImportPage() {
         </Card>
       )}
     </div>
+  );
+}
+
+/** Review step for adapter (CSV/XLSX) imports: shows parsed accounts and lets the
+ * user confirm the type of any account the adapter couldn't map with confidence. */
+function AdapterReview({
+  preview,
+  typeChoices,
+  setTypeChoices,
+  onImport,
+  onReset,
+  importing,
+}: {
+  preview: ImportPreviewResult;
+  typeChoices: Record<string, ImportPreviewAccountType>;
+  setTypeChoices: React.Dispatch<
+    React.SetStateAction<Record<string, ImportPreviewAccountType>>
+  >;
+  onImport: () => void;
+  onReset: () => void;
+  importing: boolean;
+}) {
+  const ambiguous = preview.accounts.filter((a) => a.typeSource === "ambiguous");
+  return (
+    <Card className="shadow-sm border-border">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <FileSpreadsheet className="w-5 h-5 text-primary" />
+          Review — {preview.companyName ?? preview.source}
+        </CardTitle>
+        <CardDescription>
+          {preview.asOf ? `${preview.asOf}. ` : ""}
+          We read {preview.accounts.length} accounts.{" "}
+          {ambiguous.length > 0
+            ? `${ambiguous.length} need a category confirmed before we post.`
+            : "Every account was categorized automatically."}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        <div className="flex flex-wrap gap-3">
+          <Badge variant={preview.balanced ? "secondary" : "destructive"}>
+            {preview.balanced ? "Trial balance balanced" : "Unbalanced — will plug to equity"}
+          </Badge>
+          <Badge variant="outline">Dr ${minorToDecimal(preview.totalDebit)}</Badge>
+          <Badge variant="outline">Cr ${minorToDecimal(preview.totalCredit)}</Badge>
+          {ambiguous.length > 0 && (
+            <Badge variant="destructive">{ambiguous.length} to review</Badge>
+          )}
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border text-left text-muted-foreground">
+                <th className="py-2 pr-4 font-medium">Account</th>
+                <th className="py-2 px-4 font-medium text-right">Debit</th>
+                <th className="py-2 px-4 font-medium text-right">Credit</th>
+                <th className="py-2 pl-4 font-medium">Category</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {preview.accounts.map((a) => {
+                const needsReview = a.typeSource === "ambiguous";
+                return (
+                  <tr
+                    key={a.code}
+                    className={needsReview ? "bg-destructive/5" : undefined}
+                  >
+                    <td className="py-2 pr-4">
+                      {a.name}
+                      {needsReview && (
+                        <span className="ml-2 inline-flex items-center gap-1 text-xs text-destructive">
+                          <AlertCircle className="w-3 h-3" />
+                          confirm
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-2 px-4 text-right font-mono">
+                      {a.debit !== "0" ? `$${minorToDecimal(a.debit)}` : ""}
+                    </td>
+                    <td className="py-2 px-4 text-right font-mono">
+                      {a.credit !== "0" ? `$${minorToDecimal(a.credit)}` : ""}
+                    </td>
+                    <td className="py-2 pl-4">
+                      <Select
+                        value={typeChoices[a.name] ?? a.type}
+                        onValueChange={(v) =>
+                          setTypeChoices((prev) => ({
+                            ...prev,
+                            [a.name]: v as ImportPreviewAccountType,
+                          }))
+                        }
+                      >
+                        <SelectTrigger
+                          className={`h-8 w-36 ${needsReview ? "border-destructive" : ""}`}
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ACCOUNT_TYPES.map((t) => (
+                            <SelectItem key={t} value={t}>
+                              {t[0].toUpperCase() + t.slice(1)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="flex gap-3">
+          <Button onClick={onImport} disabled={importing} className="gap-2">
+            {importing ? "Importing…" : "Import & reconcile"}
+            {!importing && <ArrowRight className="w-4 h-4" />}
+          </Button>
+          <Button variant="outline" onClick={onReset} className="gap-2">
+            <RotateCcw className="w-4 h-4" />
+            Start over
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

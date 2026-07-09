@@ -933,6 +933,50 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /orgs/{orgId}/import/preview:
+    post:
+      operationId: previewImport
+      tags: [import]
+      summary: Preview a vendor export (CSV/XLSX) before importing
+      description: >-
+        Dry-run adapter step. Translates a raw vendor export (currently a
+        QuickBooks Online "Trial Balance" CSV or XLSX) into the canonical import
+        draft WITHOUT posting anything to the ledger. Returns the resolved
+        accounts (with account-type resolution flagged when ambiguous) and the
+        canonical draft the client confirms and then posts to /orgs/{orgId}/import.
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImportPreviewInput"
+      responses:
+        "200":
+          description: The parsed preview and canonical draft
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportPreviewResult"
+        "400":
+          description: The file could not be read as the declared report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not a member of this org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /orgs/{orgId}/bills:
     get:
       operationId: listBills
@@ -2014,6 +2058,95 @@ components:
           items:
             $ref: "#/components/schemas/ImportBillInput"
       required: [source, accounts]
+    ImportPreviewInput:
+      type: object
+      description: A raw vendor export to translate into the canonical draft.
+      properties:
+        report:
+          type: string
+          description: Which vendor report/adapter to apply.
+          enum: [qbo_trial_balance]
+        contentType:
+          type: string
+          description: Encoding of `content` — CSV text, or base64-encoded XLSX.
+          enum: [csv, xlsx]
+        content:
+          type: string
+          description: The file body (CSV text, or base64 for xlsx).
+        filename:
+          type: string
+      required: [report, contentType, content]
+    ImportPreviewAccount:
+      type: object
+      description: >-
+        A resolved account from the vendor export. Money fields (debit/credit)
+        are integer minor units as strings (e.g. "120100" = $1,201.00), matching
+        the canonical import format. `typeSource=ambiguous` means the type could
+        not be determined from the account name and must be confirmed in Review.
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum: [asset, liability, equity, revenue, expense]
+        typeSource:
+          type: string
+          enum: [mapped, ambiguous]
+        candidateTypes:
+          type: array
+          items:
+            type: string
+            enum: [asset, liability, equity, revenue, expense]
+        debit:
+          type: string
+        credit:
+          type: string
+      required:
+        - code
+        - name
+        - type
+        - typeSource
+        - candidateTypes
+        - debit
+        - credit
+    ImportPreviewResult:
+      type: object
+      description: >-
+        The parsed preview plus the canonical draft to confirm and post. No
+        ledger posting has occurred. Money totals are integer minor units as
+        strings (e.g. "350100" = $3,501.00), matching the import format.
+      properties:
+        source:
+          type: string
+          enum: [quickbooks, xero]
+        companyName:
+          type: string
+        asOf:
+          type: string
+        accounts:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImportPreviewAccount"
+        totalDebit:
+          type: string
+        totalCredit:
+          type: string
+        balanced:
+          type: boolean
+        ambiguousCount:
+          type: integer
+        draft:
+          $ref: "#/components/schemas/ImportFileInput"
+      required:
+        - source
+        - accounts
+        - totalDebit
+        - totalCredit
+        - balanced
+        - ambiguousCount
+        - draft
     ReconciliationAccountRow:
       type: object
       description: Money fields are decimal strings.

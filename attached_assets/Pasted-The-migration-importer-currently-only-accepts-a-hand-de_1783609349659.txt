@@ -1,0 +1,70 @@
+The migration importer currently only accepts a hand-defined JSON format. Real
+users export CSV or Excel from QuickBooks and Xero and cannot produce JSON. A
+pasted real QuickBooks Trial Balance CSV currently fails with a JSON parse error.
+Fix this WITHOUT changing the proven posting, dedup, or reconciliation engine.
+
+ARCHITECTURE (important — two layers):
+- Keep the existing canonical import format (the current JSON contract) and the
+  existing posting / idempotency / reconciliation pipeline FROZEN. They are
+  proven. Do not modify them.
+- Add a thin, isolated ADAPTER layer that translates a real vendor export into
+  the canonical format and then feeds the existing pipeline. One adapter per
+  source/report. Adapters only reshape data at the doorstep; they never touch the
+  ledger. This keeps adding Xero or a General Ledger import later small and
+  contained, and means a broken adapter can never corrupt the ledger.
+
+FIRST ADAPTER — QuickBooks Online "Trial Balance" CSV export:
+- Accept real file types in BOTH the upload dropzone and the paste box: .csv and
+  .xlsx (keep .json working). Stop labeling the input "JSON only."
+- Parse CSV with a real parser (papaparse) that respects quoted fields containing
+  commas. Do NOT split on commas.
+- Use the ATTACHED real QuickBooks Trial Balance CSV as the test fixture. Do not
+  invent the format. Its real shape:
+    Craig's Design and Landscaping Services,,
+    Trial Balance,,
+    "As of Jul 9, 2026",,
+    (blank row)
+    Account Name,Debit,Credit
+    Checking,"1,201.00",
+    Savings,800.00,
+    Accounts Receivable (A/R),"5,281.52",
+    ...
+    TOTAL,"...","..."
+  The adapter must:
+  * Skip the preamble rows (company name, report title, "As of" date, blanks) and
+    locate the real header row (Account Name, Debit, Credit).
+  * Skip TOTAL / subtotal / section-header rows — never import them as accounts.
+  * Parse amounts like "1,201.00" and 800.00 (dollars, comma thousands
+    separators, sometimes quoted) into INTEGER minor units via the existing
+    parseMoney path. No JS float on the money path.
+  * Handle rows with only a debit or only a credit.
+- ACCOUNT TYPE (the load-bearing part — make it explicit, do not silently guess):
+  * Upsert accounts by name from the file into the org's chart of accounts.
+  * A bare Trial Balance does NOT carry account type (asset/liability/equity/
+    revenue/expense). Implement a type-resolution strategy (map common QuickBooks
+    account names plus the normal debit/credit side to a type), and for any
+    account whose type is ambiguous, SURFACE it in the Review step for the user to
+    confirm rather than guessing. Unit-test this mapping.
+- POSTING: convert the trial balance into balanced opening-balance journal
+  entries posted through the EXISTING posting service. A complete trial balance
+  already has debits == credits, so it posts as a single balanced entry (one line
+  per account) with no plug; if a file is partial/unbalanced, plug the difference
+  to an Opening Balance Equity account. Idempotent via the existing content-hash
+  dedup — re-importing the same file posts nothing new.
+- RECONCILIATION: reuse the existing reconciliation report. The imported trial
+  balance must equal the source file's trial balance EXACTLY.
+- ERRORS: if a file cannot be parsed, show a clear human message ("We couldn't
+  read this as a QuickBooks Trial Balance export — please upload the CSV or Excel
+  you exported from Reports > Trial Balance"). Never surface a raw parser error.
+
+DEFINITION OF DONE (tests):
+- Importing the attached real QuickBooks Trial Balance CSV reproduces its trial
+  balance exactly and shows the reconciliation match.
+- Re-importing the same file adds zero new entries (idempotent).
+- Amount parsing verified: "1,201.00" -> 120100 minor units, etc.
+- Account-type resolution unit-tested; ambiguous accounts are surfaced, not
+  silently miscategorized.
+- The existing JSON import and all prior tests still pass.
+
+Show me the real CSV importing end-to-end with a matching reconciliation report,
+the idempotency test, and the amount/type mapping tests.
