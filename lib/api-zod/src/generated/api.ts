@@ -617,3 +617,301 @@ export const GetTaxEstimateResponse = zod.object({
 }).describe('Money fields are decimal strings. This is an estimate, not tax advice.')
 
 
+/**
+ * Ingests a normalized accounting export. Every economic event posts through the ledger. Fully idempotent by file content: a content hash is computed server-side, so re-importing the same file posts nothing new. Returns a reconciliation report proving the ledger reproduces the file's own trial balance.
+ * @summary Import a QBO/Xero export via the posting service
+ */
+export const ImportAccountingFileParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+export const ImportAccountingFileBody = zod.object({
+  "source": zod.enum(['quickbooks', 'xero']),
+  "accounts": zod.array(zod.object({
+  "code": zod.string(),
+  "name": zod.string(),
+  "type": zod.enum(['asset', 'liability', 'equity', 'revenue', 'expense'])
+})),
+  "openingBalances": zod.array(zod.object({
+  "accountCode": zod.string(),
+  "debit": zod.string().optional(),
+  "credit": zod.string().optional()
+}).describe('debit \/ credit are integer minor-unit strings (e.g. \"150000\").')).optional(),
+  "transactions": zod.array(zod.object({
+  "id": zod.string(),
+  "date": zod.string(),
+  "memo": zod.string().optional(),
+  "lines": zod.array(zod.object({
+  "accountCode": zod.string(),
+  "debit": zod.string().optional(),
+  "credit": zod.string().optional()
+}).describe('debit \/ credit are integer minor-unit strings (e.g. \"150000\").'))
+})).optional(),
+  "openInvoices": zod.array(zod.object({
+  "id": zod.string(),
+  "customer": zod.string(),
+  "invoiceNumber": zod.string().optional(),
+  "invoiceDate": zod.string(),
+  "dueDate": zod.string(),
+  "amount": zod.string(),
+  "arAccountCode": zod.string(),
+  "revenueAccountCode": zod.string()
+}).describe('amount is an integer minor-unit string.')).optional(),
+  "openBills": zod.array(zod.object({
+  "id": zod.string(),
+  "vendor": zod.string(),
+  "billNumber": zod.string().optional(),
+  "billDate": zod.string(),
+  "dueDate": zod.string(),
+  "amount": zod.string(),
+  "apAccountCode": zod.string(),
+  "expenseAccountCode": zod.string()
+}).describe('amount is an integer minor-unit string.')).optional()
+}).describe('A normalized QBO\/Xero export. All monetary amounts are integer minor-unit strings. The server computes a content hash for idempotency — no client-supplied ref is used.')
+
+export const ImportAccountingFileResponse = zod.object({
+  "source": zod.string(),
+  "ref": zod.string(),
+  "accounts": zod.array(zod.object({
+  "code": zod.string(),
+  "name": zod.string(),
+  "sourceDebit": zod.string(),
+  "sourceCredit": zod.string(),
+  "ledgerDebit": zod.string(),
+  "ledgerCredit": zod.string(),
+  "matched": zod.boolean()
+}).describe('Money fields are decimal strings.')),
+  "sourceTotalDebit": zod.string(),
+  "sourceTotalCredit": zod.string(),
+  "ledgerTotalDebit": zod.string(),
+  "ledgerTotalCredit": zod.string(),
+  "sourceBalanced": zod.boolean(),
+  "matched": zod.boolean(),
+  "entriesPosted": zod.number(),
+  "invoicesCreated": zod.number(),
+  "billsCreated": zod.number()
+}).describe('Money fields are decimal strings.')
+
+
+/**
+ * @summary List bills for an org
+ */
+export const ListBillsParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+export const ListBillsResponse = zod.object({
+  "bills": zod.array(zod.object({
+  "id": zod.string(),
+  "vendor": zod.string(),
+  "billNumber": zod.string().nullish(),
+  "billDate": zod.string(),
+  "dueDate": zod.string(),
+  "amount": zod.string(),
+  "paid": zod.string(),
+  "outstanding": zod.string(),
+  "status": zod.string()
+}).describe('Money fields are decimal strings.'))
+})
+
+
+/**
+ * @summary Create a bill (posts Dr expense / Cr A/P)
+ */
+export const CreateBillParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+
+
+
+export const CreateBillBody = zod.object({
+  "vendor": zod.string().min(1),
+  "billNumber": zod.string().optional(),
+  "billDate": zod.string(),
+  "dueDate": zod.string(),
+  "amount": zod.string(),
+  "expenseAccountId": zod.string()
+}).describe('amount is a decimal string (e.g. \"1200.00\").')
+
+export const CreateBillResponse = zod.object({
+  "id": zod.string(),
+  "vendor": zod.string(),
+  "billNumber": zod.string().nullish(),
+  "billDate": zod.string(),
+  "dueDate": zod.string(),
+  "amount": zod.string(),
+  "paid": zod.string(),
+  "outstanding": zod.string(),
+  "status": zod.string()
+}).describe('Money fields are decimal strings.')
+
+
+/**
+ * @summary Record a payment on a bill (posts Dr A/P / Cr cash)
+ */
+export const PayBillParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.'),
+  "billId": zod.coerce.string()
+})
+
+export const PayBillBody = zod.object({
+  "amount": zod.string(),
+  "paymentDate": zod.string(),
+  "cashAccountId": zod.string().optional()
+}).describe('amount is a decimal string (e.g. \"1200.00\").')
+
+export const PayBillResponse = zod.object({
+  "id": zod.string(),
+  "vendor": zod.string(),
+  "billNumber": zod.string().nullish(),
+  "billDate": zod.string(),
+  "dueDate": zod.string(),
+  "amount": zod.string(),
+  "paid": zod.string(),
+  "outstanding": zod.string(),
+  "status": zod.string()
+}).describe('Money fields are decimal strings.')
+
+
+/**
+ * @summary Accounts-receivable aging report
+ */
+export const GetArAgingParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+export const GetArAgingQueryParams = zod.object({
+  "asOf": zod.coerce.string().optional().describe('As-of date (YYYY-MM-DD). Defaults to today.')
+})
+
+export const GetArAgingResponse = zod.object({
+  "asOf": zod.string(),
+  "buckets": zod.object({
+  "current": zod.string(),
+  "1-30": zod.string(),
+  "31-60": zod.string(),
+  "61-90": zod.string(),
+  "90+": zod.string()
+}).describe('Each bucket total is a decimal string.'),
+  "total": zod.string(),
+  "lines": zod.array(zod.object({
+  "invoiceId": zod.string(),
+  "customer": zod.string(),
+  "invoiceNumber": zod.string().nullish(),
+  "dueDate": zod.string(),
+  "outstanding": zod.string(),
+  "daysPastDue": zod.number(),
+  "bucket": zod.string()
+}))
+})
+
+
+/**
+ * @summary List ingested payroll runs (display only)
+ */
+export const ListPayrollRunsParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+export const ListPayrollRunsResponse = zod.object({
+  "payrollRuns": zod.array(zod.object({
+  "id": zod.string(),
+  "provider": zod.string(),
+  "externalId": zod.string(),
+  "payDate": zod.string(),
+  "grossPay": zod.string(),
+  "taxes": zod.string(),
+  "netPay": zod.string()
+}).describe('Money fields are decimal strings.'))
+})
+
+
+/**
+ * @summary List org members and their roles
+ */
+export const ListMembersParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+export const ListMembersResponse = zod.object({
+  "members": zod.array(zod.object({
+  "userId": zod.string(),
+  "email": zod.string(),
+  "name": zod.string().nullable(),
+  "role": zod.string(),
+  "active": zod.boolean(),
+  "revokedAt": zod.string().nullish()
+}))
+})
+
+
+/**
+ * @summary Invite a user to the org with a role
+ */
+export const AddMemberParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+
+
+
+export const AddMemberBody = zod.object({
+  "email": zod.string().min(1),
+  "name": zod.string().optional(),
+  "role": zod.enum(['owner', 'staff', 'view_only', 'accountant'])
+})
+
+export const AddMemberResponse = zod.object({
+  "userId": zod.string(),
+  "email": zod.string(),
+  "name": zod.string().nullable(),
+  "role": zod.string(),
+  "active": zod.boolean(),
+  "revokedAt": zod.string().nullish()
+})
+
+
+/**
+ * @summary Revoke a member's access (append-only, sets revokedAt)
+ */
+export const RevokeMemberParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.'),
+  "userId": zod.coerce.string()
+})
+
+export const RevokeMemberResponse = zod.object({
+  "userId": zod.string(),
+  "email": zod.string(),
+  "name": zod.string().nullable(),
+  "role": zod.string(),
+  "active": zod.boolean(),
+  "revokedAt": zod.string().nullish()
+})
+
+
+/**
+ * @summary Invite an external accountant (scoped, revocable, audited)
+ */
+export const InviteAccountantParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+
+
+
+export const InviteAccountantBody = zod.object({
+  "email": zod.string().min(1),
+  "name": zod.string().optional()
+})
+
+export const InviteAccountantResponse = zod.object({
+  "userId": zod.string(),
+  "email": zod.string(),
+  "name": zod.string().nullable(),
+  "role": zod.string(),
+  "active": zod.boolean(),
+  "revokedAt": zod.string().nullish()
+})
+
+

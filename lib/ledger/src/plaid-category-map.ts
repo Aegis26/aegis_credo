@@ -60,6 +60,67 @@ const SOFTWARE_NAME_HINTS = [
   "SAAS",
 ];
 
+/** Payment processors / merchant-services providers. */
+const MERCHANT_FEE_NAME_HINTS = [
+  "STRIPE",
+  "SQUARE",
+  "PAYPAL",
+  "BRAINTREE",
+  "ADYEN",
+  "SHOPIFY PAYMENTS",
+  "AUTHORIZE.NET",
+  "MERCHANT FEE",
+  "PROCESSING FEE",
+];
+
+/** Advertising / marketing platforms. */
+const ADVERTISING_NAME_HINTS = [
+  "GOOGLE ADS",
+  "GOOGLE ADWORDS",
+  "FACEBOOK ADS",
+  "META ADS",
+  "META PLATFORMS",
+  "LINKEDIN ADS",
+  "TWITTER ADS",
+  "TIKTOK ADS",
+  "MAILCHIMP",
+  "HUBSPOT",
+];
+
+/** Contractor / professional-services firms and keywords. */
+const CONTRACTOR_NAME_HINTS = [
+  "LAW",
+  "LEGAL",
+  "ATTORNEY",
+  "ACCOUNTING",
+  "CPA",
+  "CONSULT",
+  "CONTRACTOR",
+  "FREELANCE",
+  "UPWORK",
+  "FIVERR",
+];
+
+/** Insurance carriers / keywords. */
+const INSURANCE_NAME_HINTS = [
+  "INSURANCE",
+  "GEICO",
+  "ALLSTATE",
+  "STATE FARM",
+  "PROGRESSIVE",
+  "HISCOX",
+  "NEXT INSURANCE",
+];
+
+/** Office-supply retailers / keywords. */
+const OFFICE_SUPPLY_NAME_HINTS = [
+  "STAPLES",
+  "OFFICE DEPOT",
+  "OFFICEMAX",
+  "OFFICE SUPPLIES",
+  "ULINE",
+];
+
 /**
  * Suggest a COA account code for an imported bank transaction. Money in maps to
  * revenue; money out maps to the best-fit expense account.
@@ -79,6 +140,11 @@ export function mapPlaidCategoryToAccountCode(
   // Money out → expense. Provider-name overrides win over the generic PFC,
   // because Plaid mis-labels employer payroll and many SaaS charges.
   if (PAYROLL_NAME_HINTS.some((h) => name.includes(h))) return "5200"; // Salaries
+  if (MERCHANT_FEE_NAME_HINTS.some((h) => name.includes(h))) return "6200"; // Merchant / Processing Fees
+  if (ADVERTISING_NAME_HINTS.some((h) => name.includes(h))) return "6100"; // Advertising & Marketing
+  if (INSURANCE_NAME_HINTS.some((h) => name.includes(h))) return "6000"; // Insurance
+  if (OFFICE_SUPPLY_NAME_HINTS.some((h) => name.includes(h))) return "5900"; // Office Supplies
+  if (CONTRACTOR_NAME_HINTS.some((h) => name.includes(h))) return "5800"; // Contractor / Professional Fees
   if (SOFTWARE_NAME_HINTS.some((h) => name.includes(h))) return "5600"; // Software
 
   switch (primary) {
@@ -91,6 +157,15 @@ export function mapPlaidCategoryToAccountCode(
     case "BANK_FEES":
       return "5700"; // Bank Fees & Charges
     case "GENERAL_SERVICES":
+      // Professional services (legal, accounting, consulting) → Contractor fees;
+      // everything else general → Software & Subscriptions.
+      if (
+        detailed.includes("LEGAL") ||
+        detailed.includes("ACCOUNTING") ||
+        detailed.includes("CONSULTING")
+      ) {
+        return "5800"; // Contractor / Professional Fees
+      }
       return "5600"; // Software & Subscriptions (professional services)
     case "RENT_AND_UTILITIES":
       // The primary itself starts with "RENT_", so match the rent-specific

@@ -19,6 +19,11 @@ import Reconcile from "@/pages/reconcile";
 import Invoices from "@/pages/invoices";
 import Reports from "@/pages/reports";
 import Taxes from "@/pages/taxes";
+import ImportPage from "@/pages/import";
+import Bills from "@/pages/bills";
+import Aging from "@/pages/aging";
+import Payroll from "@/pages/payroll";
+import Team from "@/pages/team";
 
 const queryClient = new QueryClient();
 
@@ -59,11 +64,16 @@ function ProtectedRouter() {
           <Switch>
             <Route path="/onboarding" component={Onboarding} />
             <Route path="/" component={Dashboard} />
+            <Route path="/import" component={ImportPage} />
             <Route path="/bank" component={Bank} />
             <Route path="/reconcile" component={Reconcile} />
             <Route path="/invoices" component={Invoices} />
+            <Route path="/bills" component={Bills} />
+            <Route path="/aging" component={Aging} />
+            <Route path="/payroll" component={Payroll} />
             <Route path="/reports" component={Reports} />
             <Route path="/taxes" component={Taxes} />
+            <Route path="/team" component={Team} />
             <Route component={NotFound} />
           </Switch>
         </OrgGuard>

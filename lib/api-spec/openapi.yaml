@@ -26,6 +26,14 @@ tags:
     description: Accounts-receivable invoicing via the posting service
   - name: tax
     description: Tax set-aside estimator (estimate only, not tax advice)
+  - name: import
+    description: Migrate-in — import a QBO/Xero export via the posting service
+  - name: bills
+    description: Accounts-payable bills via the posting service
+  - name: payroll
+    description: Payroll runs ingested from a provider (display only)
+  - name: members
+    description: Org membership — user management, roles, accountant collaboration
 paths:
   /healthz:
     get:
@@ -881,6 +889,358 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /orgs/{orgId}/import:
+    post:
+      operationId: importAccountingFile
+      tags: [import]
+      summary: Import a QBO/Xero export via the posting service
+      description: >-
+        Ingests a normalized accounting export. Every economic event posts
+        through the ledger. Fully idempotent by file content: a content hash is
+        computed server-side, so re-importing the same file posts nothing new.
+        Returns a reconciliation report proving the ledger reproduces the file's
+        own trial balance.
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImportFileInput"
+      responses:
+        "200":
+          description: The reconciliation report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReconciliationReport"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not a member of this org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /orgs/{orgId}/bills:
+    get:
+      operationId: listBills
+      tags: [bills]
+      summary: List bills for an org
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      responses:
+        "200":
+          description: The bills
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillList"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not a member of this org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createBill
+      tags: [bills]
+      summary: Create a bill (posts Dr expense / Cr A/P)
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BillInput"
+      responses:
+        "201":
+          description: The created bill
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bill"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not a member of this org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /orgs/{orgId}/bills/{billId}/pay:
+    post:
+      operationId: payBill
+      tags: [bills]
+      summary: Record a payment on a bill (posts Dr A/P / Cr cash)
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+        - name: billId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BillPaymentInput"
+      responses:
+        "200":
+          description: The updated bill
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bill"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not a member of this org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Bill not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /orgs/{orgId}/reports/ar-aging:
+    get:
+      operationId: getArAging
+      tags: [reports]
+      summary: Accounts-receivable aging report
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+        - name: asOf
+          in: query
+          required: false
+          description: As-of date (YYYY-MM-DD). Defaults to today.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The A/R aging report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArAgingReport"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not a member of this org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /orgs/{orgId}/payroll-runs:
+    get:
+      operationId: listPayrollRuns
+      tags: [payroll]
+      summary: List ingested payroll runs (display only)
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      responses:
+        "200":
+          description: The payroll runs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrollRunList"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not a member of this org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /orgs/{orgId}/members:
+    get:
+      operationId: listMembers
+      tags: [members]
+      summary: List org members and their roles
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      responses:
+        "200":
+          description: The members
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberList"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not a member of this org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: addMember
+      tags: [members]
+      summary: Invite a user to the org with a role
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberInput"
+      responses:
+        "201":
+          description: The created / updated membership
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient permission
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /orgs/{orgId}/members/{userId}/revoke:
+    post:
+      operationId: revokeMember
+      tags: [members]
+      summary: Revoke a member's access (append-only, sets revokedAt)
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The revoked membership
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient permission
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Membership not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /orgs/{orgId}/accountants:
+    post:
+      operationId: inviteAccountant
+      tags: [members]
+      summary: Invite an external accountant (scoped, revocable, audited)
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountantInput"
+      responses:
+        "201":
+          description: The accountant membership
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient permission
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   parameters:
     OrgId:
@@ -1531,3 +1891,399 @@ components:
         disclaimer:
           type: string
       required: [netIncome, rate, estimatedSetAside, disclaimer]
+    ImportAccountInput:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum: [asset, liability, equity, revenue, expense]
+      required: [code, name, type]
+    ImportLineInput:
+      type: object
+      description: debit / credit are integer minor-unit strings (e.g. "150000").
+      properties:
+        accountCode:
+          type: string
+        debit:
+          type: string
+        credit:
+          type: string
+      required: [accountCode]
+    ImportTransactionInput:
+      type: object
+      properties:
+        id:
+          type: string
+        date:
+          type: string
+        memo:
+          type: string
+        lines:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImportLineInput"
+      required: [id, date, lines]
+    ImportInvoiceInput:
+      type: object
+      description: amount is an integer minor-unit string.
+      properties:
+        id:
+          type: string
+        customer:
+          type: string
+        invoiceNumber:
+          type: string
+        invoiceDate:
+          type: string
+        dueDate:
+          type: string
+        amount:
+          type: string
+        arAccountCode:
+          type: string
+        revenueAccountCode:
+          type: string
+      required:
+        - id
+        - customer
+        - invoiceDate
+        - dueDate
+        - amount
+        - arAccountCode
+        - revenueAccountCode
+    ImportBillInput:
+      type: object
+      description: amount is an integer minor-unit string.
+      properties:
+        id:
+          type: string
+        vendor:
+          type: string
+        billNumber:
+          type: string
+        billDate:
+          type: string
+        dueDate:
+          type: string
+        amount:
+          type: string
+        apAccountCode:
+          type: string
+        expenseAccountCode:
+          type: string
+      required:
+        - id
+        - vendor
+        - billDate
+        - dueDate
+        - amount
+        - apAccountCode
+        - expenseAccountCode
+    ImportFileInput:
+      type: object
+      description: >-
+        A normalized QBO/Xero export. All monetary amounts are integer
+        minor-unit strings. The server computes a content hash for idempotency —
+        no client-supplied ref is used.
+      properties:
+        source:
+          type: string
+          enum: [quickbooks, xero]
+        accounts:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImportAccountInput"
+        openingBalances:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImportLineInput"
+        transactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImportTransactionInput"
+        openInvoices:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImportInvoiceInput"
+        openBills:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImportBillInput"
+      required: [source, accounts]
+    ReconciliationAccountRow:
+      type: object
+      description: Money fields are decimal strings.
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        sourceDebit:
+          type: string
+        sourceCredit:
+          type: string
+        ledgerDebit:
+          type: string
+        ledgerCredit:
+          type: string
+        matched:
+          type: boolean
+      required:
+        - code
+        - name
+        - sourceDebit
+        - sourceCredit
+        - ledgerDebit
+        - ledgerCredit
+        - matched
+    ReconciliationReport:
+      type: object
+      description: Money fields are decimal strings.
+      properties:
+        source:
+          type: string
+        ref:
+          type: string
+        accounts:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReconciliationAccountRow"
+        sourceTotalDebit:
+          type: string
+        sourceTotalCredit:
+          type: string
+        ledgerTotalDebit:
+          type: string
+        ledgerTotalCredit:
+          type: string
+        sourceBalanced:
+          type: boolean
+        matched:
+          type: boolean
+        entriesPosted:
+          type: integer
+        invoicesCreated:
+          type: integer
+        billsCreated:
+          type: integer
+      required:
+        - source
+        - ref
+        - accounts
+        - sourceTotalDebit
+        - sourceTotalCredit
+        - ledgerTotalDebit
+        - ledgerTotalCredit
+        - sourceBalanced
+        - matched
+        - entriesPosted
+        - invoicesCreated
+        - billsCreated
+    Bill:
+      type: object
+      description: Money fields are decimal strings.
+      properties:
+        id:
+          type: string
+        vendor:
+          type: string
+        billNumber:
+          type: string
+          nullable: true
+        billDate:
+          type: string
+        dueDate:
+          type: string
+        amount:
+          type: string
+        paid:
+          type: string
+        outstanding:
+          type: string
+        status:
+          type: string
+      required:
+        - id
+        - vendor
+        - billDate
+        - dueDate
+        - amount
+        - paid
+        - outstanding
+        - status
+    BillList:
+      type: object
+      properties:
+        bills:
+          type: array
+          items:
+            $ref: "#/components/schemas/Bill"
+      required: [bills]
+    BillInput:
+      type: object
+      description: amount is a decimal string (e.g. "1200.00").
+      properties:
+        vendor:
+          type: string
+          minLength: 1
+        billNumber:
+          type: string
+        billDate:
+          type: string
+        dueDate:
+          type: string
+        amount:
+          type: string
+        expenseAccountId:
+          type: string
+      required: [vendor, billDate, dueDate, amount, expenseAccountId]
+    BillPaymentInput:
+      type: object
+      description: amount is a decimal string (e.g. "1200.00").
+      properties:
+        amount:
+          type: string
+        paymentDate:
+          type: string
+        cashAccountId:
+          type: string
+      required: [amount, paymentDate]
+    ArAgingBuckets:
+      type: object
+      description: Each bucket total is a decimal string.
+      properties:
+        current:
+          type: string
+        "1-30":
+          type: string
+        "31-60":
+          type: string
+        "61-90":
+          type: string
+        "90+":
+          type: string
+      required: [current, "1-30", "31-60", "61-90", "90+"]
+    ArAgingLine:
+      type: object
+      properties:
+        invoiceId:
+          type: string
+        customer:
+          type: string
+        invoiceNumber:
+          type: string
+          nullable: true
+        dueDate:
+          type: string
+        outstanding:
+          type: string
+        daysPastDue:
+          type: integer
+        bucket:
+          type: string
+      required:
+        - invoiceId
+        - customer
+        - dueDate
+        - outstanding
+        - daysPastDue
+        - bucket
+    ArAgingReport:
+      type: object
+      properties:
+        asOf:
+          type: string
+        buckets:
+          $ref: "#/components/schemas/ArAgingBuckets"
+        total:
+          type: string
+        lines:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArAgingLine"
+      required: [asOf, buckets, total, lines]
+    PayrollRun:
+      type: object
+      description: Money fields are decimal strings.
+      properties:
+        id:
+          type: string
+        provider:
+          type: string
+        externalId:
+          type: string
+        payDate:
+          type: string
+        grossPay:
+          type: string
+        taxes:
+          type: string
+        netPay:
+          type: string
+      required:
+        - id
+        - provider
+        - externalId
+        - payDate
+        - grossPay
+        - taxes
+        - netPay
+    PayrollRunList:
+      type: object
+      properties:
+        payrollRuns:
+          type: array
+          items:
+            $ref: "#/components/schemas/PayrollRun"
+      required: [payrollRuns]
+    Member:
+      type: object
+      properties:
+        userId:
+          type: string
+        email:
+          type: string
+        name:
+          type: string
+          nullable: true
+        role:
+          type: string
+        active:
+          type: boolean
+        revokedAt:
+          type: string
+          nullable: true
+      required: [userId, email, name, role, active]
+    MemberList:
+      type: object
+      properties:
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/Member"
+      required: [members]
+    MemberInput:
+      type: object
+      properties:
+        email:
+          type: string
+          minLength: 1
+        name:
+          type: string
+        role:
+          type: string
+          enum: [owner, staff, view_only, accountant]
+      required: [email, role]
+    AccountantInput:
+      type: object
+      properties:
+        email:
+          type: string
+          minLength: 1
+        name:
+          type: string
+      required: [email]

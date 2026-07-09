@@ -109,6 +109,72 @@ describe("mapPlaidCategoryToAccountCode", () => {
     ).toBe("5300");
   });
 
+  it("routes payment processors to Merchant / Processing Fees 6200", () => {
+    expect(
+      mapPlaidCategoryToAccountCode({
+        primary: "GENERAL_SERVICES",
+        detailed: "GENERAL_SERVICES_OTHER_GENERAL_SERVICES",
+        name: "STRIPE PROCESSING FEE",
+        direction: "out",
+      }),
+    ).toBe("6200");
+  });
+
+  it("routes advertising platforms to Advertising & Marketing 6100", () => {
+    expect(
+      mapPlaidCategoryToAccountCode({
+        primary: "GENERAL_SERVICES",
+        detailed: null,
+        name: "GOOGLE ADS 8829",
+        direction: "out",
+      }),
+    ).toBe("6100");
+  });
+
+  it("routes insurance carriers to Insurance 6000", () => {
+    expect(
+      mapPlaidCategoryToAccountCode({
+        primary: "GENERAL_SERVICES",
+        detailed: null,
+        name: "HISCOX INSURANCE PREMIUM",
+        direction: "out",
+      }),
+    ).toBe("6000");
+  });
+
+  it("routes office-supply retailers to Office Supplies 5900", () => {
+    expect(
+      mapPlaidCategoryToAccountCode({
+        primary: "GENERAL_MERCHANDISE",
+        detailed: "GENERAL_MERCHANDISE_OFFICE_SUPPLIES",
+        name: "STAPLES STORE #123",
+        direction: "out",
+      }),
+    ).toBe("5900");
+  });
+
+  it("routes contractor / professional-services names to Contractor Fees 5800", () => {
+    expect(
+      mapPlaidCategoryToAccountCode({
+        primary: "GENERAL_MERCHANDISE",
+        detailed: null,
+        name: "Upwork Freelance Payment",
+        direction: "out",
+      }),
+    ).toBe("5800");
+  });
+
+  it("routes legal/accounting GENERAL_SERVICES detailed to Contractor Fees 5800", () => {
+    expect(
+      mapPlaidCategoryToAccountCode({
+        primary: "GENERAL_SERVICES",
+        detailed: "GENERAL_SERVICES_ACCOUNTING_AND_FINANCIAL_PLANNING",
+        name: "Firm & Co",
+        direction: "out",
+      }),
+    ).toBe("5800");
+  });
+
   it("maps any money-in to revenue 4000", () => {
     expect(
       mapPlaidCategoryToAccountCode({

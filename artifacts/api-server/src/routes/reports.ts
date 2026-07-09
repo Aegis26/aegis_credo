@@ -6,10 +6,14 @@ import {
   GetProfitAndLossReportResponse,
   GetBalanceSheetReportParams,
   GetBalanceSheetReportResponse,
+  GetArAgingParams,
+  GetArAgingQueryParams,
+  GetArAgingResponse,
 } from "@workspace/api-zod";
 import {
   requirePermission,
   getTrialBalance,
+  getArAging,
   formatMoney,
 } from "@workspace/ledger";
 import { sendLedgerError } from "../lib/errors";
@@ -117,6 +121,43 @@ router.get("/orgs/:orgId/reports/balance-sheet", async (req, res) => {
         equityWithIncome: formatMoney(equityWithIncome),
         totalLiabilitiesAndEquity: formatMoney(totalLiabilities + equityWithIncome),
         balanced: totalAssets === totalLiabilities + equityWithIncome,
+      }),
+    );
+  } catch (err) {
+    sendLedgerError(res, err);
+  }
+});
+
+router.get("/orgs/:orgId/reports/ar-aging", async (req, res) => {
+  try {
+    const userId = getSessionUserId(req);
+    const { orgId } = GetArAgingParams.parse(req.params);
+    const { asOf } = GetArAgingQueryParams.parse(req.query);
+    await requirePermission(orgId, userId, "reports.read");
+
+    const asOfDate = asOf ?? new Date().toISOString().slice(0, 10);
+    const report = await getArAging(orgId, asOfDate);
+
+    res.json(
+      GetArAgingResponse.parse({
+        asOf: report.asOf,
+        buckets: {
+          current: formatMoney(report.buckets.current),
+          "1-30": formatMoney(report.buckets["1-30"]),
+          "31-60": formatMoney(report.buckets["31-60"]),
+          "61-90": formatMoney(report.buckets["61-90"]),
+          "90+": formatMoney(report.buckets["90+"]),
+        },
+        total: formatMoney(report.total),
+        lines: report.lines.map((l) => ({
+          invoiceId: l.invoiceId,
+          customer: l.customer,
+          invoiceNumber: l.invoiceNumber,
+          dueDate: l.dueDate,
+          outstanding: formatMoney(l.outstanding),
+          daysPastDue: l.daysPastDue,
+          bucket: l.bucket,
+        })),
       }),
     );
   } catch (err) {

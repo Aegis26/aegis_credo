@@ -32,6 +32,11 @@ import {
   Calculator,
   LogOut,
   Menu,
+  UploadCloud,
+  Receipt,
+  PieChart,
+  Users,
+  UsersRound,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
@@ -53,11 +58,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const navigation = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
+    { name: "Migrate", href: "/import", icon: UploadCloud },
     { name: "Bank", href: "/bank", icon: Landmark },
     { name: "Reconcile", href: "/reconcile", icon: FileCheck },
     { name: "Invoices", href: "/invoices", icon: FileText },
+    { name: "Bills", href: "/bills", icon: Receipt },
+    { name: "A/R Aging", href: "/aging", icon: PieChart },
+    { name: "Payroll", href: "/payroll", icon: Users },
     { name: "Reports", href: "/reports", icon: LineChart },
     { name: "Taxes", href: "/taxes", icon: Calculator },
+    { name: "Team", href: "/team", icon: UsersRound },
   ];
 
   const handleLogout = () => {

@@ -38,6 +38,12 @@ export const STARTER_CHART_OF_ACCOUNTS: StarterAccount[] = [
   { code: "5500", name: "Travel", type: "expense" },
   { code: "5600", name: "Software & Subscriptions", type: "expense" },
   { code: "5700", name: "Bank Fees & Charges", type: "expense" },
+  { code: "5800", name: "Contractor / Professional Fees", type: "expense" },
+  { code: "5900", name: "Office Supplies", type: "expense" },
+  { code: "6000", name: "Insurance", type: "expense" },
+  { code: "6100", name: "Advertising & Marketing", type: "expense" },
+  { code: "6200", name: "Merchant / Processing Fees", type: "expense" },
+  { code: "6300", name: "Repairs & Maintenance", type: "expense" },
 ];
 
 export interface SeededOrg {

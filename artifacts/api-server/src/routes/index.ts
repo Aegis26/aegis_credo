@@ -8,6 +8,10 @@ import reportsRouter from "./reports";
 import bankRouter from "./bank";
 import invoicesRouter from "./invoices";
 import taxRouter from "./tax";
+import importRouter from "./import";
+import billsRouter from "./bills";
+import payrollRouter from "./payroll";
+import membersRouter from "./members";
 import { requireAuth } from "../middlewares/auth";
 
 export interface RouterOptions {
@@ -32,6 +36,10 @@ export function createRouter(options: RouterOptions = {}): IRouter {
   router.use(bankRouter);
   router.use(invoicesRouter);
   router.use(taxRouter);
+  router.use(importRouter);
+  router.use(billsRouter);
+  router.use(payrollRouter);
+  router.use(membersRouter);
 
   return router;
 }

@@ -21,6 +21,8 @@ import type {
 
 import type {
   AccountList,
+  AccountantInput,
+  ArAgingReport,
   AuthSession,
   BalanceSheetReport,
   BankExchangeInput,
@@ -31,26 +33,37 @@ import type {
   BankTransactionList,
   BatchExportRequest,
   BatchExportResponse,
+  Bill,
+  BillInput,
+  BillList,
+  BillPaymentInput,
   CategorizeInput,
   ClientList,
   ClosePeriodList,
   CloseStatusSummary,
   ErrorResponse,
+  GetArAgingParams,
   GetPracticeDashboardParams,
   GetTaxEstimateParams,
   HealthStatus,
+  ImportFileInput,
   Invoice,
   InvoiceInput,
   InvoiceList,
   InvoicePaymentInput,
   ListBankTransactionsParams,
   LoginRequest,
+  Member,
+  MemberInput,
+  MemberList,
   Org,
   OrgDashboard,
   OrgInput,
   OrgList,
+  PayrollRunList,
   PracticeDashboard,
   ProfitAndLossReport,
+  ReconciliationReport,
   SignupRequest,
   TaxEstimate,
   TrialBalanceReport
@@ -2223,4 +2236,760 @@ export function useGetTaxEstimate<TData = Awaited<ReturnType<typeof getTaxEstima
 
 
 
+
+export const getImportAccountingFileUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/import`
+}
+
+/**
+ * Ingests a normalized accounting export. Every economic event posts through the ledger. Fully idempotent by file content: a content hash is computed server-side, so re-importing the same file posts nothing new. Returns a reconciliation report proving the ledger reproduces the file's own trial balance.
+ * @summary Import a QBO/Xero export via the posting service
+ */
+export const importAccountingFile = async (orgId: string,
+    importFileInput: ImportFileInput, options?: RequestInit): Promise<ReconciliationReport> => {
+
+  return customFetch<ReconciliationReport>(getImportAccountingFileUrl(orgId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(importFileInput)
+  }
+);}
+
+
+
+
+
+export const getImportAccountingFileMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importAccountingFile>>, TError,{orgId: string;data: BodyType<ImportFileInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof importAccountingFile>>, TError,{orgId: string;data: BodyType<ImportFileInput>}, TContext> => {
+
+const mutationKey = ['importAccountingFile'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof importAccountingFile>>, {orgId: string;data: BodyType<ImportFileInput>}> = (props) => {
+          const {orgId,data} = props ?? {};
+
+          return  importAccountingFile(orgId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ImportAccountingFileMutationResult = NonNullable<Awaited<ReturnType<typeof importAccountingFile>>>
+    export type ImportAccountingFileMutationBody = BodyType<ImportFileInput>
+    export type ImportAccountingFileMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Import a QBO/Xero export via the posting service
+ */
+export const useImportAccountingFile = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importAccountingFile>>, TError,{orgId: string;data: BodyType<ImportFileInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof importAccountingFile>>,
+        TError,
+        {orgId: string;data: BodyType<ImportFileInput>},
+        TContext
+      > => {
+      return useMutation(getImportAccountingFileMutationOptions(options));
+    }
+
+export const getListBillsUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/bills`
+}
+
+/**
+ * @summary List bills for an org
+ */
+export const listBills = async (orgId: string, options?: RequestInit): Promise<BillList> => {
+
+  return customFetch<BillList>(getListBillsUrl(orgId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListBillsQueryKey = (orgId: string,) => {
+    return [
+    `/api/orgs/${orgId}/bills`
+    ] as const;
+    }
+
+
+export const getListBillsQueryOptions = <TData = Awaited<ReturnType<typeof listBills>>, TError = ErrorType<ErrorResponse>>(orgId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBills>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListBillsQueryKey(orgId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listBills>>> = ({ signal }) => listBills(orgId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listBills>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListBillsQueryResult = NonNullable<Awaited<ReturnType<typeof listBills>>>
+export type ListBillsQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List bills for an org
+ */
+
+export function useListBills<TData = Awaited<ReturnType<typeof listBills>>, TError = ErrorType<ErrorResponse>>(
+ orgId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBills>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListBillsQueryOptions(orgId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateBillUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/bills`
+}
+
+/**
+ * @summary Create a bill (posts Dr expense / Cr A/P)
+ */
+export const createBill = async (orgId: string,
+    billInput: BillInput, options?: RequestInit): Promise<Bill> => {
+
+  return customFetch<Bill>(getCreateBillUrl(orgId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(billInput)
+  }
+);}
+
+
+
+
+
+export const getCreateBillMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createBill>>, TError,{orgId: string;data: BodyType<BillInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createBill>>, TError,{orgId: string;data: BodyType<BillInput>}, TContext> => {
+
+const mutationKey = ['createBill'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createBill>>, {orgId: string;data: BodyType<BillInput>}> = (props) => {
+          const {orgId,data} = props ?? {};
+
+          return  createBill(orgId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateBillMutationResult = NonNullable<Awaited<ReturnType<typeof createBill>>>
+    export type CreateBillMutationBody = BodyType<BillInput>
+    export type CreateBillMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Create a bill (posts Dr expense / Cr A/P)
+ */
+export const useCreateBill = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createBill>>, TError,{orgId: string;data: BodyType<BillInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createBill>>,
+        TError,
+        {orgId: string;data: BodyType<BillInput>},
+        TContext
+      > => {
+      return useMutation(getCreateBillMutationOptions(options));
+    }
+
+export const getPayBillUrl = (orgId: string,
+    billId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/bills/${billId}/pay`
+}
+
+/**
+ * @summary Record a payment on a bill (posts Dr A/P / Cr cash)
+ */
+export const payBill = async (orgId: string,
+    billId: string,
+    billPaymentInput: BillPaymentInput, options?: RequestInit): Promise<Bill> => {
+
+  return customFetch<Bill>(getPayBillUrl(orgId,billId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(billPaymentInput)
+  }
+);}
+
+
+
+
+
+export const getPayBillMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof payBill>>, TError,{orgId: string;billId: string;data: BodyType<BillPaymentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof payBill>>, TError,{orgId: string;billId: string;data: BodyType<BillPaymentInput>}, TContext> => {
+
+const mutationKey = ['payBill'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof payBill>>, {orgId: string;billId: string;data: BodyType<BillPaymentInput>}> = (props) => {
+          const {orgId,billId,data} = props ?? {};
+
+          return  payBill(orgId,billId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PayBillMutationResult = NonNullable<Awaited<ReturnType<typeof payBill>>>
+    export type PayBillMutationBody = BodyType<BillPaymentInput>
+    export type PayBillMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Record a payment on a bill (posts Dr A/P / Cr cash)
+ */
+export const usePayBill = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof payBill>>, TError,{orgId: string;billId: string;data: BodyType<BillPaymentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof payBill>>,
+        TError,
+        {orgId: string;billId: string;data: BodyType<BillPaymentInput>},
+        TContext
+      > => {
+      return useMutation(getPayBillMutationOptions(options));
+    }
+
+export const getGetArAgingUrl = (orgId: string,
+    params?: GetArAgingParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/orgs/${orgId}/reports/ar-aging?${stringifiedParams}` : `/api/orgs/${orgId}/reports/ar-aging`
+}
+
+/**
+ * @summary Accounts-receivable aging report
+ */
+export const getArAging = async (orgId: string,
+    params?: GetArAgingParams, options?: RequestInit): Promise<ArAgingReport> => {
+
+  return customFetch<ArAgingReport>(getGetArAgingUrl(orgId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetArAgingQueryKey = (orgId: string,
+    params?: GetArAgingParams,) => {
+    return [
+    `/api/orgs/${orgId}/reports/ar-aging`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetArAgingQueryOptions = <TData = Awaited<ReturnType<typeof getArAging>>, TError = ErrorType<ErrorResponse>>(orgId: string,
+    params?: GetArAgingParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getArAging>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetArAgingQueryKey(orgId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getArAging>>> = ({ signal }) => getArAging(orgId,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getArAging>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetArAgingQueryResult = NonNullable<Awaited<ReturnType<typeof getArAging>>>
+export type GetArAgingQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Accounts-receivable aging report
+ */
+
+export function useGetArAging<TData = Awaited<ReturnType<typeof getArAging>>, TError = ErrorType<ErrorResponse>>(
+ orgId: string,
+    params?: GetArAgingParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getArAging>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetArAgingQueryOptions(orgId,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListPayrollRunsUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/payroll-runs`
+}
+
+/**
+ * @summary List ingested payroll runs (display only)
+ */
+export const listPayrollRuns = async (orgId: string, options?: RequestInit): Promise<PayrollRunList> => {
+
+  return customFetch<PayrollRunList>(getListPayrollRunsUrl(orgId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPayrollRunsQueryKey = (orgId: string,) => {
+    return [
+    `/api/orgs/${orgId}/payroll-runs`
+    ] as const;
+    }
+
+
+export const getListPayrollRunsQueryOptions = <TData = Awaited<ReturnType<typeof listPayrollRuns>>, TError = ErrorType<ErrorResponse>>(orgId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPayrollRuns>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPayrollRunsQueryKey(orgId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPayrollRuns>>> = ({ signal }) => listPayrollRuns(orgId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPayrollRuns>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPayrollRunsQueryResult = NonNullable<Awaited<ReturnType<typeof listPayrollRuns>>>
+export type ListPayrollRunsQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List ingested payroll runs (display only)
+ */
+
+export function useListPayrollRuns<TData = Awaited<ReturnType<typeof listPayrollRuns>>, TError = ErrorType<ErrorResponse>>(
+ orgId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPayrollRuns>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPayrollRunsQueryOptions(orgId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListMembersUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/members`
+}
+
+/**
+ * @summary List org members and their roles
+ */
+export const listMembers = async (orgId: string, options?: RequestInit): Promise<MemberList> => {
+
+  return customFetch<MemberList>(getListMembersUrl(orgId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMembersQueryKey = (orgId: string,) => {
+    return [
+    `/api/orgs/${orgId}/members`
+    ] as const;
+    }
+
+
+export const getListMembersQueryOptions = <TData = Awaited<ReturnType<typeof listMembers>>, TError = ErrorType<ErrorResponse>>(orgId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMembers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMembersQueryKey(orgId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMembers>>> = ({ signal }) => listMembers(orgId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMembers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMembersQueryResult = NonNullable<Awaited<ReturnType<typeof listMembers>>>
+export type ListMembersQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List org members and their roles
+ */
+
+export function useListMembers<TData = Awaited<ReturnType<typeof listMembers>>, TError = ErrorType<ErrorResponse>>(
+ orgId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMembers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMembersQueryOptions(orgId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAddMemberUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/members`
+}
+
+/**
+ * @summary Invite a user to the org with a role
+ */
+export const addMember = async (orgId: string,
+    memberInput: MemberInput, options?: RequestInit): Promise<Member> => {
+
+  return customFetch<Member>(getAddMemberUrl(orgId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(memberInput)
+  }
+);}
+
+
+
+
+
+export const getAddMemberMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addMember>>, TError,{orgId: string;data: BodyType<MemberInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof addMember>>, TError,{orgId: string;data: BodyType<MemberInput>}, TContext> => {
+
+const mutationKey = ['addMember'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addMember>>, {orgId: string;data: BodyType<MemberInput>}> = (props) => {
+          const {orgId,data} = props ?? {};
+
+          return  addMember(orgId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AddMemberMutationResult = NonNullable<Awaited<ReturnType<typeof addMember>>>
+    export type AddMemberMutationBody = BodyType<MemberInput>
+    export type AddMemberMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Invite a user to the org with a role
+ */
+export const useAddMember = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addMember>>, TError,{orgId: string;data: BodyType<MemberInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof addMember>>,
+        TError,
+        {orgId: string;data: BodyType<MemberInput>},
+        TContext
+      > => {
+      return useMutation(getAddMemberMutationOptions(options));
+    }
+
+export const getRevokeMemberUrl = (orgId: string,
+    userId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/members/${userId}/revoke`
+}
+
+/**
+ * @summary Revoke a member's access (append-only, sets revokedAt)
+ */
+export const revokeMember = async (orgId: string,
+    userId: string, options?: RequestInit): Promise<Member> => {
+
+  return customFetch<Member>(getRevokeMemberUrl(orgId,userId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRevokeMemberMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeMember>>, TError,{orgId: string;userId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof revokeMember>>, TError,{orgId: string;userId: string}, TContext> => {
+
+const mutationKey = ['revokeMember'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeMember>>, {orgId: string;userId: string}> = (props) => {
+          const {orgId,userId} = props ?? {};
+
+          return  revokeMember(orgId,userId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RevokeMemberMutationResult = NonNullable<Awaited<ReturnType<typeof revokeMember>>>
+
+    export type RevokeMemberMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Revoke a member's access (append-only, sets revokedAt)
+ */
+export const useRevokeMember = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeMember>>, TError,{orgId: string;userId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof revokeMember>>,
+        TError,
+        {orgId: string;userId: string},
+        TContext
+      > => {
+      return useMutation(getRevokeMemberMutationOptions(options));
+    }
+
+export const getInviteAccountantUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/accountants`
+}
+
+/**
+ * @summary Invite an external accountant (scoped, revocable, audited)
+ */
+export const inviteAccountant = async (orgId: string,
+    accountantInput: AccountantInput, options?: RequestInit): Promise<Member> => {
+
+  return customFetch<Member>(getInviteAccountantUrl(orgId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(accountantInput)
+  }
+);}
+
+
+
+
+
+export const getInviteAccountantMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof inviteAccountant>>, TError,{orgId: string;data: BodyType<AccountantInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof inviteAccountant>>, TError,{orgId: string;data: BodyType<AccountantInput>}, TContext> => {
+
+const mutationKey = ['inviteAccountant'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof inviteAccountant>>, {orgId: string;data: BodyType<AccountantInput>}> = (props) => {
+          const {orgId,data} = props ?? {};
+
+          return  inviteAccountant(orgId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type InviteAccountantMutationResult = NonNullable<Awaited<ReturnType<typeof inviteAccountant>>>
+    export type InviteAccountantMutationBody = BodyType<AccountantInput>
+    export type InviteAccountantMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Invite an external accountant (scoped, revocable, audited)
+ */
+export const useInviteAccountant = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof inviteAccountant>>, TError,{orgId: string;data: BodyType<AccountantInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof inviteAccountant>>,
+        TError,
+        {orgId: string;data: BodyType<AccountantInput>},
+        TContext
+      > => {
+      return useMutation(getInviteAccountantMutationOptions(options));
+    }
 

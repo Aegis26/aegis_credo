@@ -1,0 +1,59 @@
+Phases 1–5 are built, tested, and hardened: the ledger engine, the SMB engine
+(Phase 2), and the freelancer web UI over an authenticated, server-verified API.
+The bank-import path was recently hardened — integer-safe money (parsePlaidAmount
+-> bigint), content-based dedup on re-link, a one-time idempotent opening balance,
+and a shared Plaid category -> COA mapping. Reuse that same discipline here.
+
+Build the SMB-facing screens in React, extending the SAME web app, calling the
+EXISTING authenticated API and posting service. The UI holds no accounting logic.
+All Phase 1 invariants and server-verified identity rules apply: integer money on
+every path (no JS number), no caller-supplied userId (session identity only), no
+direct ledger writes.
+
+BUILD (screens, extending the existing app):
+
+- Migration IN wizard — THE headline feature, build it first and build it well.
+  Upload a QuickBooks Online / Xero export (chart of accounts, historical
+  transactions, open invoices, open bills, opening balances) and load it into the
+  ledger via the posting service. Requirements:
+  * IDEMPOTENT, using the same content-based dedup approach as the bank sync —
+    re-running the same import must add ZERO duplicate rows and must not re-post
+    opening balances. (We just fixed triplicate transactions from re-linking; do
+    not reintroduce that class of bug.)
+  * End in a RECONCILIATION REPORT: imported trial balance vs. the source file
+    totals, shown to the user so they can confirm nothing was lost. This report
+    is the trust-builder that makes a QBO/Xero switcher believe the move is safe.
+  * Integer-safe money parsing throughout; reuse parseMoney.
+
+- Bills / Accounts Payable: create bills and record bill payments via the posting
+  service; list open and paid bills.
+- A/R aging report view.
+- Payroll: surface the output of the existing payroll integration (Gusto/Check)
+  — display posted payroll runs. Do NOT build payroll logic.
+- User management: invite users to an org and assign roles (owner, staff,
+  view-only), enforced server-side.
+- Accountant collaboration: invite an external accountant into an org with
+  scoped, revocable, audit-logged access.
+
+- Extend the seeded chart of accounts with the expense/vendor accounts an SMB
+  needs, on top of the freelancer set already seeded (5000 COGS, 5100 Rent,
+  5200 Salaries, 5300 Utilities, 5400 Meals, 5500 Travel, 5600 Software,
+  5700 Bank Fees). Add: 5800 Contractor / Professional Fees, 5900 Office
+  Supplies, 6000 Insurance, 6100 Advertising & Marketing, 6200 Merchant /
+  Processing Fees, 6300 Repairs & Maintenance. Route imported categories to
+  these via the existing shared mapping.
+
+RULES: reuse existing endpoints, services, and the shared category mapping; do
+not rebuild the ledger or import core; identity from the session only; no direct
+ledger writes; imports idempotent; match the existing app's UI patterns.
+
+DEFINITION OF DONE (tests must pass):
+- Importing a sample QBO/Xero export reproduces its trial balance exactly and
+  shows the reconciliation report.
+- Re-running the same import adds ZERO duplicate rows (idempotency test).
+- A bill can be created and paid and posts correctly; A/R aging is correct.
+- Roles gate access; an invited accountant sees only granted orgs.
+- All existing tests still pass and the trial balance still nets to zero.
+
+Show me the migration walkthrough, the reconciliation report, and the passing
+tests including the import-idempotency test.

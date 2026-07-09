@@ -387,6 +387,240 @@ export interface TaxEstimate {
   disclaimer: string;
 }
 
+export type ImportAccountInputType = typeof ImportAccountInputType[keyof typeof ImportAccountInputType];
+
+
+export const ImportAccountInputType = {
+  asset: 'asset',
+  liability: 'liability',
+  equity: 'equity',
+  revenue: 'revenue',
+  expense: 'expense',
+} as const;
+
+export interface ImportAccountInput {
+  code: string;
+  name: string;
+  type: ImportAccountInputType;
+}
+
+/**
+ * debit / credit are integer minor-unit strings (e.g. "150000").
+ */
+export interface ImportLineInput {
+  accountCode: string;
+  debit?: string;
+  credit?: string;
+}
+
+export interface ImportTransactionInput {
+  id: string;
+  date: string;
+  memo?: string;
+  lines: ImportLineInput[];
+}
+
+/**
+ * amount is an integer minor-unit string.
+ */
+export interface ImportInvoiceInput {
+  id: string;
+  customer: string;
+  invoiceNumber?: string;
+  invoiceDate: string;
+  dueDate: string;
+  amount: string;
+  arAccountCode: string;
+  revenueAccountCode: string;
+}
+
+/**
+ * amount is an integer minor-unit string.
+ */
+export interface ImportBillInput {
+  id: string;
+  vendor: string;
+  billNumber?: string;
+  billDate: string;
+  dueDate: string;
+  amount: string;
+  apAccountCode: string;
+  expenseAccountCode: string;
+}
+
+export type ImportFileInputSource = typeof ImportFileInputSource[keyof typeof ImportFileInputSource];
+
+
+export const ImportFileInputSource = {
+  quickbooks: 'quickbooks',
+  xero: 'xero',
+} as const;
+
+/**
+ * A normalized QBO/Xero export. All monetary amounts are integer minor-unit strings. The server computes a content hash for idempotency — no client-supplied ref is used.
+ */
+export interface ImportFileInput {
+  source: ImportFileInputSource;
+  accounts: ImportAccountInput[];
+  openingBalances?: ImportLineInput[];
+  transactions?: ImportTransactionInput[];
+  openInvoices?: ImportInvoiceInput[];
+  openBills?: ImportBillInput[];
+}
+
+/**
+ * Money fields are decimal strings.
+ */
+export interface ReconciliationAccountRow {
+  code: string;
+  name: string;
+  sourceDebit: string;
+  sourceCredit: string;
+  ledgerDebit: string;
+  ledgerCredit: string;
+  matched: boolean;
+}
+
+/**
+ * Money fields are decimal strings.
+ */
+export interface ReconciliationReport {
+  source: string;
+  ref: string;
+  accounts: ReconciliationAccountRow[];
+  sourceTotalDebit: string;
+  sourceTotalCredit: string;
+  ledgerTotalDebit: string;
+  ledgerTotalCredit: string;
+  sourceBalanced: boolean;
+  matched: boolean;
+  entriesPosted: number;
+  invoicesCreated: number;
+  billsCreated: number;
+}
+
+/**
+ * Money fields are decimal strings.
+ */
+export interface Bill {
+  id: string;
+  vendor: string;
+  billNumber?: string | null;
+  billDate: string;
+  dueDate: string;
+  amount: string;
+  paid: string;
+  outstanding: string;
+  status: string;
+}
+
+export interface BillList {
+  bills: Bill[];
+}
+
+/**
+ * amount is a decimal string (e.g. "1200.00").
+ */
+export interface BillInput {
+  /** @minLength 1 */
+  vendor: string;
+  billNumber?: string;
+  billDate: string;
+  dueDate: string;
+  amount: string;
+  expenseAccountId: string;
+}
+
+/**
+ * amount is a decimal string (e.g. "1200.00").
+ */
+export interface BillPaymentInput {
+  amount: string;
+  paymentDate: string;
+  cashAccountId?: string;
+}
+
+/**
+ * Each bucket total is a decimal string.
+ */
+export interface ArAgingBuckets {
+  current: string;
+  '1-30': string;
+  '31-60': string;
+  '61-90': string;
+  '90+': string;
+}
+
+export interface ArAgingLine {
+  invoiceId: string;
+  customer: string;
+  invoiceNumber?: string | null;
+  dueDate: string;
+  outstanding: string;
+  daysPastDue: number;
+  bucket: string;
+}
+
+export interface ArAgingReport {
+  asOf: string;
+  buckets: ArAgingBuckets;
+  total: string;
+  lines: ArAgingLine[];
+}
+
+/**
+ * Money fields are decimal strings.
+ */
+export interface PayrollRun {
+  id: string;
+  provider: string;
+  externalId: string;
+  payDate: string;
+  grossPay: string;
+  taxes: string;
+  netPay: string;
+}
+
+export interface PayrollRunList {
+  payrollRuns: PayrollRun[];
+}
+
+export interface Member {
+  userId: string;
+  email: string;
+  name: string | null;
+  role: string;
+  active: boolean;
+  revokedAt?: string | null;
+}
+
+export interface MemberList {
+  members: Member[];
+}
+
+export type MemberInputRole = typeof MemberInputRole[keyof typeof MemberInputRole];
+
+
+export const MemberInputRole = {
+  owner: 'owner',
+  staff: 'staff',
+  view_only: 'view_only',
+  accountant: 'accountant',
+} as const;
+
+export interface MemberInput {
+  /** @minLength 1 */
+  email: string;
+  name?: string;
+  role: MemberInputRole;
+}
+
+export interface AccountantInput {
+  /** @minLength 1 */
+  email: string;
+  name?: string;
+}
+
 export type GetPracticeDashboardParams = {
 /**
  * Restrict to a single practice the user is a member of.
@@ -415,5 +649,12 @@ export type GetTaxEstimateParams = {
  * Set-aside rate as a fraction (e.g. 0.25 for 25%). Defaults to 0.25.
  */
 rate?: number;
+};
+
+export type GetArAgingParams = {
+/**
+ * As-of date (YYYY-MM-DD). Defaults to today.
+ */
+asOf?: string;
 };
 
