@@ -1,4 +1,6 @@
 import { Router, type IRouter } from "express";
+import fs from "node:fs";
+import path from "node:path";
 import Papa from "papaparse";
 import ExcelJS from "exceljs";
 import {
@@ -16,6 +18,29 @@ import { sendLedgerError, HttpError } from "../lib/errors";
 import { getSessionUserId } from "../middlewares/auth";
 
 const router: IRouter = Router();
+
+/**
+ * DEV ONLY: persist a copy of every uploaded import file so a real-world
+ * export can be promoted to a regression-test fixture verbatim. Runs only in
+ * development (not production, not tests); never fails the request.
+ */
+function captureUploadForFixture(contentType: "csv" | "xlsx", content: string): void {
+  if (process.env.NODE_ENV !== "development") return;
+  if (content.length > 5 * 1024 * 1024) return; // cap capture at ~5MB
+  try {
+    const dir = path.resolve(process.cwd(), "import-uploads");
+    fs.mkdirSync(dir, { recursive: true });
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const file = path.join(dir, `upload-${stamp}.${contentType}`);
+    if (contentType === "csv") {
+      fs.writeFileSync(file, content, "utf8");
+    } else {
+      fs.writeFileSync(file, Buffer.from(content, "base64"));
+    }
+  } catch {
+    // Best-effort capture only — never block the preview.
+  }
+}
 
 /** Parse CSV text into a grid of string cells, respecting quoted commas. */
 function csvToRows(text: string): string[][] {
@@ -79,6 +104,8 @@ router.post("/orgs/:orgId/import/preview", async (req, res) => {
     const { orgId } = PreviewImportParams.parse(req.params);
     const body = PreviewImportBody.parse(req.body);
     await requirePermission(orgId, userId, "ledger.post");
+
+    captureUploadForFixture(body.contentType, body.content);
 
     let rows: string[][];
     try {

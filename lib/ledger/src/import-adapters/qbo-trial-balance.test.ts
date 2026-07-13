@@ -62,6 +62,10 @@ const CRAIG_ROWS: string[][] = [
   ["Services", "", "503.55"],
   ["Uncategorized Income", "", "0.00"], // zero balance, one-sided 0.00 shape
   ["TOTAL", "25,553.06", "25,553.06"], // must be skipped, never imported
+  ["", "", ""], // trailing blank row
+  // QuickBooks report FOOTER — basis/timestamp scaffolding, never an account.
+  ["Accrual Basis Thursday, July 09, 2026 02:52 PM GMTZ", "", ""],
+  ["Thursday, July 09, 2026 02:52 PM GMTZ", "", ""],
 ];
 
 describe("parseDecimalToMinor", () => {
@@ -204,9 +208,28 @@ describe("parseQboTrialBalance (real Craig's file)", () => {
     expect(parse.asOf).toBe("As of Jul 9, 2026");
   });
 
-  it("keeps every real account (including zero-balance) and skips only TOTAL rows", () => {
+  it("keeps every real account (including zero-balance) and skips scaffolding (TOTAL, footer, blanks)", () => {
     expect(parse.accounts).toHaveLength(36);
     expect(parse.accounts.some((a) => /^total/i.test(a.name))).toBe(false);
+    // The report footer must never be ingested as an account.
+    expect(
+      parse.accounts.some((a) => /^(accrual|cash)\s+basis/i.test(a.name)),
+    ).toBe(false);
+    expect(parse.accounts.some((a) => /gmt/i.test(a.name))).toBe(false);
+  });
+
+  it("keeps a REAL account that merely resembles a footer when it carries an amount", () => {
+    const rows = [
+      ["Account Name", "Debit", "Credit"],
+      ["Cash Basis Adjustments", "10.00", ""],
+      ["Checking", "", "10.00"],
+      ["Accrual Basis Thursday, July 09, 2026 02:52 PM GMTZ", "", ""],
+    ];
+    const p = parseQboTrialBalance(rows);
+    expect(p.accounts.map((a) => a.name).sort()).toEqual([
+      "Cash Basis Adjustments",
+      "Checking",
+    ]);
   });
 
   it("keeps zero-balance accounts in BOTH QBO shapes (blank and explicit 0.00)", () => {

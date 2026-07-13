@@ -236,6 +236,16 @@ _Populate as you build — explicit user instructions worth remembering across s
   gate, and tenant scoping (`assertClientAccess`, `accessibleClients`) runs on
   top of the authenticated identity, not instead of it.
 
+- **TB adapter strips report scaffolding STRUCTURALLY, never by missing
+  amounts.** TOTAL/subtotal rows, blank rows, and the QuickBooks report FOOTER
+  ("Accrual Basis <timestamp>", "Cash Basis …", weekday/GMT timestamp lines) are
+  skipped by pattern — and footer patterns only apply when the amount cells are
+  empty, so a real account that resembles a footer but carries a balance
+  survives. Zero-balance accounts must never be filtered by "has no amounts".
+  Dev-only: every preview upload is captured to
+  `artifacts/api-server/import-uploads/` (gitignored) so a real export can be
+  promoted to a test fixture verbatim.
+
 - **TB adapter treats name-only rows as zero-balance ACCOUNTS, not section
   headers.** QuickBooks lists zero-balance accounts with blank amounts (e.g.
   "Arizona Dept. of Revenue Payable"), so the adapter keeps them — upserted to

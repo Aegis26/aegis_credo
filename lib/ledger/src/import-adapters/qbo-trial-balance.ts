@@ -66,6 +66,30 @@ const HEADER_CREDIT = "credit";
 /** Rows we must never import as accounts, matched on the account-name cell. */
 const SKIP_NAME = /^(total|subtotal|net (income|loss)|gross profit|net )/i;
 
+/**
+ * QuickBooks report FOOTER scaffolding — the basis/timestamp stamp QuickBooks
+ * appends to the bottom of every export, e.g.:
+ *   "Accrual Basis Thursday, July 09, 2026 02:52 PM GMTZ"
+ *   "Cash Basis Tuesday, Jan 2, 2024 09:14 AM GMT-07:00"
+ *   "Thursday, July 09, 2026 02:52 PM GMTZ"   (timestamp on its own row)
+ * Matched STRUCTURALLY by known footer shapes — never by "row has no amounts",
+ * because a real zero-balance account also has no amounts and must be kept.
+ * As a second guard, a row matching these patterns is only treated as footer
+ * when its amount cells are empty (see the parse loop), so an account that
+ * happened to start with e.g. "Cash Basis…" AND carries a balance survives.
+ */
+const FOOTER_NAME = new RegExp(
+  [
+    // "Accrual Basis …" / "Cash Basis …" stamp (with or without a trailing timestamp).
+    String.raw`^(accrual|cash)\s+basis\b`,
+    // A row that is just a weekday-prefixed date/timestamp.
+    String.raw`^(monday|tuesday|wednesday|thursday|friday|saturday|sunday),\s`,
+    // A row ending in a clock time + GMT/UTC zone stamp.
+    String.raw`\d{1,2}:\d{2}\s*(am|pm)?\s*(gmt|utc)\S*\s*$`,
+  ].join("|"),
+  "i",
+);
+
 const norm = (s: string): string => s.trim().toLowerCase();
 
 /**
@@ -340,6 +364,10 @@ export function parseQboTrialBalance(rows: string[][]): QboTrialBalanceParse {
 
     if (!name) continue; // blank / spacer row
     if (SKIP_NAME.test(name)) continue; // TOTAL / subtotal / section summary
+    // Report footer (basis/timestamp stamp). Structural pattern match, plus
+    // the amount cells must be EMPTY — a footer never carries an amount, while
+    // a real account whose name merely resembles one would.
+    if (FOOTER_NAME.test(name) && !debitRaw && !creditRaw) continue;
 
     // NOTE: rows with a name but no (or zero) amounts are REAL accounts that
     // happen to carry a zero balance in this trial balance (QuickBooks lists

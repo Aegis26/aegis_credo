@@ -277,6 +277,8 @@ describe("QBO Trial Balance CSV adapter (preview → post → reconcile)", () =>
       "Services,,503.55",
       "Uncategorized Income,,0.00",
       'TOTAL,"25,553.06","25,553.06"',
+      "",
+      '"Accrual Basis Thursday, July 09, 2026 02:52 PM GMTZ",,',
     ].join("\n");
 
     const preview = await agent
@@ -325,6 +327,13 @@ describe("QBO Trial Balance CSV adapter (preview → post → reconcile)", () =>
     expect(byName("Uncategorized Asset").debit).toBe("0");
     expect(byName("Uncategorized Asset").credit).toBe("0");
     expect(byName("Uncategorized Income").credit).toBe("0");
+
+    // The report footer must NOT be ingested as an account.
+    expect(
+      preview.body.accounts.some((a: { name: string }) =>
+        /^(accrual|cash)\s+basis/i.test(a.name),
+      ),
+    ).toBe(false);
 
     // Post the draft — 33 opening lines; the zero-balance accounts must NOT
     // produce a "lines[i] must have exactly one of debit/credit" 400.
