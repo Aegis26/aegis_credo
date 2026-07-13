@@ -246,6 +246,7 @@ describe("QBO Trial Balance CSV adapter (preview → post → reconcile)", () =>
       "Inventory Asset,596.25,",
       'Undeposited Funds,"2,062.52",',
       'Truck:Original Cost,"13,495.00",',
+      "Uncategorized Asset,0.00,0.00",
       "Advertising,74.86,",
       "Automobile:Fuel,349.41,",
       "Equipment Rental,112.00,",
@@ -274,6 +275,7 @@ describe("QBO Trial Balance CSV adapter (preview → post → reconcile)", () =>
       'Landscaping Services:Job Materials:Fountains and Garden Lighting,,"1,501.72"',
       "Sales of Product Income,,912.75",
       "Services,,503.55",
+      "Uncategorized Income,,0.00",
       'TOTAL,"25,553.06","25,553.06"',
     ].join("\n");
 
@@ -317,11 +319,16 @@ describe("QBO Trial Balance CSV adapter (preview → post → reconcile)", () =>
     expect(byName("Discounts given").type).toBe("revenue");
     expect(byName("Discounts given").typeSource).toBe("ambiguous");
     expect(byName("Miscellaneous").typeSource).toBe("ambiguous");
-    expect(preview.body.ambiguousCount).toBe(3);
+    expect(preview.body.ambiguousCount).toBe(4);
 
-    // Post the draft — 33 opening lines; the zero-balance account must NOT
+    // Zero-balance rows in the explicit "0.00" shapes are also kept as accounts.
+    expect(byName("Uncategorized Asset").debit).toBe("0");
+    expect(byName("Uncategorized Asset").credit).toBe("0");
+    expect(byName("Uncategorized Income").credit).toBe("0");
+
+    // Post the draft — 33 opening lines; the zero-balance accounts must NOT
     // produce a "lines[i] must have exactly one of debit/credit" 400.
-    expect(preview.body.draft.accounts).toHaveLength(34);
+    expect(preview.body.draft.accounts).toHaveLength(36);
     expect(preview.body.draft.openingBalances).toHaveLength(33);
     const posted = await agent
       .post(`/api/orgs/${orgId}/import`)

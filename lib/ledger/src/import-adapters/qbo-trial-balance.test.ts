@@ -27,6 +27,7 @@ const CRAIG_ROWS: string[][] = [
   ["Inventory Asset", "596.25", ""],
   ["Undeposited Funds", "2,062.52", ""],
   ["Truck:Original Cost", "13,495.00", ""],
+  ["Uncategorized Asset", "0.00", "0.00"], // zero balance, explicit 0.00 shape
   ["Advertising", "74.86", ""],
   ["Automobile:Fuel", "349.41", ""],
   ["Equipment Rental", "112.00", ""],
@@ -59,6 +60,7 @@ const CRAIG_ROWS: string[][] = [
   ],
   ["Sales of Product Income", "", "912.75"],
   ["Services", "", "503.55"],
+  ["Uncategorized Income", "", "0.00"], // zero balance, one-sided 0.00 shape
   ["TOTAL", "25,553.06", "25,553.06"], // must be skipped, never imported
 ];
 
@@ -203,11 +205,12 @@ describe("parseQboTrialBalance (real Craig's file)", () => {
   });
 
   it("keeps every real account (including zero-balance) and skips only TOTAL rows", () => {
-    expect(parse.accounts).toHaveLength(34);
+    expect(parse.accounts).toHaveLength(36);
     expect(parse.accounts.some((a) => /^total/i.test(a.name))).toBe(false);
   });
 
-  it("keeps zero-balance accounts with a resolved type and zero amounts", () => {
+  it("keeps zero-balance accounts in BOTH QBO shapes (blank and explicit 0.00)", () => {
+    // Blank-cells shape.
     const az = parse.accounts.find(
       (a) => a.name === "Arizona Dept. of Revenue Payable",
     )!;
@@ -216,6 +219,17 @@ describe("parseQboTrialBalance (real Craig's file)", () => {
     expect(az.credit).toBe("0");
     expect(az.type).toBe("liability"); // "payable" wins over "revenue"
     expect(az.typeSource).toBe("mapped");
+    // Explicit "0.00","0.00" shape.
+    const ua = parse.accounts.find((a) => a.name === "Uncategorized Asset")!;
+    expect(ua).toBeDefined();
+    expect(ua.debit).toBe("0");
+    expect(ua.credit).toBe("0");
+    // One-sided "0.00" shape.
+    const ui = parse.accounts.find((a) => a.name === "Uncategorized Income")!;
+    expect(ui).toBeDefined();
+    expect(ui.debit).toBe("0");
+    expect(ui.credit).toBe("0");
+    expect(ui.type).toBe("revenue");
   });
 
   it("parses amounts into integer minor units and balances", () => {
@@ -259,6 +273,7 @@ describe("parseQboTrialBalance (real Craig's file)", () => {
       "Ask My Accountant",
       "Discounts given",
       "Miscellaneous",
+      "Uncategorized Asset",
     ]);
     // Discounts given is surfaced as contra-revenue, not defaulted to Asset.
     const discounts = ambiguous.find((a) => a.name === "Discounts given")!;
@@ -289,17 +304,21 @@ describe("toImportFileInput", () => {
     const parse = parseQboTrialBalance(CRAIG_ROWS);
     const draft = toImportFileInput(parse);
     expect(draft.source).toBe("quickbooks");
-    // All 34 accounts (incl. the zero-balance one) go to the chart of accounts…
-    expect(draft.accounts).toHaveLength(34);
-    const az = draft.accounts.find(
-      (a) => a.name === "Arizona Dept. of Revenue Payable",
-    )!;
-    expect(az).toBeDefined();
+    // All 36 accounts (incl. the three zero-balance ones) go to the COA…
+    expect(draft.accounts).toHaveLength(36);
     // …but only the 33 with a balance become opening journal lines.
     expect(draft.openingBalances).toHaveLength(33);
-    expect(
-      draft.openingBalances.some((l) => l.accountCode === az.code),
-    ).toBe(false);
+    for (const name of [
+      "Arizona Dept. of Revenue Payable",
+      "Uncategorized Asset",
+      "Uncategorized Income",
+    ]) {
+      const zero = draft.accounts.find((a) => a.name === name)!;
+      expect(zero).toBeDefined();
+      expect(
+        draft.openingBalances.some((l) => l.accountCode === zero.code),
+      ).toBe(false);
+    }
     // Every emitted line has exactly one positive side (the engine's rule).
     for (const line of draft.openingBalances) {
       const hasDebit = line.debit !== undefined && line.debit !== "0";
