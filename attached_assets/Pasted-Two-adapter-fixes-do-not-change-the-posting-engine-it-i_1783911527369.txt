@@ -1,0 +1,35 @@
+Two adapter fixes (do not change the posting engine — it is behaving correctly).
+
+FIX 1 — Zero-balance accounts break the import.
+Clicking "Import & reconcile" on the real Craig's QBO Trial Balance CSV fails with:
+  HTTP 400: lines[8] must have exactly one of a positive debit or credit amount
+Cause: QuickBooks lists accounts with a ZERO/blank balance in the trial balance
+(e.g. "Arizona Dept. of Revenue Payable" has neither a debit nor a credit). The
+adapter is passing these through as journal lines with no amount, and the posting
+service correctly rejects them.
+Fix: in the adapter, still UPSERT zero-balance accounts into the chart of accounts
+(the user should keep them), but EXCLUDE them from the opening journal entry —
+they contribute nothing and must not become journal lines. Add a test using the
+real Craig's file asserting the import succeeds and that zero-balance accounts
+exist in the COA but produce no journal lines.
+
+FIX 2 — The account-type resolver has a bad default and mis-types clear expenses.
+On the real file it defaulted these to Asset:
+  - Equipment Rental (an EXPENSE)
+  - Maintenance and Repair:Equipment Repairs (an EXPENSE — note its parent
+    "Maintenance and Repair" correctly resolved to Expense)
+  - The unresolved ones (Office Expenses, Job Expenses, Miscellaneous,
+    Discounts given) all default to "Asset" in the dropdown.
+Fixes:
+  - Do NOT default unresolved accounts to Asset. Either leave the dropdown empty
+    and force an explicit choice, or inherit from the QuickBooks parent:child
+    hierarchy (colon-delimited) — a child should inherit its parent's type.
+  - Strengthen the name-based resolver: names containing "Expense(s)", "Repairs",
+    "Rental", "Fees", "Maintenance" resolve to Expense.
+  - Treat "Discounts given" style accounts as contra-revenue and surface them for
+    confirmation rather than typing them Asset.
+  - Unit-test each case against the real Craig's file.
+
+CRITICAL: the trial balance BALANCES even when account types are wrong, so
+balancing is not proof of correctness. Tests must assert account TYPE, not just
+that debits equal credits.

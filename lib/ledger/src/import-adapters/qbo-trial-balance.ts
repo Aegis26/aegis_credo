@@ -20,8 +20,14 @@ export class TrialBalanceParseError extends Error {
   }
 }
 
-/** How an account's type was determined. Ambiguous ones are surfaced for review. */
-export type TypeResolution = "mapped" | "ambiguous";
+/**
+ * How an account's type was determined. `mapped` = its own name matched a
+ * keyword; `inherited` = its QuickBooks parent (colon hierarchy) resolved and
+ * the child takes the parent's type (QBO enforces that sub-accounts share
+ * their parent's type); `ambiguous` = surfaced in Review for an explicit
+ * choice — NEVER silently defaulted.
+ */
+export type TypeResolution = "mapped" | "inherited" | "ambiguous";
 
 export interface ResolvedTbAccount {
   /** Deterministic code assigned by the adapter (stable per file). */
@@ -63,60 +69,47 @@ const SKIP_NAME = /^(total|subtotal|net (income|loss)|gross profit|net )/i;
 const norm = (s: string): string => s.trim().toLowerCase();
 
 /**
- * Ordered name-map: the first keyword found in the account name wins. Keywords
- * are matched as case-insensitive substrings. This encodes the common
- * QuickBooks chart-of-accounts vocabulary; anything not matched here is left
- * `ambiguous` and surfaced to the user rather than silently guessed.
+ * Ordered name-map: the FIRST keyword found in the account name wins, so the
+ * list is precedence-ordered — unambiguous phrases first, then explicit
+ * expense words (so "Income Tax Expense" is an expense), then revenue words
+ * (so "Rental Income" is revenue, not a rental expense), then strong expense
+ * indicators like "rental"/"repairs"/"fees" BEFORE generic asset nouns (so
+ * "Equipment Rental" is an expense, not equipment). Anything not matched is
+ * left `ambiguous` and surfaced to the user rather than silently guessed.
  */
 const NAME_MAP: { keyword: string; type: AccountType }[] = [
-  // Assets
+  // 1. Unambiguous phrases and the receivable/payable families. "payable"
+  //    must beat "revenue" ("Arizona Dept. of Revenue Payable" is a liability).
   { keyword: "accounts receivable", type: "asset" },
   { keyword: "a/r", type: "asset" },
   { keyword: "receivable", type: "asset" },
-  { keyword: "undeposited funds", type: "asset" },
-  { keyword: "checking", type: "asset" },
-  { keyword: "savings", type: "asset" },
-  { keyword: "petty cash", type: "asset" },
-  { keyword: "cash", type: "asset" },
-  { keyword: "bank", type: "asset" },
-  { keyword: "inventory", type: "asset" },
-  { keyword: "prepaid", type: "asset" },
-  { keyword: "truck", type: "asset" },
-  { keyword: "vehicle", type: "asset" },
-  { keyword: "equipment", type: "asset" },
-  { keyword: "furniture", type: "asset" },
-  { keyword: "building", type: "asset" },
-  { keyword: "land", type: "asset" },
-  { keyword: "fixed asset", type: "asset" },
-  // Liabilities (checked before generic revenue/expense keywords)
   { keyword: "accounts payable", type: "liability" },
   { keyword: "a/p", type: "liability" },
   { keyword: "payable", type: "liability" },
-  { keyword: "credit card", type: "liability" },
-  { keyword: "mastercard", type: "liability" },
-  { keyword: "visa", type: "liability" },
-  { keyword: "amex", type: "liability" },
-  { keyword: "loan", type: "liability" },
-  { keyword: "note payable", type: "liability" },
-  { keyword: "notes payable", type: "liability" },
-  { keyword: "line of credit", type: "liability" },
   { keyword: "sales tax", type: "liability" },
-  // Equity
+  { keyword: "credit card", type: "liability" },
+  { keyword: "undeposited funds", type: "asset" },
+  { keyword: "prepaid", type: "asset" },
+  { keyword: "inventory", type: "asset" },
+  { keyword: "fixed asset", type: "asset" },
   { keyword: "opening balance equity", type: "equity" },
   { keyword: "retained earnings", type: "equity" },
-  { keyword: "owner", type: "equity" },
-  { keyword: "capital", type: "equity" },
-  { keyword: "distribution", type: "equity" },
-  { keyword: "drawing", type: "equity" },
-  { keyword: "equity", type: "equity" },
-  // Revenue
-  { keyword: "sales", type: "revenue" },
-  { keyword: "revenue", type: "revenue" },
-  { keyword: "income", type: "revenue" },
-  { keyword: "services", type: "revenue" },
-  // Expenses (specific "...fees"/"...expense" phrases beat the revenue "services")
   { keyword: "cost of goods", type: "expense" },
   { keyword: "cogs", type: "expense" },
+  // 2. Explicit expense words — before "income" so "Income Tax Expense" wins.
+  { keyword: "expenses", type: "expense" },
+  { keyword: "expense", type: "expense" },
+  // 3. Revenue words — before "rental"/"fees" so "Rental Income" stays revenue.
+  { keyword: "income", type: "revenue" },
+  { keyword: "revenue", type: "revenue" },
+  { keyword: "sales", type: "revenue" },
+  // 4. Strong expense indicators — before generic asset nouns so
+  //    "Equipment Rental" and "Equipment Repairs" resolve to expense.
+  { keyword: "repairs", type: "expense" },
+  { keyword: "repair", type: "expense" },
+  { keyword: "maintenance", type: "expense" },
+  { keyword: "rental", type: "expense" },
+  { keyword: "fees", type: "expense" },
   { keyword: "job materials", type: "expense" },
   { keyword: "materials", type: "expense" },
   { keyword: "supplies", type: "expense" },
@@ -133,13 +126,34 @@ const NAME_MAP: { keyword: string; type: AccountType }[] = [
   { keyword: "travel", type: "expense" },
   { keyword: "automobile", type: "expense" },
   { keyword: "fuel", type: "expense" },
-  { keyword: "repair", type: "expense" },
-  { keyword: "maintenance", type: "expense" },
   { keyword: "legal", type: "expense" },
-  { keyword: "professional fees", type: "expense" },
-  { keyword: "bank fees", type: "expense" },
   { keyword: "depreciation", type: "expense" },
-  { keyword: "expense", type: "expense" },
+  // 5. Assets.
+  { keyword: "checking", type: "asset" },
+  { keyword: "savings", type: "asset" },
+  { keyword: "petty cash", type: "asset" },
+  { keyword: "cash", type: "asset" },
+  { keyword: "bank", type: "asset" },
+  { keyword: "truck", type: "asset" },
+  { keyword: "vehicle", type: "asset" },
+  { keyword: "equipment", type: "asset" },
+  { keyword: "furniture", type: "asset" },
+  { keyword: "building", type: "asset" },
+  { keyword: "land", type: "asset" },
+  // 6. Liabilities.
+  { keyword: "mastercard", type: "liability" },
+  { keyword: "visa", type: "liability" },
+  { keyword: "amex", type: "liability" },
+  { keyword: "loan", type: "liability" },
+  { keyword: "line of credit", type: "liability" },
+  // 7. Equity.
+  { keyword: "owner", type: "equity" },
+  { keyword: "capital", type: "equity" },
+  { keyword: "distribution", type: "equity" },
+  { keyword: "drawing", type: "equity" },
+  { keyword: "equity", type: "equity" },
+  // 8. Generic revenue last ("services" appears in many expense phrases).
+  { keyword: "services", type: "revenue" },
 ];
 
 /**
@@ -162,27 +176,77 @@ const CODE_BAND: Record<AccountType, number> = {
   expense: 50000,
 };
 
-/**
- * Resolve an account type from its name plus the side it sits on in the trial
- * balance. Name keywords win (mapped). Otherwise we can only narrow by the
- * normal-balance side — a debit balance is an asset OR an expense, a credit
- * balance is a liability, equity, OR revenue — so we return the safest default
- * and mark it `ambiguous` for the user to confirm. We never silently guess a
- * type we cannot justify.
- */
-export function resolveAccountType(
-  name: string,
-  side: "debit" | "credit",
-): { type: AccountType; typeSource: TypeResolution; candidateTypes: AccountType[] } {
+/** Keyword lookup on a single (flat) name. Returns null when nothing matches. */
+function resolveByKeyword(name: string): AccountType | null {
   const lower = norm(name);
   for (const { keyword, type } of NAME_MAP) {
     // Word-boundary match so short keywords never match inside a longer word
     // (e.g. "land" must not match "Landscaping Services").
     const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     if (new RegExp(`\\b${escaped}\\b`).test(lower)) {
+      return type;
+    }
+  }
+  return null;
+}
+
+/**
+ * Resolve an account type from its name plus the side it sits on in the trial
+ * balance.
+ *
+ * - Colon-delimited names ("Parent:Child") are resolved ROOT-FIRST: QuickBooks
+ *   enforces that a sub-account shares its parent's type, so the parent's
+ *   resolution wins and the child inherits it ("Maintenance and
+ *   Repair:Equipment Repairs" is an expense because its parent is; a
+ *   "Landscaping Services:Job Materials" sub-INCOME account stays revenue even
+ *   though "materials" alone would read as an expense).
+ * - Flat names resolve by keyword (mapped).
+ * - "Discount(s)…" accounts are contra-revenue: best-guess `revenue`, but
+ *   surfaced as ambiguous so the user must confirm.
+ * - Anything else is `ambiguous`: candidates are narrowed by the
+ *   normal-balance side (debit → asset/expense, credit →
+ *   liability/equity/revenue) and the account is surfaced for an EXPLICIT
+ *   choice in Review — never silently defaulted to Asset.
+ */
+export function resolveAccountType(
+  name: string,
+  side: "debit" | "credit",
+): { type: AccountType; typeSource: TypeResolution; candidateTypes: AccountType[] } {
+  const segments = name
+    .split(":")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  if (segments.length > 1) {
+    // Root-first: the shallowest resolvable ancestor decides the type.
+    for (let depth = 1; depth <= segments.length; depth++) {
+      const prefix = segments.slice(0, depth).join(":");
+      const type = resolveByKeyword(prefix);
+      if (type) {
+        return {
+          type,
+          typeSource: depth < segments.length ? "inherited" : "mapped",
+          candidateTypes: [type],
+        };
+      }
+    }
+  } else {
+    const type = resolveByKeyword(name);
+    if (type) {
       return { type, typeSource: "mapped", candidateTypes: [type] };
     }
   }
+
+  // Contra-revenue ("Discounts given", "Discounts"): a debit-balance account
+  // that belongs on the revenue side. Best guess revenue, but confirm.
+  if (/\bdiscounts?\b/.test(norm(name))) {
+    return {
+      type: "revenue",
+      typeSource: "ambiguous",
+      candidateTypes: ["revenue", "expense"],
+    };
+  }
+
   if (side === "debit") {
     return {
       type: "asset",
@@ -276,8 +340,11 @@ export function parseQboTrialBalance(rows: string[][]): QboTrialBalanceParse {
 
     if (!name) continue; // blank / spacer row
     if (SKIP_NAME.test(name)) continue; // TOTAL / subtotal / section summary
-    if (!debitRaw && !creditRaw) continue; // section header (name only, no amounts)
 
+    // NOTE: rows with a name but no (or zero) amounts are REAL accounts that
+    // happen to carry a zero balance in this trial balance (QuickBooks lists
+    // them). They are kept — upserted into the chart of accounts — but
+    // excluded from the opening journal entry in `toImportFileInput`.
     let debit: Money = 0n;
     let credit: Money = 0n;
     try {
@@ -347,6 +414,10 @@ export function toImportFileInput(
   for (const acc of parse.accounts) {
     const type = typeOverrides[acc.name] ?? acc.type;
     accounts.push({ code: acc.code, name: acc.name, type });
+    // Zero-balance accounts belong in the chart of accounts but contribute
+    // nothing to the opening entry — the posting service (correctly) rejects
+    // journal lines with no amount, so they must never become lines.
+    if (acc.debit === "0" && acc.credit === "0") continue;
     const line: { accountCode: string; debit?: string; credit?: string } = {
       accountCode: acc.code,
     };

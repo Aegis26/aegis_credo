@@ -11,5 +11,6 @@ export type ImportPreviewAccountTypeSource = typeof ImportPreviewAccountTypeSour
 
 export const ImportPreviewAccountTypeSource = {
   mapped: 'mapped',
+  inherited: 'inherited',
   ambiguous: 'ambiguous',
 } as const;

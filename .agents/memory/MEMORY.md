@@ -3,6 +3,7 @@
 - [drizzle-kit composite constraints](drizzle-kit-composite-constraints.md) — declare composite `(org_id,id)` uniques as `.on(t.id,t.orgId)` (table-ordinal order) or `push` false-diffs & prompts to truncate forever; BigInt default snapshot bug too.
 - [Orval zod string-format pitfall](orval-zod-string-formats.md) — never use `format: email` in openapi.yaml; orval emits zod v4 `zod.email()` which breaks against the repo's resolved zod v3. minLength/maxLength are safe.
 - [RHF empty-string defaults](rhf-empty-string-defaults.md) — react-hook-form sends blank optionals as `""`; server `??` fallbacks don't catch them → 500. Use `||`. UI-only bug curl can't repro = empty form fields.
+- [TB adapter typing](tb-adapter-typing.md) — balanced ≠ correctly typed (tests must assert type); never silently default ambiguous accounts; name-only TB rows are zero-balance accounts; QBO colon children inherit parent type.
 - [QBO Trial Balance adapter](qbo-trial-balance-adapter.md) — vendor-export adapters scoped to one-TB-into-fresh-org; XLSX numeric cells → `String()` not `toFixed` (no float).
 - [API zod response drift](api-zod-response-drift.md) — `<Op>Response.parse()` is runtime-only; a wrong/renamed response key passes typecheck but 500s. Keep route response keys in lockstep with the OpenAPI schema; test the endpoint.
 - [Plaid import gotchas](plaid-import-gotchas.md) — PFC `RENT_AND_UTILITIES` primary starts with "RENT" (substring trap); content-dedup on date|amount|name survives id rotation on re-link; opening balance idempotent per connection.

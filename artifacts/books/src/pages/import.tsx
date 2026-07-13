@@ -161,9 +161,13 @@ export default function ImportPage() {
         data: { report: "qbo_trial_balance", contentType, content, filename },
       });
       setSource({ kind: "adapter", preview });
-      // Seed the Review selectors with the adapter's best guess for every account.
+      // Seed the Review selectors ONLY for accounts the adapter resolved
+      // (mapped/inherited). Ambiguous accounts start EMPTY — the user must
+      // make an explicit choice; we never pre-select a default for them.
       const seeded: Record<string, ImportPreviewAccountType> = {};
-      for (const a of preview.accounts) seeded[a.name] = a.type;
+      for (const a of preview.accounts) {
+        if (a.typeSource !== "ambiguous") seeded[a.name] = a.type;
+      }
       setTypeChoices(seeded);
       setStep("review");
     } catch (e) {
@@ -498,6 +502,9 @@ function AdapterReview({
   importing: boolean;
 }) {
   const ambiguous = preview.accounts.filter((a) => a.typeSource === "ambiguous");
+  // Ambiguous accounts have NO default — the import stays blocked until the
+  // user has explicitly chosen a category for every one of them.
+  const unchosen = ambiguous.filter((a) => !typeChoices[a.name]).length;
   return (
     <Card className="shadow-sm border-border">
       <CardHeader>
@@ -560,7 +567,7 @@ function AdapterReview({
                     </td>
                     <td className="py-2 pl-4">
                       <Select
-                        value={typeChoices[a.name] ?? a.type}
+                        value={typeChoices[a.name] ?? ""}
                         onValueChange={(v) =>
                           setTypeChoices((prev) => ({
                             ...prev,
@@ -569,9 +576,9 @@ function AdapterReview({
                         }
                       >
                         <SelectTrigger
-                          className={`h-8 w-36 ${needsReview ? "border-destructive" : ""}`}
+                          className={`h-8 w-36 ${needsReview && !typeChoices[a.name] ? "border-destructive" : ""}`}
                         >
-                          <SelectValue />
+                          <SelectValue placeholder="Choose type…" />
                         </SelectTrigger>
                         <SelectContent>
                           {ACCOUNT_TYPES.map((t) => (
@@ -589,15 +596,28 @@ function AdapterReview({
           </table>
         </div>
 
-        <div className="flex gap-3">
-          <Button onClick={onImport} disabled={importing} className="gap-2">
-            {importing ? "Importing…" : "Import & reconcile"}
-            {!importing && <ArrowRight className="w-4 h-4" />}
-          </Button>
-          <Button variant="outline" onClick={onReset} className="gap-2">
-            <RotateCcw className="w-4 h-4" />
-            Start over
-          </Button>
+        <div className="flex flex-col gap-2">
+          <div className="flex gap-3">
+            <Button
+              onClick={onImport}
+              disabled={importing || unchosen > 0}
+              className="gap-2"
+            >
+              {importing ? "Importing…" : "Import & reconcile"}
+              {!importing && <ArrowRight className="w-4 h-4" />}
+            </Button>
+            <Button variant="outline" onClick={onReset} className="gap-2">
+              <RotateCcw className="w-4 h-4" />
+              Start over
+            </Button>
+          </div>
+          {unchosen > 0 && (
+            <p className="text-sm text-destructive flex items-center gap-1.5">
+              <AlertCircle className="w-3.5 h-3.5" />
+              Choose a category for {unchosen} highlighted account
+              {unchosen === 1 ? "" : "s"} before importing.
+            </p>
+          )}
         </div>
       </CardContent>
     </Card>

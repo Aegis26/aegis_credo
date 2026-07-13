@@ -10,7 +10,7 @@ import type { ImportPreviewAccountType } from './importPreviewAccountType';
 import type { ImportPreviewAccountTypeSource } from './importPreviewAccountTypeSource';
 
 /**
- * A resolved account from the vendor export. Money fields (debit/credit) are integer minor units as strings (e.g. "120100" = $1,201.00), matching the canonical import format. `typeSource=ambiguous` means the type could not be determined from the account name and must be confirmed in Review.
+ * A resolved account from the vendor export. Money fields (debit/credit) are integer minor units as strings (e.g. "120100" = $1,201.00), matching the canonical import format. `typeSource=mapped` means the account's own name resolved; `typeSource=inherited` means the type came from its QuickBooks parent account (colon hierarchy); `typeSource=ambiguous` means the type could not be determined and MUST be explicitly chosen in Review before importing (`type` is only a best-guess candidate).
  */
 export interface ImportPreviewAccount {
   code: string;

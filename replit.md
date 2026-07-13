@@ -156,6 +156,30 @@ session-authenticated, org-scoped endpoints:
   returns `configured:false` and `bank/link-token` returns 503; the UI degrades to
   a "not set up" message.
 
+Phase 6 adds a vendor-export ADAPTER layer in front of the frozen import engine
+(`import.ts` unchanged):
+
+- **QBO Trial Balance adapter** (`lib/ledger/src/import-adapters/
+  qbo-trial-balance.ts`): parses a QuickBooks Trial Balance export (CSV or XLSX
+  cell grid) into the canonical `ImportFileInput`. Preamble/company detection,
+  TOTAL-row skipping, thousands separators and native XLSX numbers parsed to
+  BigInt minor units (no float). Type resolution: precedence-ordered keyword
+  map (`mapped`), QBO colon `parent:child` hierarchy inheritance resolved
+  root-first (`inherited`), and `ambiguous` accounts surfaced for an explicit
+  user choice — never silently defaulted. Zero-balance rows (name only / 0.00)
+  are real accounts: upserted to the COA, excluded from the opening entry.
+  Unbalanced files get an Opening Balance Equity plug.
+- **Preview endpoint** (`POST /orgs/:orgId/import/preview`,
+  `import-preview.ts`): parse + resolve without posting; returns accounts with
+  `typeSource`/`candidateTypes`, totals, `ambiguousCount`, and the canonical
+  `draft` to post to the frozen `POST /import`.
+- **UI wizard** (`artifacts/books/src/pages/import.tsx`): upload → review
+  (ambiguous accounts start with an EMPTY type dropdown; Import is disabled
+  until every one has an explicit choice) → import & reconcile.
+- Tests: adapter unit suite against a real Craig's-file fixture
+  (`qbo-trial-balance.test.ts`) + API e2e (`phase6.test.ts`) asserting account
+  TYPES and DB state, not just balance.
+
 ## User preferences
 
 _Populate as you build — explicit user instructions worth remembering across sessions._
@@ -211,6 +235,14 @@ _Populate as you build — explicit user instructions worth remembering across s
   identity wins. The ledger core still performs NO auth: the API layer is the
   gate, and tenant scoping (`assertClientAccess`, `accessibleClients`) runs on
   top of the authenticated identity, not instead of it.
+
+- **TB adapter treats name-only rows as zero-balance ACCOUNTS, not section
+  headers.** QuickBooks lists zero-balance accounts with blank amounts (e.g.
+  "Arizona Dept. of Revenue Payable"), so the adapter keeps them — upserted to
+  the chart of accounts but excluded from the opening journal entry (a zero
+  line would be rejected by the posting service). A TB export that contains
+  decorative section headings would import them as zero-balance accounts; this
+  is a deliberate tradeoff in favor of never dropping real accounts.
 
 - **Money crosses the API/CSV boundary as a decimal string, never a JS number.**
   JSON and JS `number` cannot carry BigInt safely, so `formatMoney` renders minor

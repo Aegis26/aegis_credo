@@ -2,7 +2,13 @@ import { describe, it, expect, afterAll } from "vitest";
 import request from "supertest";
 import ExcelJS from "exceljs";
 import { and, eq } from "drizzle-orm";
-import { db, pool, journalEntriesTable } from "@workspace/db";
+import {
+  db,
+  pool,
+  accountsTable,
+  journalEntriesTable,
+  journalLinesTable,
+} from "@workspace/db";
 import { createApp } from "./app";
 
 const app = createApp();
@@ -220,6 +226,132 @@ describe("QBO Trial Balance CSV adapter (preview → post → reconcile)", () =>
     expect(second.body.matched).toBe(true);
     const afterSecond = await countEntries();
     expect(afterSecond).toBe(afterFirst);
+  });
+
+  it("imports the full real Craig's TB: zero-balance account lands in the COA with NO journal lines, and clear expenses are typed expense", async () => {
+    const { agent } = await newUser("qbo-craig-full");
+    const orgId = await newOrg(agent, `QBO Craig ${nonce}`);
+
+    // The real QBO sample-company export shape: colon-hierarchy sub-accounts,
+    // a zero-balance account row (name only), and a TOTAL row.
+    const csv = [
+      "Craig's Design and Landscaping Services",
+      "Trial Balance",
+      '"As of Jul 9, 2026"',
+      "",
+      "Account Name,Debit,Credit",
+      'Checking,"1,201.00",',
+      "Savings,800.00,",
+      'Accounts Receivable (A/R),"5,281.52",',
+      "Inventory Asset,596.25,",
+      'Undeposited Funds,"2,062.52",',
+      'Truck:Original Cost,"13,495.00",',
+      "Advertising,74.86,",
+      "Automobile:Fuel,349.41,",
+      "Equipment Rental,112.00,",
+      "Insurance,241.23,",
+      "Job Expenses,155.07,",
+      "Job Expenses:Job Materials:Decks and Patios,234.04,",
+      "Legal & Professional Fees,75.00,",
+      "Maintenance and Repair:Equipment Repairs,185.00,",
+      "Meals and Entertainment,28.49,",
+      "Miscellaneous,100.00,",
+      "Office Expenses,18.08,",
+      "Rent or Lease,240.00,",
+      "Utilities:Gas and Electric,114.09,",
+      "Discounts given,89.50,",
+      "Ask My Accountant,100.00,",
+      'Accounts Payable (A/P),,"1,602.67"',
+      "Mastercard,,157.72",
+      "Visa,,900.00",
+      "Arizona Dept. of Revenue Payable,,",
+      "Board of Equalization Payable,,370.94",
+      'Loan Payable,,"4,000.00"',
+      'Opening Balance Equity,,"9,337.50"',
+      "Retained Earnings,,604.94",
+      'Design income,,"2,500.00"',
+      'Landscaping Services,,"3,161.27"',
+      'Landscaping Services:Job Materials:Fountains and Garden Lighting,,"1,501.72"',
+      "Sales of Product Income,,912.75",
+      "Services,,503.55",
+      'TOTAL,"25,553.06","25,553.06"',
+    ].join("\n");
+
+    const preview = await agent
+      .post(`/api/orgs/${orgId}/import/preview`)
+      .send({ report: "qbo_trial_balance", contentType: "csv", content: csv });
+    expect(preview.status).toBe(200);
+    expect(preview.body.balanced).toBe(true);
+    expect(preview.body.totalDebit).toBe("2555306");
+
+    type PreviewAccount = {
+      name: string;
+      type: string;
+      typeSource: string;
+      debit: string;
+      credit: string;
+    };
+    const accounts: PreviewAccount[] = preview.body.accounts;
+    const byName = (n: string) => accounts.find((a) => a.name === n)!;
+
+    // Zero-balance account is kept, typed liability ("payable" beats "revenue").
+    const az = byName("Arizona Dept. of Revenue Payable");
+    expect(az.debit).toBe("0");
+    expect(az.credit).toBe("0");
+    expect(az.type).toBe("liability");
+    expect(az.typeSource).toBe("mapped");
+
+    // TYPE assertions — a balanced import is NOT proof of correct typing.
+    expect(byName("Equipment Rental").type).toBe("expense");
+    expect(byName("Office Expenses").type).toBe("expense");
+    expect(byName("Maintenance and Repair:Equipment Repairs").type).toBe(
+      "expense",
+    );
+    expect(
+      byName("Maintenance and Repair:Equipment Repairs").typeSource,
+    ).toBe("inherited");
+    expect(
+      byName("Landscaping Services:Job Materials:Fountains and Garden Lighting")
+        .type,
+    ).toBe("revenue");
+    expect(byName("Discounts given").type).toBe("revenue");
+    expect(byName("Discounts given").typeSource).toBe("ambiguous");
+    expect(byName("Miscellaneous").typeSource).toBe("ambiguous");
+    expect(preview.body.ambiguousCount).toBe(3);
+
+    // Post the draft — 33 opening lines; the zero-balance account must NOT
+    // produce a "lines[i] must have exactly one of debit/credit" 400.
+    expect(preview.body.draft.accounts).toHaveLength(34);
+    expect(preview.body.draft.openingBalances).toHaveLength(33);
+    const posted = await agent
+      .post(`/api/orgs/${orgId}/import`)
+      .send(preview.body.draft);
+    expect(posted.status).toBe(200);
+    expect(posted.body.matched).toBe(true);
+
+    // The zero-balance account exists in the chart of accounts…
+    const [azRow] = await db
+      .select({ id: accountsTable.id })
+      .from(accountsTable)
+      .where(
+        and(
+          eq(accountsTable.orgId, orgId),
+          eq(accountsTable.name, "Arizona Dept. of Revenue Payable"),
+        ),
+      );
+    expect(azRow).toBeDefined();
+
+    // …but produced ZERO journal lines.
+    const azLines = await db
+      .select({ id: journalLinesTable.id })
+      .from(journalLinesTable)
+      .where(
+        and(
+          eq(journalLinesTable.orgId, orgId),
+          eq(journalLinesTable.accountId, azRow.id),
+        ),
+      );
+    expect(azLines).toHaveLength(0);
   });
 
   it("parses an XLSX export with numeric amount cells to exact minor units (no float)", async () => {

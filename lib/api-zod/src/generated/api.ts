@@ -716,11 +716,11 @@ export const PreviewImportResponse = zod.object({
   "code": zod.string(),
   "name": zod.string(),
   "type": zod.enum(['asset', 'liability', 'equity', 'revenue', 'expense']),
-  "typeSource": zod.enum(['mapped', 'ambiguous']),
+  "typeSource": zod.enum(['mapped', 'inherited', 'ambiguous']),
   "candidateTypes": zod.array(zod.enum(['asset', 'liability', 'equity', 'revenue', 'expense'])),
   "debit": zod.string(),
   "credit": zod.string()
-}).describe('A resolved account from the vendor export. Money fields (debit\/credit) are integer minor units as strings (e.g. \"120100\" = $1,201.00), matching the canonical import format. `typeSource=ambiguous` means the type could not be determined from the account name and must be confirmed in Review.')),
+}).describe('A resolved account from the vendor export. Money fields (debit\/credit) are integer minor units as strings (e.g. \"120100\" = $1,201.00), matching the canonical import format. `typeSource=mapped` means the account\'s own name resolved; `typeSource=inherited` means the type came from its QuickBooks parent account (colon hierarchy); `typeSource=ambiguous` means the type could not be determined and MUST be explicitly chosen in Review before importing (`type` is only a best-guess candidate).')),
   "totalDebit": zod.string(),
   "totalCredit": zod.string(),
   "balanced": zod.boolean(),
