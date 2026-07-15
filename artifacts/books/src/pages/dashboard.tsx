@@ -17,6 +17,7 @@ import { CheckCircle2, AlertTriangle, ArrowUpRight, ArrowDownRight, ClipboardLis
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { CHART_CATEGORICAL } from "@/lib/brand";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Cell as PieCell } from 'recharts';
 
 const leafName = (name: string) => {
@@ -98,7 +99,7 @@ export default function Dashboard() {
       }));
   }, [pnl]);
 
-  const COLORS = ['#1E90FF', '#2b6cb0', '#2c5282', '#1a365d', '#4299e1'];
+  const COLORS = CHART_CATEGORICAL;
 
   if (!orgId) return null;
 
