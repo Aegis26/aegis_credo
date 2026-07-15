@@ -47,6 +47,7 @@ import {
   Wallet
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { BrandWordmark } from "@/lib/brand";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -68,7 +69,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const hasPractice = (practiceData?.clients?.length ?? 0) > 0;
 
   const navigation = [
-    { name: "Dashboard", href: "/", icon: LayoutDashboard },
+    { name: "Overview", href: "/", icon: LayoutDashboard },
     { name: "Migrate", href: "/import", icon: UploadCloud },
     { name: "Bank", href: "/bank", icon: Landmark },
     { name: "Reconcile", href: "/reconcile", icon: FileCheck },
@@ -104,8 +105,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const NavLinks = () => (
     <>
-      <div className="px-3 mb-2 mt-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-        Client Books
+      <div className="px-3 mb-2 mt-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+        Command Center
       </div>
       {navigation.map((item) => {
         const isActive = location === item.href;
@@ -114,10 +115,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             key={item.name} 
             href={item.href}
             onClick={() => setMobileMenuOpen(false)}
-            className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+            className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all ${
               isActive 
-                ? "bg-primary text-primary-foreground" 
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                ? "bg-accent/50 text-primary border border-primary/20" 
+                : "text-muted-foreground hover:bg-accent hover:text-foreground"
             }`}
           >
             <item.icon className="w-4 h-4" />
@@ -126,8 +127,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         );
       })}
 
-      <div className="px-3 mb-2 mt-6 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-        Multi-Entity
+      <div className="px-3 mb-2 mt-6 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+        Organization
       </div>
       {midMarketNavigation.map((item) => {
         const isActive = location === item.href;
@@ -136,10 +137,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             key={item.name}
             href={item.href}
             onClick={() => setMobileMenuOpen(false)}
-            className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+            className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all ${
               isActive
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                ? "bg-accent/50 text-primary border border-primary/20"
+                : "text-muted-foreground hover:bg-accent hover:text-foreground"
             }`}
           >
             <item.icon className="w-4 h-4" />
@@ -150,8 +151,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {hasPractice && (
         <>
-          <div className="px-3 mb-2 mt-6 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Practice
+          <div className="px-3 mb-2 mt-6 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+            Practice Cockpit
           </div>
           {practiceNavigation.map((item) => {
             const isActive = location === item.href || (item.href !== "/practice" && location.startsWith(item.href));
@@ -160,10 +161,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 key={item.name} 
                 href={item.href}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all ${
                   isActive 
-                    ? "bg-primary text-primary-foreground" 
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    ? "bg-accent/50 text-primary border border-primary/20" 
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
                 }`}
               >
                 <item.icon className="w-4 h-4" />
@@ -177,13 +178,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {!hasPractice && (
         <div className="mt-8 px-3">
           <Link href="/practice/setup">
-            <div className="p-3 bg-muted/40 border rounded-md text-sm hover:bg-muted cursor-pointer transition-colors">
-              <div className="flex items-center gap-2 font-medium text-foreground mb-1">
-                <Briefcase className="w-4 h-4 text-primary" />
-                Are you an accountant?
+            <div className="p-3 bg-card border border-border rounded-md text-sm hover:border-primary/50 cursor-pointer transition-colors group">
+              <div className="flex items-center gap-2 font-medium text-foreground mb-1 group-hover:text-primary transition-colors">
+                <ShieldCheck className="w-4 h-4" />
+                Accountant Access
               </div>
               <div className="text-xs text-muted-foreground leading-tight">
-                Setup your practice cockpit to manage multiple clients.
+                Setup your practice cockpit to manage multiple clients securely.
               </div>
             </div>
           </Link>
@@ -195,11 +196,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-[100dvh] flex flex-col md:flex-row bg-background">
       {/* Sidebar for desktop */}
-      <aside className="hidden md:flex flex-col w-64 border-r border-border bg-card">
+      <aside className="hidden md:flex flex-col w-64 border-r border-border bg-[#0A0A0A]">
         <div className="p-4 border-b border-border flex items-center justify-between">
-          <div className="flex items-center gap-2 font-serif text-xl font-semibold text-primary">
-            Books
-          </div>
+          <BrandWordmark />
         </div>
         
         {orgs.length > 0 && (
@@ -215,26 +214,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="p-4 border-t border-border">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="w-full justify-start gap-2 px-2">
-                <Avatar className="w-6 h-6">
-                  <AvatarFallback className="bg-primary/10 text-primary text-xs">
+              <Button variant="ghost" className="w-full justify-start gap-2 px-2 hover:bg-accent">
+                <Avatar className="w-6 h-6 border border-border">
+                  <AvatarFallback className="bg-card text-foreground text-xs font-medium">
                     {session?.user?.name?.charAt(0).toUpperCase() || session?.user?.email?.charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-                <div className="flex-1 text-left truncate text-sm">
+                <div className="flex-1 text-left truncate text-sm text-foreground">
                   {session?.user?.name || session?.user?.email}
                 </div>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuContent align="end" className="w-56 bg-card border-border">
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">{session?.user?.name}</p>
+                  <p className="text-sm font-medium leading-none text-foreground">{session?.user?.name}</p>
                   <p className="text-xs leading-none text-muted-foreground">{session?.user?.email}</p>
                 </div>
               </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive cursor-pointer">
+              <DropdownMenuSeparator className="bg-border" />
+              <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer">
                 <LogOut className="w-4 h-4 mr-2" />
                 Log out
               </DropdownMenuItem>
@@ -244,20 +243,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Mobile header */}
-      <header className="md:hidden flex items-center justify-between p-4 border-b border-border bg-card">
-        <div className="flex items-center gap-2 font-serif text-xl font-semibold text-primary">
-          Books
-        </div>
+      <header className="md:hidden flex items-center justify-between p-4 border-b border-border bg-[#0A0A0A]">
+        <BrandWordmark />
         <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" className="hover:bg-accent text-foreground">
               <Menu className="w-5 h-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-64 p-0 flex flex-col">
+          <SheetContent side="left" className="w-64 p-0 flex flex-col bg-[#0A0A0A] border-r border-border">
             <div className="p-4 border-b border-border">
-              <div className="font-serif text-xl font-semibold text-primary mb-4">
-                Books
+              <div className="mb-4">
+                <BrandWordmark />
               </div>
               {orgs.length > 0 && <OrgSwitcher />}
             </div>
@@ -268,17 +265,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
             <div className="p-4 border-t border-border">
               <div className="flex items-center gap-2 mb-4 px-2">
-                <Avatar className="w-8 h-8">
-                  <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                <Avatar className="w-8 h-8 border border-border">
+                  <AvatarFallback className="bg-card text-foreground text-sm font-medium">
                     {session?.user?.name?.charAt(0).toUpperCase() || session?.user?.email?.charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 text-left truncate text-sm">
-                  <p className="font-medium">{session?.user?.name}</p>
+                  <p className="font-medium text-foreground">{session?.user?.name}</p>
                   <p className="text-xs text-muted-foreground">{session?.user?.email}</p>
                 </div>
               </div>
-              <Button variant="destructive" className="w-full justify-start" onClick={handleLogout}>
+              <Button variant="destructive" className="w-full justify-start bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground border border-transparent hover:border-destructive" onClick={handleLogout}>
                 <LogOut className="w-4 h-4 mr-2" />
                 Log out
               </Button>
@@ -288,7 +285,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto bg-background">
         <div className="max-w-6xl mx-auto p-4 md:p-8">
           {children}
         </div>

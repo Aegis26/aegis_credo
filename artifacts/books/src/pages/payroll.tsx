@@ -25,48 +25,49 @@ export default function Payroll() {
   const runs = data?.payrollRuns || [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-6xl mx-auto">
       <div>
-        <h1 className="text-3xl font-serif font-semibold tracking-tight text-primary">Payroll</h1>
+        <h1 className="text-3xl font-serif font-semibold tracking-tight text-foreground">Payroll</h1>
         <p className="text-muted-foreground mt-1">
           Finished payroll runs ingested from your provider and posted to the ledger.
         </p>
       </div>
 
-      <Card className="shadow-sm border-border">
-        <CardHeader>
-          <CardTitle>Payroll runs</CardTitle>
+      <Card className="shadow-none border-border bg-card">
+        <CardHeader className="border-b border-border bg-accent/30 pb-4">
+          <CardTitle>Payroll Runs</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {runs.length === 0 ? (
-            <div className="text-center py-16 text-muted-foreground">
-              <Users className="w-12 h-12 mx-auto mb-3 opacity-20" />
-              <p>No payroll runs recorded yet.</p>
+            <div className="text-center py-16 text-muted-foreground bg-accent/20 m-6 rounded-md border border-border border-dashed">
+              <Users className="w-12 h-12 mx-auto mb-3 opacity-40 text-primary" />
+              <p className="text-lg font-medium text-foreground mb-1">No payroll runs recorded yet.</p>
+              <p className="text-sm">Once processed by your provider, they will appear here.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-border text-left text-muted-foreground">
-                    <th className="py-3 px-6 font-medium">Pay date</th>
-                    <th className="py-3 px-4 font-medium">Provider</th>
-                    <th className="py-3 px-4 font-medium text-right">Gross</th>
-                    <th className="py-3 px-4 font-medium text-right">Taxes</th>
-                    <th className="py-3 px-6 font-medium text-right">Net</th>
+                  <tr className="border-b border-border text-left text-muted-foreground bg-accent/20">
+                    <th className="py-3 px-6 font-semibold uppercase tracking-wider text-xs">Pay Date</th>
+                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-xs">Provider</th>
+                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-xs text-right">Gross</th>
+                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-xs text-right">Taxes</th>
+                    <th className="py-3 px-6 font-semibold uppercase tracking-wider text-xs text-right">Net</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {runs.map((run) => (
-                    <tr key={run.id} className="hover:bg-muted/30 transition-colors">
-                      <td className="py-3 px-6 font-medium">
+                    <tr key={run.id} className="hover:bg-accent/30 transition-colors bg-background">
+                      <td className="py-3 px-6 font-medium text-foreground font-mono text-xs">
                         {format(new Date(run.payDate), "MMM d, yyyy")}
                       </td>
                       <td className="py-3 px-4">
-                        <Badge variant="outline" className="capitalize">{run.provider}</Badge>
+                        <Badge variant="outline" className="capitalize text-[10px] tracking-wider bg-transparent text-muted-foreground border-border">{run.provider}</Badge>
                       </td>
-                      <td className="py-3 px-4 text-right font-mono">${run.grossPay}</td>
-                      <td className="py-3 px-4 text-right font-mono">${run.taxes}</td>
-                      <td className="py-3 px-6 text-right font-mono font-medium">${run.netPay}</td>
+                      <td className="py-3 px-4 text-right font-mono text-foreground">${run.grossPay}</td>
+                      <td className="py-3 px-4 text-right font-mono text-destructive">${run.taxes}</td>
+                      <td className="py-3 px-6 text-right font-mono font-medium text-foreground">${run.netPay}</td>
                     </tr>
                   ))}
                 </tbody>

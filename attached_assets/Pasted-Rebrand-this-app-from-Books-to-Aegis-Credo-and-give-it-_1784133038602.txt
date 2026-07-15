@@ -1,0 +1,71 @@
+Rebrand this app from "Books" to "Aegis Credo" and give it a real visual identity.
+This is a VISUAL and BRANDING pass ONLY: do not change any business logic, ledger
+behavior, API, or data. All existing tests must still pass unchanged, and every
+verified feature (import, reconcile, consolidation, cockpit access control) must
+behave exactly as before.
+
+BRAND DIRECTION:
+- Aegis Credo is the accounting platform from a cybersecurity company. The feel is
+  TRUST, PRECISION, SECURITY — a premium "command center" for a business's
+  finances. Institutional-grade and calm, NOT playful fintech and NOT a QuickBooks
+  look-alike. Data density with clarity; confidence without clutter.
+- Design north star (our tagline): "Accounting. Clarity. Confidence." The UI must
+  feel clear, calm, and confident.
+
+BRAND ASSETS (logo + reference images are attached to this message):
+- Palette (from the logo — replace bracketed values with exact hexes if provided):
+  * Base: near-black [#0A0A0A] — the dark command-center canvas
+  * Primary accent (trust): electric blue [~#1E90FF] — buttons, links, active nav,
+    focus states. Safe to use liberally.
+  * Signal color: lime/emerald green [~#3CB54A] — RESERVE for positive / success /
+    money-in and the "Balanced" state. Do NOT use green as general chrome; it must
+    stay meaningful in a financial UI.
+  * Text/borders: silver/steel gray [~#B8C0C8]
+- Use the blue→green logo gradient ONLY for the logo and at most one hero moment
+  (the login page). Everywhere else: near-black base, blue accent, green as signal.
+
+DARK UI — full dark theme everywhere (matches the logo). Follow these rules:
+- Base background is NEAR-black (#0A0A0A), NOT pure #000000, on working screens.
+  Reserve true black for the login hero only.
+- Body text is off-white (#E8EAED), never pure white, to avoid eye strain over long
+  sessions.
+- Build hierarchy with LAYERED SURFACES, not borders/shadows: base #0A0A0A,
+  cards ~#16181C, elevated/hover ~#1E2126. This layering is what makes it feel like
+  a command center rather than a flat black screen.
+- Tune semantic colors FOR the dark background: positive/success/money-in uses the
+  brand green; negative/overdue/money-out uses a red — both adjusted to read clearly
+  and calmly on near-black (slightly desaturate if they vibrate).
+- Maintain WCAG AA contrast for all text and interactive elements.
+
+BUILD:
+- Wordmark as a SINGLE SWAPPABLE COMPONENT: replace "Books" with "Aegis Credo"
+  everywhere (sidebar header, login/signup, page titles, browser tab <title>,
+  empty states, toasts) by referencing one brand/wordmark component or config value
+  — do NOT hardcode the string across files. Changing the name later must be a
+  one-line change.
+- Establish a real design-token system (colors, typography scale, spacing, radius,
+  elevation) in one place, and drive every screen from it, so the look is
+  consistent and future changes are centralized.
+- Redesign the primary surfaces to feel premium and intentional: the login/signup
+  page (first impression — this is where the logo gradient can shine), the
+  dashboard/Overview (make it a command center — clear KPI cards, real hierarchy,
+  the "Ledger Status: Balanced" state as a confident green trust signal), the
+  reports, and the reconcile screen.
+- Upgrade EMPTY STATES across all faces — they currently look unfinished. Each
+  should look designed and guide the next action.
+- Apply the identity consistently across all four faces: Client Books, Multi-Entity,
+  and Practice sections. Match the feel of the attached reference images.
+
+RULES: no logic/ledger/API/data changes; reuse all existing components and data
+hooks — only restyle; keep it accessible (contrast, focus states); do not touch
+the posting engine, import adapter, or access-control code.
+
+VERIFICATION (don't claim done without this):
+- Full test suite still passes unchanged.
+- Restart the server and confirm it runs new code.
+- Walk the running app: login → dashboard → reports → reconcile → each of the four
+  faces, and confirm it looks like Aegis Credo end to end AND every feature still
+  works (do a quick import + reconcile to confirm nothing visual broke the flow).
+
+Show me the login page, the redesigned dashboard, and confirmation that all tests
+still pass.

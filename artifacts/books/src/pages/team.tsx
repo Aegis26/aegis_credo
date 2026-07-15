@@ -131,35 +131,41 @@ export default function Team() {
   const accountants = all.filter((m) => m.role === "accountant");
 
   const MemberRow = ({ m }: { m: (typeof all)[number] }) => (
-    <div className="p-4 sm:px-6 flex items-center justify-between gap-4 hover:bg-muted/30 transition-colors">
+    <div className="p-4 sm:px-6 flex items-center justify-between gap-4 hover:bg-accent/30 transition-colors bg-background">
       <div className="flex items-center gap-3">
-        <Avatar className="h-9 w-9">
-          <AvatarFallback className="bg-primary/10 text-primary text-xs">
+        <Avatar className="h-10 w-10 border border-border">
+          <AvatarFallback className="bg-primary/20 text-primary text-xs font-semibold">
             {initials(m.name, m.email)}
           </AvatarFallback>
         </Avatar>
         <div>
-          <div className="font-medium">{m.name || m.email}</div>
+          <div className="font-medium text-foreground">{m.name || m.email}</div>
           {m.name && <div className="text-sm text-muted-foreground">{m.email}</div>}
         </div>
       </div>
       <div className="flex items-center gap-3">
-        <Badge variant="outline">{ROLE_LABELS[m.role] ?? m.role}</Badge>
+        <Badge variant="outline" className="text-[10px] uppercase tracking-wider bg-transparent text-muted-foreground border-border">
+          {ROLE_LABELS[m.role] ?? m.role}
+        </Badge>
         {m.active ? (
-          <Badge variant="secondary">Active</Badge>
+          <Badge variant="secondary" className="text-[10px] uppercase tracking-wider bg-[#3CB54A]/20 text-[#3CB54A] border-transparent font-bold">
+            Active
+          </Badge>
         ) : (
-          <Badge variant="destructive">Revoked</Badge>
+          <Badge variant="destructive" className="text-[10px] uppercase tracking-wider bg-destructive/20 text-destructive border-transparent font-bold">
+            Revoked
+          </Badge>
         )}
         {canManage && m.active && m.role !== "owner" && (
           <Button
             size="sm"
             variant="ghost"
-            className="text-destructive hover:text-destructive"
+            className="text-destructive hover:text-destructive hover:bg-destructive/10"
             onClick={() => handleRevoke(m.userId, m.email)}
             disabled={revokeMember.isPending}
           >
-            <Ban className="w-4 h-4 mr-1" />
-            Revoke
+            <Ban className="w-4 h-4 sm:mr-1" />
+            <span className="hidden sm:inline">Revoke</span>
           </Button>
         )}
       </div>
@@ -167,35 +173,35 @@ export default function Team() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-5xl mx-auto">
       <div>
-        <h1 className="text-3xl font-serif font-semibold tracking-tight text-primary">Team</h1>
+        <h1 className="text-3xl font-serif font-semibold tracking-tight text-foreground">Team & Access</h1>
         <p className="text-muted-foreground mt-1">
-          Manage who can access your books and invite your accountant.
+          Manage who can access your ledger and collaborate with your accountant.
         </p>
       </div>
 
       {!canManage && (
-        <div className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-          Only owners can invite or revoke members. You have {ROLE_LABELS[role ?? ""] ?? "limited"} access.
+        <div className="rounded-md border border-border bg-accent/20 px-4 py-3 text-sm text-muted-foreground">
+          Only owners can invite or revoke members. You have <strong className="text-foreground">{ROLE_LABELS[role ?? ""] ?? "limited"}</strong> access.
         </div>
       )}
 
-      <Tabs defaultValue="users">
-        <TabsList>
-          <TabsTrigger value="users" className="gap-2">
+      <Tabs defaultValue="users" className="w-full">
+        <TabsList className="bg-card border border-border">
+          <TabsTrigger value="users" className="gap-2 data-[state=active]:bg-accent data-[state=active]:text-primary">
             <Users className="w-4 h-4" />
-            Users
+            Internal Team
           </TabsTrigger>
-          <TabsTrigger value="accountants" className="gap-2">
+          <TabsTrigger value="accountants" className="gap-2 data-[state=active]:bg-accent data-[state=active]:text-primary">
             <Briefcase className="w-4 h-4" />
-            Accountants
+            External Accountants
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="users" className="mt-4">
-          <Card className="shadow-sm border-border">
-            <CardHeader className="flex flex-row items-center justify-between">
+          <Card className="shadow-none border-border bg-card">
+            <CardHeader className="flex flex-row items-center justify-between border-b border-border bg-accent/30 pb-4">
               <div>
                 <CardTitle>Users</CardTitle>
                 <CardDescription>People on your team with a role in this org.</CardDescription>
@@ -203,15 +209,15 @@ export default function Team() {
               {canManage && (
                 <Dialog open={memberOpen} onOpenChange={setMemberOpen}>
                   <DialogTrigger asChild>
-                    <Button className="gap-2">
+                    <Button className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
                       <UserPlus className="w-4 h-4" />
-                      Invite user
+                      Invite User
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-[425px]">
+                  <DialogContent className="sm:max-w-[425px] bg-card border-border">
                     <DialogHeader>
-                      <DialogTitle>Invite a user</DialogTitle>
-                      <DialogDescription>Grant a teammate access with a role.</DialogDescription>
+                      <DialogTitle className="text-foreground">Invite a user</DialogTitle>
+                      <DialogDescription className="text-muted-foreground">Grant a teammate access to this ledger.</DialogDescription>
                     </DialogHeader>
                     <Form {...memberForm}>
                       <form onSubmit={memberForm.handleSubmit(onAddMember)} className="space-y-4">
@@ -220,9 +226,9 @@ export default function Team() {
                           name="email"
                           render={({ field }) => (
                             <FormItem>
-                              <Label>Email</Label>
+                              <Label className="text-foreground">Email</Label>
                               <FormControl>
-                                <Input placeholder="teammate@company.com" {...field} />
+                                <Input placeholder="teammate@company.com" className="bg-input/50 border-border focus:border-primary" {...field} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -233,9 +239,9 @@ export default function Team() {
                           name="name"
                           render={({ field }) => (
                             <FormItem>
-                              <Label>Name (Optional)</Label>
+                              <Label className="text-foreground">Name (Optional)</Label>
                               <FormControl>
-                                <Input placeholder="Jane Doe" {...field} />
+                                <Input placeholder="Jane Doe" className="bg-input/50 border-border focus:border-primary" {...field} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -246,14 +252,14 @@ export default function Team() {
                           name="role"
                           render={({ field }) => (
                             <FormItem>
-                              <Label>Role</Label>
+                              <Label className="text-foreground">Role</Label>
                               <Select onValueChange={field.onChange} value={field.value}>
                                 <FormControl>
-                                  <SelectTrigger>
+                                  <SelectTrigger className="bg-input/50 border-border focus:border-primary">
                                     <SelectValue />
                                   </SelectTrigger>
                                 </FormControl>
-                                <SelectContent>
+                                <SelectContent className="bg-card border-border">
                                   <SelectItem value="staff">Staff — can post transactions</SelectItem>
                                   <SelectItem value="view_only">View only — read reports</SelectItem>
                                 </SelectContent>
@@ -262,8 +268,8 @@ export default function Team() {
                             </FormItem>
                           )}
                         />
-                        <DialogFooter>
-                          <Button type="submit" disabled={addMember.isPending}>
+                        <DialogFooter className="pt-4 border-t border-border mt-2">
+                          <Button type="submit" className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90" disabled={addMember.isPending}>
                             {addMember.isPending ? "Inviting..." : "Send invite"}
                           </Button>
                         </DialogFooter>
@@ -284,27 +290,27 @@ export default function Team() {
         </TabsContent>
 
         <TabsContent value="accountants" className="mt-4">
-          <Card className="shadow-sm border-border">
-            <CardHeader className="flex flex-row items-center justify-between">
+          <Card className="shadow-none border-border bg-card">
+            <CardHeader className="flex flex-row items-center justify-between border-b border-border bg-accent/30 pb-4">
               <div>
-                <CardTitle>Accountants</CardTitle>
+                <CardTitle>External Accountants</CardTitle>
                 <CardDescription>
-                  External collaborators with scoped, revocable, audited access.
+                  Collaborators with scoped, revocable, audited access.
                 </CardDescription>
               </div>
               {canManage && (
                 <Dialog open={accountantOpen} onOpenChange={setAccountantOpen}>
                   <DialogTrigger asChild>
-                    <Button className="gap-2">
+                    <Button className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
                       <UserPlus className="w-4 h-4" />
-                      Invite accountant
+                      Invite Accountant
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-[425px]">
+                  <DialogContent className="sm:max-w-[425px] bg-card border-border">
                     <DialogHeader>
-                      <DialogTitle>Invite an accountant</DialogTitle>
-                      <DialogDescription>
-                        They'll see only this org, and only until you revoke access.
+                      <DialogTitle className="text-foreground">Invite an accountant</DialogTitle>
+                      <DialogDescription className="text-muted-foreground">
+                        They'll securely access only this org until you revoke access.
                       </DialogDescription>
                     </DialogHeader>
                     <Form {...accountantForm}>
@@ -314,9 +320,9 @@ export default function Team() {
                           name="email"
                           render={({ field }) => (
                             <FormItem>
-                              <Label>Email</Label>
+                              <Label className="text-foreground">Email</Label>
                               <FormControl>
-                                <Input placeholder="cpa@firm.com" {...field} />
+                                <Input placeholder="cpa@firm.com" className="bg-input/50 border-border focus:border-primary" {...field} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -327,16 +333,16 @@ export default function Team() {
                           name="name"
                           render={({ field }) => (
                             <FormItem>
-                              <Label>Name (Optional)</Label>
+                              <Label className="text-foreground">Name (Optional)</Label>
                               <FormControl>
-                                <Input placeholder="Firm name or contact" {...field} />
+                                <Input placeholder="Firm name or contact" className="bg-input/50 border-border focus:border-primary" {...field} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
-                        <DialogFooter>
-                          <Button type="submit" disabled={inviteAccountant.isPending}>
+                        <DialogFooter className="pt-4 border-t border-border mt-2">
+                          <Button type="submit" className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90" disabled={inviteAccountant.isPending}>
                             {inviteAccountant.isPending ? "Inviting..." : "Send invite"}
                           </Button>
                         </DialogFooter>
@@ -348,9 +354,10 @@ export default function Team() {
             </CardHeader>
             <CardContent className="p-0">
               {accountants.length === 0 ? (
-                <div className="text-center py-16 text-muted-foreground">
-                  <Briefcase className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                  <p>No accountants invited yet.</p>
+                <div className="text-center py-16 text-muted-foreground bg-accent/20 m-6 rounded-md border border-border border-dashed">
+                  <Briefcase className="w-12 h-12 mx-auto mb-3 opacity-40 text-primary" />
+                  <p className="text-lg font-medium text-foreground mb-1">No external accountants invited.</p>
+                  <p className="text-sm">Securely share access with your financial professionals.</p>
                 </div>
               ) : (
                 <div className="divide-y divide-border">

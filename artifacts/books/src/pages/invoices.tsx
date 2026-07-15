@@ -134,24 +134,24 @@ export default function Invoices() {
   const revenueAccounts = accountsData?.accounts?.filter(a => a.type === "revenue") || [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-6xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-serif font-semibold tracking-tight text-primary">Invoices</h1>
-          <p className="text-muted-foreground mt-1">Manage what you're owed.</p>
+          <h1 className="text-3xl font-serif font-semibold tracking-tight text-foreground">Invoices</h1>
+          <p className="text-muted-foreground mt-1">Manage receivables and track owed revenue.</p>
         </div>
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
+            <Button className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
               <Plus className="w-4 h-4" />
               New Invoice
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-[425px] bg-card border-border">
             <DialogHeader>
-              <DialogTitle>Create Invoice</DialogTitle>
-              <DialogDescription>
-                Create a new invoice to track owed revenue.
+              <DialogTitle className="text-foreground">Create Invoice</DialogTitle>
+              <DialogDescription className="text-muted-foreground">
+                Issue a new invoice to record owed revenue.
               </DialogDescription>
             </DialogHeader>
             <Form {...form}>
@@ -161,9 +161,9 @@ export default function Invoices() {
                   name="customer"
                   render={({ field }) => (
                     <FormItem>
-                      <Label>Customer Name</Label>
+                      <Label className="text-foreground">Customer Name</Label>
                       <FormControl>
-                        <Input placeholder="Acme Corp" {...field} />
+                        <Input placeholder="Acme Corp" className="bg-input/50 border-border focus:border-primary" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -175,9 +175,9 @@ export default function Invoices() {
                     name="invoiceNumber"
                     render={({ field }) => (
                       <FormItem>
-                        <Label>Invoice # (Optional)</Label>
+                        <Label className="text-foreground">Invoice # (Optional)</Label>
                         <FormControl>
-                          <Input placeholder="INV-001" {...field} />
+                          <Input placeholder="INV-001" className="bg-input/50 border-border focus:border-primary font-mono text-sm" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -188,11 +188,11 @@ export default function Invoices() {
                     name="amount"
                     render={({ field }) => (
                       <FormItem>
-                        <Label>Amount</Label>
+                        <Label className="text-foreground">Amount</Label>
                         <FormControl>
                           <div className="relative">
-                            <span className="absolute left-3 top-2.5 text-muted-foreground text-sm">$</span>
-                            <Input placeholder="0.00" className="pl-6" {...field} />
+                            <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-mono">$</span>
+                            <Input placeholder="0.00" className="pl-6 bg-input/50 border-border focus:border-primary font-mono text-sm" {...field} />
                           </div>
                         </FormControl>
                         <FormMessage />
@@ -206,9 +206,9 @@ export default function Invoices() {
                     name="invoiceDate"
                     render={({ field }) => (
                       <FormItem>
-                        <Label>Date</Label>
+                        <Label className="text-foreground">Date</Label>
                         <FormControl>
-                          <Input type="date" {...field} />
+                          <Input type="date" className="bg-input/50 border-border focus:border-primary" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -219,9 +219,9 @@ export default function Invoices() {
                     name="dueDate"
                     render={({ field }) => (
                       <FormItem>
-                        <Label>Due Date</Label>
+                        <Label className="text-foreground">Due Date</Label>
                         <FormControl>
-                          <Input type="date" {...field} />
+                          <Input type="date" className="bg-input/50 border-border focus:border-primary" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -234,16 +234,17 @@ export default function Invoices() {
                     name="revenueAccountId"
                     render={({ field }) => (
                       <FormItem>
-                        <Label>Revenue Account (Optional)</Label>
+                        <Label className="text-foreground">Revenue Account (Optional)</Label>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
-                            <SelectTrigger>
+                            <SelectTrigger className="bg-input/50 border-border focus:border-primary">
                               <SelectValue placeholder="Select account" />
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent>
+                          <SelectContent className="bg-card border-border">
                             {revenueAccounts.map((acc) => (
                               <SelectItem key={acc.id} value={acc.id}>
+                                <span className="font-mono text-muted-foreground text-xs mr-2">{acc.code}</span>
                                 {acc.name}
                               </SelectItem>
                             ))}
@@ -254,9 +255,9 @@ export default function Invoices() {
                     )}
                   />
                 )}
-                <DialogFooter>
-                  <Button type="submit" disabled={createInvoice.isPending}>
-                    {createInvoice.isPending ? "Creating..." : "Save Invoice"}
+                <DialogFooter className="pt-4 border-t border-border mt-2">
+                  <Button type="submit" className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90" disabled={createInvoice.isPending}>
+                    {createInvoice.isPending ? "Generating..." : "Save Invoice"}
                   </Button>
                 </DialogFooter>
               </form>
@@ -265,25 +266,33 @@ export default function Invoices() {
         </Dialog>
       </div>
 
-      <Card className="shadow-sm border-border">
+      <Card className="shadow-none border-border bg-card">
         <CardContent className="p-0">
           {invoices.length === 0 ? (
-            <div className="text-center py-16 text-muted-foreground">
-              <FileText className="w-12 h-12 mx-auto mb-3 opacity-20" />
-              <p>No invoices found. Create your first one to get started.</p>
+            <div className="text-center py-16 text-muted-foreground bg-accent/20 m-6 rounded-md border border-border border-dashed">
+              <FileText className="w-12 h-12 mx-auto mb-3 opacity-40 text-primary" />
+              <p className="text-lg font-medium text-foreground mb-1">No outstanding invoices.</p>
+              <p className="text-sm">Issue your first invoice to record revenue.</p>
             </div>
           ) : (
             <div className="divide-y divide-border">
               {invoices.map((inv) => (
-                <div key={inv.id} className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-muted/30 transition-colors">
+                <div key={inv.id} className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-accent/30 transition-colors bg-background">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-semibold text-lg">{inv.customer}</span>
-                      <Badge variant={inv.status === 'paid' ? 'secondary' : inv.sentAt ? 'default' : 'outline'} className="ml-2">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="font-semibold text-lg text-foreground">{inv.customer}</span>
+                      <Badge 
+                        variant={inv.status === 'paid' ? 'secondary' : inv.sentAt ? 'default' : 'outline'} 
+                        className={`ml-2 text-[10px] uppercase tracking-wider font-bold ${
+                          inv.status === 'paid' ? "bg-[#3CB54A]/20 text-[#3CB54A] border-transparent" :
+                          inv.sentAt ? "bg-primary/20 text-primary border-transparent" :
+                          "bg-transparent text-muted-foreground border-border"
+                        }`}
+                      >
                         {inv.status === 'paid' ? 'paid' : inv.sentAt ? 'sent' : 'open'}
                       </Badge>
                     </div>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-4 text-xs font-mono text-muted-foreground">
                       <span>{inv.invoiceNumber || "No number"}</span>
                       <span>•</span>
                       <span>Due {format(new Date(inv.dueDate), "MMM d, yyyy")}</span>
@@ -292,21 +301,22 @@ export default function Invoices() {
                   
                   <div className="flex items-center justify-between sm:justify-end gap-6 sm:w-1/3">
                     <div className="text-right">
-                      <div className="font-serif text-lg">${inv.amount}</div>
-                      <div className="text-xs text-muted-foreground">
-                        ${inv.outstanding} outstanding
+                      <div className="font-serif text-xl text-foreground">${inv.amount}</div>
+                      <div className="text-xs font-mono text-muted-foreground mt-1">
+                        ${inv.outstanding} outst.
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                       {!inv.sentAt && (
                         <Button 
                           size="sm" 
                           variant="outline" 
                           onClick={() => handleSend(inv.id)}
                           disabled={sendInvoice.isPending}
+                          className="border-primary/50 text-primary hover:bg-primary/10 w-full sm:w-auto"
                         >
-                          <Send className="w-4 h-4 mr-2" />
+                          <Send className="w-3.5 h-3.5 mr-2" />
                           Send
                         </Button>
                       )}
@@ -315,8 +325,9 @@ export default function Invoices() {
                           size="sm" 
                           onClick={() => handlePay(inv.id, inv.outstanding)}
                           disabled={payInvoice.isPending}
+                          className="bg-[#3CB54A] text-white hover:bg-[#3CB54A]/90 w-full sm:w-auto"
                         >
-                          <DollarSign className="w-4 h-4 mr-2" />
+                          <DollarSign className="w-3.5 h-3.5 mr-1" />
                           Record Pay
                         </Button>
                       )}

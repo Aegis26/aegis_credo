@@ -14,7 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/hooks/use-toast";
-import { Landmark, RefreshCw, AlertCircle, CheckCircle } from "lucide-react";
+import { Landmark, RefreshCw, AlertCircle, CheckCircle, ShieldCheck } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function Bank() {
@@ -105,50 +105,52 @@ export default function Bank() {
   }
 
   return (
-    <div className="space-y-6 max-w-2xl mx-auto">
+    <div className="space-y-6 max-w-4xl mx-auto">
       <div>
-        <h1 className="text-3xl font-serif font-semibold tracking-tight text-primary">Bank Connection</h1>
-        <p className="text-muted-foreground mt-1">Connect your accounts to automatically import transactions.</p>
+        <h1 className="text-3xl font-serif font-semibold tracking-tight text-foreground">Bank Connection</h1>
+        <p className="text-muted-foreground mt-1">Connect your accounts to automatically sync transactions securely.</p>
       </div>
 
       {!status.configured ? (
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Bank connection isn't set up yet</AlertTitle>
-          <AlertDescription>
-            The system needs Plaid credentials to connect banks. Once configured, you'll be able to link your accounts here.
+        <Alert className="bg-accent/20 border-border">
+          <AlertCircle className="h-4 w-4 text-primary" />
+          <AlertTitle className="text-foreground">Bank connection isn't set up yet</AlertTitle>
+          <AlertDescription className="text-muted-foreground">
+            The system needs Plaid credentials to connect banks. Once configured, you'll be able to securely link your accounts here.
           </AlertDescription>
         </Alert>
       ) : (
-        <Card className="shadow-sm border-border">
-          <CardHeader>
+        <Card className="shadow-none border-border bg-card">
+          <CardHeader className="border-b border-border bg-accent/30 pb-4">
             <div className="flex items-center gap-2">
-              <Landmark className="w-5 h-5 text-primary" />
-              <CardTitle>Linked Accounts</CardTitle>
+              <ShieldCheck className="w-5 h-5 text-primary" />
+              <CardTitle>Secure Bank Feeds</CardTitle>
             </div>
-            <CardDescription>Manage your bank feeds</CardDescription>
+            <CardDescription>Manage your institutional connections</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-6">
             {status.connected ? (
               <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50 border border-border">
-                  <div className="flex items-center gap-3">
-                    <CheckCircle className="w-8 h-8 text-green-600" />
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between p-6 rounded-md bg-background border border-border">
+                  <div className="flex items-center gap-4 mb-4 sm:mb-0">
+                    <div className="bg-[#3CB54A]/10 p-3 rounded-full">
+                      <CheckCircle className="w-6 h-6 text-[#3CB54A]" />
+                    </div>
                     <div>
-                      <p className="font-medium text-foreground">{status.institutionName || "Connected Bank"}</p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="font-semibold text-foreground text-lg">{status.institutionName || "Connected Bank"}</p>
+                      <p className="text-xs font-mono text-muted-foreground mt-1">
                         {status.lastSyncedAt ? `Last synced: ${new Date(status.lastSyncedAt).toLocaleString()}` : "Never synced"}
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium">{status.pendingCount} pending</p>
-                    <p className="text-xs text-muted-foreground">transactions</p>
+                  <div className="text-left sm:text-right bg-accent/30 p-3 rounded-md border border-border/50">
+                    <p className="text-sm font-semibold text-primary">{status.pendingCount} pending</p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider">transactions</p>
                   </div>
                 </div>
 
                 {status.lastSyncError && (
-                  <Alert variant="destructive">
+                  <Alert variant="destructive" className="bg-destructive/10 border-destructive/30">
                     <AlertCircle className="h-4 w-4" />
                     <AlertTitle>Sync Error</AlertTitle>
                     <AlertDescription>{status.lastSyncError}</AlertDescription>
@@ -156,33 +158,34 @@ export default function Bank() {
                 )}
               </div>
             ) : (
-              <div className="text-center py-8">
-                <Landmark className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-20" />
-                <p className="text-foreground font-medium mb-1">No bank connected</p>
-                <p className="text-sm text-muted-foreground mb-4">Connect your bank to start importing transactions automatically.</p>
+              <div className="text-center py-16 px-4 bg-accent/20 rounded-md border border-border border-dashed m-2">
+                <Landmark className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-40" />
+                <p className="text-xl font-medium text-foreground mb-2">No active connection</p>
+                <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">Connect your bank securely via Plaid to start syncing transactions automatically into your ledger.</p>
                 <Button 
                   onClick={handleConnectClick} 
                   disabled={createToken.isPending || !!linkToken}
+                  className="bg-primary text-primary-foreground hover:bg-primary/90"
                 >
-                  {createToken.isPending ? "Connecting..." : "Connect Bank"}
+                  {createToken.isPending ? "Initializing Secure Link..." : "Establish Connection"}
                 </Button>
               </div>
             )}
           </CardContent>
           {status.connected && (
-            <CardFooter className="bg-muted/30 border-t border-border py-3 px-6 flex justify-between">
+            <CardFooter className="bg-accent/30 border-t border-border py-4 px-6 flex flex-col sm:flex-row gap-4 items-center justify-between">
               <span className="text-xs text-muted-foreground">
-                Transactions sync automatically, but you can sync manually if needed.
+                Transactions sync automatically, but you can force a refresh.
               </span>
               <Button 
                 variant="outline" 
                 size="sm" 
                 onClick={handleSync} 
                 disabled={syncBank.isPending}
-                className="gap-2"
+                className="gap-2 border-primary/50 hover:bg-primary hover:text-primary-foreground"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${syncBank.isPending ? "animate-spin" : ""}`} />
-                {syncBank.isPending ? "Syncing..." : "Sync Now"}
+                {syncBank.isPending ? "Syncing ledger..." : "Force Sync"}
               </Button>
             </CardFooter>
           )}

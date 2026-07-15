@@ -9,7 +9,7 @@ import {
   getGetOrgDashboardQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Badge } from "@/components/ui/badge";
@@ -107,23 +107,23 @@ export default function Bills() {
   const expenseAccounts = accountsData?.accounts?.filter((a) => a.type === "expense") || [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-6xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-serif font-semibold tracking-tight text-primary">Bills</h1>
-          <p className="text-muted-foreground mt-1">Track and pay what you owe.</p>
+          <h1 className="text-3xl font-serif font-semibold tracking-tight text-foreground">Bills</h1>
+          <p className="text-muted-foreground mt-1">Track and manage payables securely.</p>
         </div>
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
+            <Button className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
               <Plus className="w-4 h-4" />
-              New Bill
+              Log Bill
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-[425px] bg-card border-border">
             <DialogHeader>
-              <DialogTitle>Record Bill</DialogTitle>
-              <DialogDescription>Record a vendor bill into accounts payable.</DialogDescription>
+              <DialogTitle className="text-foreground">Record Bill</DialogTitle>
+              <DialogDescription className="text-muted-foreground">Log a vendor bill into accounts payable.</DialogDescription>
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmitCreate)} className="space-y-4">
@@ -132,9 +132,9 @@ export default function Bills() {
                   name="vendor"
                   render={({ field }) => (
                     <FormItem>
-                      <Label>Vendor</Label>
+                      <Label className="text-foreground">Vendor</Label>
                       <FormControl>
-                        <Input placeholder="Power Co" {...field} />
+                        <Input placeholder="Service Provider LLC" className="bg-input/50 border-border focus:border-primary" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -146,9 +146,9 @@ export default function Bills() {
                     name="billNumber"
                     render={({ field }) => (
                       <FormItem>
-                        <Label>Bill # (Optional)</Label>
+                        <Label className="text-foreground">Bill # (Optional)</Label>
                         <FormControl>
-                          <Input placeholder="U-1" {...field} />
+                          <Input placeholder="B-101" className="bg-input/50 border-border focus:border-primary font-mono text-sm" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -159,11 +159,11 @@ export default function Bills() {
                     name="amount"
                     render={({ field }) => (
                       <FormItem>
-                        <Label>Amount</Label>
+                        <Label className="text-foreground">Amount</Label>
                         <FormControl>
                           <div className="relative">
-                            <span className="absolute left-3 top-2.5 text-muted-foreground text-sm">$</span>
-                            <Input placeholder="0.00" className="pl-6" {...field} />
+                            <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-mono">$</span>
+                            <Input placeholder="0.00" className="pl-6 bg-input/50 border-border focus:border-primary font-mono text-sm" {...field} />
                           </div>
                         </FormControl>
                         <FormMessage />
@@ -177,9 +177,9 @@ export default function Bills() {
                     name="billDate"
                     render={({ field }) => (
                       <FormItem>
-                        <Label>Date</Label>
+                        <Label className="text-foreground">Date</Label>
                         <FormControl>
-                          <Input type="date" {...field} />
+                          <Input type="date" className="bg-input/50 border-border focus:border-primary" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -190,9 +190,9 @@ export default function Bills() {
                     name="dueDate"
                     render={({ field }) => (
                       <FormItem>
-                        <Label>Due Date</Label>
+                        <Label className="text-foreground">Due Date</Label>
                         <FormControl>
-                          <Input type="date" {...field} />
+                          <Input type="date" className="bg-input/50 border-border focus:border-primary" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -204,17 +204,18 @@ export default function Bills() {
                   name="expenseAccountId"
                   render={({ field }) => (
                     <FormItem>
-                      <Label>Expense Account</Label>
+                      <Label className="text-foreground">Expense Account</Label>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="bg-input/50 border-border focus:border-primary">
                             <SelectValue placeholder="Select account" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
+                        <SelectContent className="bg-card border-border">
                           {expenseAccounts.map((acc) => (
                             <SelectItem key={acc.id} value={acc.id}>
-                              {acc.code} · {acc.name}
+                              <span className="font-mono text-muted-foreground text-xs mr-2">{acc.code}</span>
+                              {acc.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -223,8 +224,8 @@ export default function Bills() {
                     </FormItem>
                   )}
                 />
-                <DialogFooter>
-                  <Button type="submit" disabled={createBill.isPending}>
+                <DialogFooter className="pt-4 border-t border-border mt-2">
+                  <Button type="submit" className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90" disabled={createBill.isPending}>
                     {createBill.isPending ? "Recording..." : "Save Bill"}
                   </Button>
                 </DialogFooter>
@@ -234,25 +235,32 @@ export default function Bills() {
         </Dialog>
       </div>
 
-      <Card className="shadow-sm border-border">
+      <Card className="shadow-none border-border bg-card">
         <CardContent className="p-0">
           {bills.length === 0 ? (
-            <div className="text-center py-16 text-muted-foreground">
-              <Receipt className="w-12 h-12 mx-auto mb-3 opacity-20" />
-              <p>No bills yet. Record your first one to get started.</p>
+            <div className="text-center py-16 text-muted-foreground bg-accent/20 m-6 rounded-md border border-border border-dashed">
+              <Receipt className="w-12 h-12 mx-auto mb-3 opacity-40 text-primary" />
+              <p className="text-lg font-medium text-foreground mb-1">No recorded payables.</p>
+              <p className="text-sm">Log your first vendor bill to track liabilities.</p>
             </div>
           ) : (
             <div className="divide-y divide-border">
               {bills.map((bill) => (
-                <div key={bill.id} className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-muted/30 transition-colors">
+                <div key={bill.id} className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-accent/30 transition-colors bg-background">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-semibold text-lg">{bill.vendor}</span>
-                      <Badge variant={bill.status === "paid" ? "secondary" : "outline"} className="ml-2">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="font-semibold text-lg text-foreground">{bill.vendor}</span>
+                      <Badge 
+                        variant={bill.status === "paid" ? "secondary" : "outline"} 
+                        className={`ml-2 text-[10px] uppercase tracking-wider font-bold ${
+                          bill.status === "paid" ? "bg-accent text-muted-foreground border-transparent" :
+                          "bg-destructive/20 text-destructive border-transparent"
+                        }`}
+                      >
                         {bill.status}
                       </Badge>
                     </div>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-4 text-xs font-mono text-muted-foreground">
                       <span>{bill.billNumber || "No number"}</span>
                       <span>•</span>
                       <span>Due {format(new Date(bill.dueDate), "MMM d, yyyy")}</span>
@@ -260,13 +268,19 @@ export default function Bills() {
                   </div>
                   <div className="flex items-center justify-between sm:justify-end gap-6 sm:w-1/3">
                     <div className="text-right">
-                      <div className="font-serif text-lg">${bill.amount}</div>
-                      <div className="text-xs text-muted-foreground">${bill.outstanding} outstanding</div>
+                      <div className="font-serif text-xl text-foreground">${bill.amount}</div>
+                      <div className="text-xs font-mono text-muted-foreground mt-1">${bill.outstanding} outst.</div>
                     </div>
                     {bill.status !== "paid" && (
-                      <Button size="sm" onClick={() => handlePay(bill.id, bill.outstanding)} disabled={payBill.isPending}>
-                        <DollarSign className="w-4 h-4 mr-2" />
-                        Pay
+                      <Button 
+                        size="sm" 
+                        onClick={() => handlePay(bill.id, bill.outstanding)} 
+                        disabled={payBill.isPending}
+                        className="bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground border-primary/20"
+                        variant="outline"
+                      >
+                        <DollarSign className="w-3.5 h-3.5 mr-1" />
+                        Execute Pay
                       </Button>
                     )}
                   </div>

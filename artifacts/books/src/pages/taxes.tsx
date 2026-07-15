@@ -26,17 +26,17 @@ export default function Taxes() {
         <p className="text-muted-foreground mt-1">Estimate what you should set aside for tax season.</p>
       </div>
 
-      <Card className="shadow-sm border-border">
-        <CardHeader>
+      <Card className="shadow-none border-border bg-card">
+        <CardHeader className="border-b border-border bg-accent/30 pb-4">
           <CardTitle>Tax Set-Aside Estimate</CardTitle>
           <CardDescription>Based on your current net income</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-8">
+        <CardContent className="space-y-8 pt-6">
           {isLoading ? (
             <div className="flex justify-center py-8"><Spinner /></div>
           ) : estimate ? (
             <>
-              <div className="flex items-center justify-between p-6 bg-muted/30 rounded-lg border border-border">
+              <div className="flex items-center justify-between p-6 bg-accent/30 rounded-lg border border-border">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground mb-1">Net Income</p>
                   <p className="text-2xl font-serif">${estimate.netIncome}</p>
@@ -65,7 +65,7 @@ export default function Taxes() {
                 </p>
               </div>
 
-              <div className="bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-200 p-4 rounded-lg text-sm border border-amber-200 dark:border-amber-900/50">
+              <div className="bg-accent/50 text-foreground p-4 rounded-lg text-sm border border-border">
                 <strong>Important:</strong> {estimate.disclaimer}
               </div>
             </>

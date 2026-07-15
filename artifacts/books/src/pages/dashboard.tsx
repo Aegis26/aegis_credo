@@ -1,20 +1,23 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useCurrentOrg } from "@/hooks/use-current-org";
 import { 
   useGetOrgDashboard, 
   getGetOrgDashboardQueryKey,
   useGetMyCloseStatus,
   getGetMyCloseStatusQueryKey,
-  useRespondPbcRequest
+  useRespondPbcRequest,
+  useGetProfitAndLossReport,
+  getGetProfitAndLossReportQueryKey
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { format } from "date-fns";
-import { CheckCircle2, AlertTriangle, ArrowUpRight, ArrowDownRight, ClipboardList, Check, Clock } from "lucide-react";
+import { CheckCircle2, AlertTriangle, ArrowUpRight, ArrowDownRight, ClipboardList, Check, Clock, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Cell as PieCell } from 'recharts';
 
 export default function Dashboard() {
   const { orgId } = useCurrentOrg();
@@ -32,6 +35,11 @@ export default function Dashboard() {
       enabled: !!orgId,
       queryKey: getGetMyCloseStatusQueryKey(orgId || "")
     }
+  });
+
+  // Fetch P&L to show charts
+  const { data: pnl } = useGetProfitAndLossReport(orgId || "", {
+    query: { enabled: !!orgId, queryKey: getGetProfitAndLossReportQueryKey(orgId || "") }
   });
 
   const respondPbc = useRespondPbcRequest();
@@ -56,6 +64,25 @@ export default function Dashboard() {
     });
   };
 
+  // Prepare chart data from P&L
+  const pnlExpenseData = useMemo(() => {
+    if (!pnl || !pnl.expenses) return [];
+    return pnl.expenses
+      .filter(item => parseFloat(item.amount) > 0)
+      .sort((a, b) => parseFloat(b.amount) - parseFloat(a.amount))
+      .slice(0, 5) // top 5
+      .map(item => ({ name: item.name, value: parseFloat(item.amount) }));
+  }, [pnl]);
+
+  const pnlRevenueData = useMemo(() => {
+    if (!pnl || !pnl.revenue) return [];
+    return pnl.revenue
+      .filter(item => parseFloat(item.amount) > 0)
+      .map(item => ({ name: item.name, value: parseFloat(item.amount) }));
+  }, [pnl]);
+
+  const COLORS = ['#1E90FF', '#2b6cb0', '#2c5282', '#1a365d', '#4299e1'];
+
   if (!orgId) return null;
 
   if (isLoading || !dashboard || closeLoading) {
@@ -72,57 +99,58 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-serif font-semibold tracking-tight text-primary">Overview</h1>
-        <p className="text-muted-foreground mt-1">Here's how your business is doing.</p>
+        <h1 className="text-3xl font-serif font-semibold tracking-tight text-foreground">Command Center</h1>
+        <p className="text-muted-foreground mt-1">Live financial status and outstanding items.</p>
       </div>
 
+      {/* KPI Row */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="shadow-sm">
+        <Card className="shadow-none border-border bg-card">
           <CardHeader className="pb-2">
-            <CardDescription>Cash on Hand</CardDescription>
-            <CardTitle className="text-3xl font-serif">${dashboard.cash}</CardTitle>
+            <CardDescription className="uppercase tracking-widest text-[10px] font-bold text-muted-foreground">Cash on Hand</CardDescription>
+            <CardTitle className="text-3xl font-mono text-foreground">${dashboard.cash}</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">Available in your accounts</p>
+            <p className="text-xs text-muted-foreground">Available liquidity</p>
           </CardContent>
         </Card>
         
-        <Card className="shadow-sm">
+        <Card className="shadow-none border-border bg-card">
           <CardHeader className="pb-2">
-            <CardDescription>Net Income</CardDescription>
-            <CardTitle className="text-3xl font-serif">${dashboard.netIncome}</CardTitle>
+            <CardDescription className="uppercase tracking-widest text-[10px] font-bold text-muted-foreground">Net Income</CardDescription>
+            <CardTitle className="text-3xl font-mono text-foreground">${dashboard.netIncome}</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">Profit this period</p>
+            <p className="text-xs text-muted-foreground">Profit this period</p>
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm">
+        <Card className={`shadow-none border ${dashboard.balanced ? "border-[#3CB54A]/30 bg-[#3CB54A]/5" : "border-destructive/30 bg-destructive/5"}`}>
           <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
             <div>
-              <CardDescription>Ledger Status</CardDescription>
-              <CardTitle className="text-xl mt-1">
+              <CardDescription className={`uppercase tracking-widest text-[10px] font-bold ${dashboard.balanced ? "text-[#3CB54A]" : "text-destructive"}`}>Ledger Status</CardDescription>
+              <CardTitle className={`text-xl mt-1 font-semibold ${dashboard.balanced ? "text-[#3CB54A]" : "text-destructive"}`}>
                 {dashboard.balanced ? "Balanced" : "Out of Balance"}
               </CardTitle>
             </div>
             {dashboard.balanced ? (
-              <CheckCircle2 className="w-8 h-8 text-green-600" />
+              <CheckCircle2 className="w-8 h-8 text-[#3CB54A]" />
             ) : (
               <AlertTriangle className="w-8 h-8 text-destructive" />
             )}
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">
-              {dashboard.balanced ? "Everything adds up" : `Difference: $${dashboard.difference}`}
+            <p className={`text-sm ${dashboard.balanced ? "text-[#3CB54A]/80" : "text-destructive/80"}`}>
+              {dashboard.balanced ? "All accounts reconciled" : `Difference: $${dashboard.difference}`}
             </p>
           </CardContent>
         </Card>
         
-        {hasCloseData && (
-          <Card className="shadow-sm bg-primary/5 border-primary/20">
+        {hasCloseData ? (
+          <Card className="shadow-none bg-accent/20 border-primary/20">
             <CardHeader className="pb-2">
-              <CardDescription className="text-primary/80 font-medium flex items-center gap-1">
-                <ClipboardList className="w-4 h-4" /> Bookkeeping Close
+              <CardDescription className="text-primary font-bold text-[10px] tracking-widest uppercase flex items-center gap-1">
+                <ClipboardList className="w-3 h-3" /> Period Close
               </CardDescription>
               <CardTitle className="text-xl mt-1">
                 {closeStatus?.summary?.period.period}
@@ -130,40 +158,124 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm">Status</span>
-                <Badge variant="outline" className="bg-white">{closeStatus?.summary?.period.status?.replace('_', ' ')}</Badge>
+                <span className="text-xs font-medium text-muted-foreground">Status</span>
+                <Badge variant="outline" className="bg-background text-[10px] font-mono border-border uppercase">
+                  {closeStatus?.summary?.period.status?.replace('_', ' ')}
+                </Badge>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Action Needed</span>
-                <span className={`font-semibold ${requestedPbcs.length > 0 ? 'text-amber-600' : 'text-green-600'}`}>
+                <span className="text-xs font-medium text-muted-foreground">Action Needed</span>
+                <span className={`font-semibold text-sm ${requestedPbcs.length > 0 ? 'text-primary' : 'text-[#3CB54A]'}`}>
                   {requestedPbcs.length} items
                 </span>
               </div>
             </CardContent>
           </Card>
+        ) : (
+          <Card className="shadow-none border-border bg-card/50 flex flex-col justify-center items-center text-center p-6">
+             <div className="w-10 h-10 rounded-full bg-accent/50 flex items-center justify-center mb-3">
+               <TrendingUp className="w-5 h-5 text-muted-foreground" />
+             </div>
+             <p className="text-sm font-medium text-muted-foreground">No active close period</p>
+          </Card>
         )}
       </div>
 
+      {/* Charts Row */}
+      {pnl && (
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card className="shadow-none border-border bg-card">
+            <CardHeader>
+              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Top Expenses</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {pnlExpenseData.length > 0 ? (
+                <div className="h-[250px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={pnlExpenseData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#1E2126" />
+                      <XAxis type="number" tickFormatter={(val) => `$${val}`} stroke="#B8C0C8" fontSize={12} tickLine={false} axisLine={false} />
+                      <YAxis dataKey="name" type="category" width={100} stroke="#B8C0C8" fontSize={12} tickLine={false} axisLine={false} />
+                      <Tooltip 
+                        cursor={{fill: '#1E2126'}} 
+                        contentStyle={{backgroundColor: '#16181C', borderColor: '#1E2126', color: '#E8EAED', borderRadius: '6px'}}
+                        itemStyle={{color: '#1E90FF'}}
+                        formatter={(value: number) => [`$${value.toFixed(2)}`, 'Expense']}
+                      />
+                      <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={24}>
+                        {pnlExpenseData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="h-[250px] flex items-center justify-center text-muted-foreground text-sm">No expense data</div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-none border-border bg-card">
+            <CardHeader>
+              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Revenue Breakdown</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {pnlRevenueData.length > 0 ? (
+                <div className="h-[250px] w-full flex items-center justify-center">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={pnlRevenueData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={90}
+                        paddingAngle={2}
+                        dataKey="value"
+                        stroke="none"
+                      >
+                        {pnlRevenueData.map((entry, index) => (
+                          <PieCell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        contentStyle={{backgroundColor: '#16181C', borderColor: '#1E2126', color: '#E8EAED', borderRadius: '6px'}}
+                        itemStyle={{color: '#3CB54A'}}
+                        formatter={(value: number) => [`$${value.toFixed(2)}`, 'Revenue']}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="h-[250px] flex items-center justify-center text-muted-foreground text-sm">No revenue data</div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Activity & Requests Row */}
       <div className="grid gap-6 md:grid-cols-2">
         <div className="space-y-6">
-          <Card className="shadow-sm">
+          <Card className="shadow-none border-border bg-card">
             <CardHeader>
-              <CardTitle className="text-xl">Recent Activity</CardTitle>
-              <CardDescription>Your latest transactions</CardDescription>
+              <CardTitle className="text-lg">Recent Ledger Activity</CardTitle>
+              <CardDescription>Latest transactions recorded</CardDescription>
             </CardHeader>
             <CardContent>
               {dashboard.recentActivity.length === 0 ? (
-                <div className="text-center py-6 text-muted-foreground text-sm">
-                  No recent activity.
+                <div className="text-center py-6 text-muted-foreground text-sm bg-accent/30 rounded-md border border-border border-dashed">
+                  No recent activity found.
                 </div>
               ) : (
                 <div className="space-y-4">
                   {dashboard.recentActivity.map((entry) => {
                     const isPositive = !entry.amount.startsWith("-");
                     return (
-                      <div key={entry.id} className="flex items-center justify-between">
+                      <div key={entry.id} className="flex items-center justify-between p-2 rounded hover:bg-accent/50 transition-colors">
                         <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-full ${isPositive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                          <div className={`p-2 rounded-md ${isPositive ? "bg-[#3CB54A]/10 text-[#3CB54A]" : "bg-destructive/10 text-destructive"}`}>
                             {isPositive ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
                           </div>
                           <div>
@@ -173,7 +285,7 @@ export default function Dashboard() {
                             </p>
                           </div>
                         </div>
-                        <div className={`text-sm font-medium ${isPositive ? "text-green-700" : "text-red-700"}`}>
+                        <div className={`text-sm font-mono font-medium ${isPositive ? "text-[#3CB54A]" : "text-destructive"}`}>
                           {isPositive ? "+" : "-"}${entry.amount.replace("-", "")}
                         </div>
                       </div>
@@ -187,37 +299,37 @@ export default function Dashboard() {
 
         {hasCloseData && (
           <div className="space-y-6">
-            <Card className="shadow-sm border-primary/20">
-              <CardHeader className="bg-primary/5 pb-4 border-b">
-                <CardTitle className="text-xl flex items-center gap-2">
-                  <ClipboardList className="w-5 h-5 text-primary" />
-                  Accountant Requests
+            <Card className="shadow-none border-primary/20 bg-card">
+              <CardHeader className="bg-primary/5 pb-4 border-b border-border">
+                <CardTitle className="text-lg flex items-center gap-2 text-primary">
+                  <ClipboardList className="w-5 h-5" />
+                  Action Required
                 </CardTitle>
                 <CardDescription>
-                  Your accountant needs information to close the books for {closeStatus?.summary?.period.period}
+                  Your accountant requested input for {closeStatus?.summary?.period.period}
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-6">
                 {(closeStatus?.summary?.pbc.items.length ?? 0) === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground flex flex-col items-center">
-                    <CheckCircle2 className="w-8 h-8 text-green-500 mb-2 opacity-50" />
-                    <p>No open requests from your accountant.</p>
+                  <div className="text-center py-8 text-muted-foreground flex flex-col items-center bg-accent/30 rounded-md border border-border border-dashed">
+                    <CheckCircle2 className="w-8 h-8 text-[#3CB54A] mb-2 opacity-80" />
+                    <p className="text-sm">No open requests from your accountant.</p>
                   </div>
                 ) : (
                   <div className="space-y-6">
                     {closeStatus?.summary?.pbc.items.map(req => (
-                      <div key={req.id} className="border rounded-lg overflow-hidden">
-                        <div className="bg-muted/30 p-4 border-b">
+                      <div key={req.id} className="border border-border rounded-md overflow-hidden bg-background">
+                        <div className="bg-accent/50 p-4 border-b border-border">
                           <div className="flex justify-between items-start mb-2">
-                            <h4 className="font-semibold">{req.title}</h4>
+                            <h4 className="font-semibold text-sm">{req.title}</h4>
                             <Badge variant={
                               req.status === 'requested' ? 'default' : 
                               req.status === 'provided' ? 'secondary' : 'outline'
-                            }>
+                            } className={req.status === 'requested' ? "bg-primary" : "bg-transparent border-border"}>
                               {req.status}
                             </Badge>
                           </div>
-                          {req.detail && <p className="text-sm text-muted-foreground">{req.detail}</p>}
+                          {req.detail && <p className="text-xs text-muted-foreground">{req.detail}</p>}
                         </div>
                         
                         <div className="p-4">
@@ -227,31 +339,32 @@ export default function Dashboard() {
                                 placeholder="Type your response here..."
                                 value={responses[req.id] || ""}
                                 onChange={(e) => setResponses(prev => ({...prev, [req.id]: e.target.value}))}
-                                className="min-h-[80px]"
+                                className="min-h-[80px] bg-input/50 text-sm focus:border-primary"
                               />
                               <div className="flex justify-end">
                                 <Button 
                                   size="sm" 
                                   onClick={() => handleRespond(req.id)}
                                   disabled={!responses[req.id]?.trim() || respondPbc.isPending}
+                                  className="bg-primary text-primary-foreground hover:bg-primary/90"
                                 >
-                                  {respondPbc.isPending && responses[req.id] !== undefined ? <Spinner className="mr-2" /> : null}
+                                  {respondPbc.isPending && responses[req.id] !== undefined ? <Spinner className="mr-2 w-3 h-3" /> : null}
                                   Submit Response
                                 </Button>
                               </div>
                             </div>
                           ) : (
-                            <div className="bg-muted p-3 rounded-md text-sm">
-                              <span className="font-medium text-muted-foreground block mb-1">Your Response:</span>
+                            <div className="bg-accent/30 p-3 rounded text-sm border border-border/50">
+                              <span className="font-medium text-muted-foreground block mb-1 text-xs uppercase tracking-wider">Your Response</span>
                               {req.response}
                               {req.status === 'provided' && (
-                                <div className="mt-3 flex items-center text-amber-600 text-xs font-medium">
-                                  <Clock className="w-3 h-3 mr-1" /> Pending accountant review
+                                <div className="mt-3 flex items-center text-primary text-xs font-medium">
+                                  <Clock className="w-3 h-3 mr-1" /> Pending review
                                 </div>
                               )}
                               {req.status === 'accepted' && (
-                                <div className="mt-3 flex items-center text-green-600 text-xs font-medium">
-                                  <Check className="w-3 h-3 mr-1" /> Accepted by accountant
+                                <div className="mt-3 flex items-center text-[#3CB54A] text-xs font-medium">
+                                  <Check className="w-3 h-3 mr-1" /> Accepted
                                 </div>
                               )}
                             </div>
