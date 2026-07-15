@@ -1,4 +1,4 @@
-import logoUrl from "@assets/unnamed_1784133052304.png";
+import logoUrl from "@assets/aegis-logo-trimmed.png";
 
 export const BRAND_NAME = "Aegis Credo";
 export const BRAND_TAGLINE = "Accounting. Clarity. Confidence.";
@@ -24,7 +24,7 @@ export function BrandLogo({ className = "h-8" }: { className?: string }) {
 export function BrandWordmark({ className = "" }: { className?: string }) {
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      <BrandLogo className="h-6 w-auto" />
+      <BrandLogo className="h-9 w-auto" />
       <span className="font-serif font-bold tracking-tight text-foreground">
         {BRAND_NAME}
       </span>
