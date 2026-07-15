@@ -24,7 +24,7 @@ export function BrandLogo({ className = "h-8" }: { className?: string }) {
 export function BrandWordmark({ className = "" }: { className?: string }) {
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      <BrandLogo className="h-9 w-auto" />
+      <BrandLogo className="h-12 w-auto" />
       <span className="font-serif font-bold tracking-tight text-foreground">
         {BRAND_NAME}
       </span>

@@ -61,7 +61,7 @@ export default function Onboarding() {
       
       <div className="w-full max-w-md space-y-8 relative z-10">
         <div className="text-center flex flex-col items-center">
-          <BrandLogo className="h-24 w-auto mb-4" />
+          <BrandLogo className="h-32 w-auto mb-4" />
           <h1 className="text-4xl font-serif font-bold text-foreground mb-2">{BRAND_NAME}</h1>
           <p className="text-muted-foreground">{BRAND_TAGLINE}</p>
         </div>

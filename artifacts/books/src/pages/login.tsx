@@ -60,7 +60,7 @@ export default function Login() {
         <div className="absolute -right-20 -bottom-20 w-96 h-96 bg-[#3CB54A]/20 rounded-full blur-[100px] pointer-events-none" />
         
         <div className="relative z-10 flex flex-col items-start max-w-lg">
-          <BrandLogo className="h-36 w-auto mb-8 drop-shadow-[0_0_15px_rgba(30,144,255,0.4)]" />
+          <BrandLogo className="h-52 w-auto mb-8 drop-shadow-[0_0_15px_rgba(30,144,255,0.4)]" />
           <h1 className="text-5xl font-serif font-bold text-white mb-4 tracking-tight leading-tight">
             The command center for your finances.
           </h1>
@@ -78,7 +78,7 @@ export default function Login() {
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-[#0A0A0A]">
         <div className="w-full max-w-md space-y-8">
           <div className="lg:hidden text-center mb-8 flex flex-col items-center">
-            <BrandLogo className="h-24 w-auto mb-4" />
+            <BrandLogo className="h-32 w-auto mb-4" />
             <h1 className="text-3xl font-serif font-bold text-white mb-2">{BRAND_NAME}</h1>
             <p className="text-muted-foreground">{BRAND_TAGLINE}</p>
           </div>
