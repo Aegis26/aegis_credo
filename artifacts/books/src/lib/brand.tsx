@@ -1,4 +1,4 @@
-import logoUrl from "@assets/aegis-logo-trimmed.png";
+import logoUrl from "@assets/unnamed_1784133052304.png";
 
 export const BRAND_NAME = "Aegis Credo";
 export const BRAND_TAGLINE = "Accounting. Clarity. Confidence.";
