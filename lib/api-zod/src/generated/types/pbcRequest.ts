@@ -11,4 +11,5 @@ export interface PbcRequest {
   title: string;
   status: string;
   detail?: string | null;
+  response?: string | null;
 }

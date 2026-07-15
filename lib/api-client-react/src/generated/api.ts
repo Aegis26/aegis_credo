@@ -33,18 +33,28 @@ import type {
   BankTransactionList,
   BatchExportRequest,
   BatchExportResponse,
+  BatchReportRequest,
+  BatchReportResponse,
   Bill,
   BillInput,
   BillList,
   BillPaymentInput,
   CategorizeInput,
+  ClientGrant,
   ClientList,
+  ClosePeriod,
+  ClosePeriodInput,
   ClosePeriodList,
+  ClosePeriodStatusInput,
   CloseStatusSummary,
+  CloseTask,
+  CloseTaskInput,
+  CloseTaskStatusInput,
   ErrorResponse,
   GetArAgingParams,
   GetPracticeDashboardParams,
   GetTaxEstimateParams,
+  GrantClientInput,
   HealthStatus,
   ImportFileInput,
   ImportPreviewInput,
@@ -58,12 +68,18 @@ import type {
   Member,
   MemberInput,
   MemberList,
+  MyCloseStatus,
   Org,
   OrgDashboard,
   OrgInput,
   OrgList,
   PayrollRunList,
+  PbcRequest,
+  PbcRequestInput,
+  PbcResponseInput,
+  Practice,
   PracticeDashboard,
+  PracticeInput,
   ProfitAndLossReport,
   ReconciliationReport,
   SignupRequest,
@@ -860,6 +876,889 @@ export function useGetCloseStatus<TData = Awaited<ReturnType<typeof getCloseStat
 
 
 
+
+export const getCreatePracticeUrl = () => {
+
+
+
+
+  return `/api/practice`
+}
+
+/**
+ * Creates a practice and adds the session user as its owner member. Membership alone grants NO client access — clients must be granted explicitly.
+ * @summary Create a practice (firm)
+ */
+export const createPractice = async (practiceInput: PracticeInput, options?: RequestInit): Promise<Practice> => {
+
+  return customFetch<Practice>(getCreatePracticeUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(practiceInput)
+  }
+);}
+
+
+
+
+
+export const getCreatePracticeMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPractice>>, TError,{data: BodyType<PracticeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createPractice>>, TError,{data: BodyType<PracticeInput>}, TContext> => {
+
+const mutationKey = ['createPractice'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createPractice>>, {data: BodyType<PracticeInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createPractice(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreatePracticeMutationResult = NonNullable<Awaited<ReturnType<typeof createPractice>>>
+    export type CreatePracticeMutationBody = BodyType<PracticeInput>
+    export type CreatePracticeMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Create a practice (firm)
+ */
+export const useCreatePractice = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPractice>>, TError,{data: BodyType<PracticeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createPractice>>,
+        TError,
+        {data: BodyType<PracticeInput>},
+        TContext
+      > => {
+      return useMutation(getCreatePracticeMutationOptions(options));
+    }
+
+export const getGrantPracticeClientUrl = (practiceId: string,) => {
+
+
+
+
+  return `/api/practice/${practiceId}/clients`
+}
+
+/**
+ * The caller must hold members.manage on the CLIENT org — the client's admin authorizes their own books to the firm, so a practice member can never self-grant an org they do not administer. Audit-logged against the client org.
+ * @summary Grant a practice access to a client org
+ */
+export const grantPracticeClient = async (practiceId: string,
+    grantClientInput: GrantClientInput, options?: RequestInit): Promise<ClientGrant> => {
+
+  return customFetch<ClientGrant>(getGrantPracticeClientUrl(practiceId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(grantClientInput)
+  }
+);}
+
+
+
+
+
+export const getGrantPracticeClientMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof grantPracticeClient>>, TError,{practiceId: string;data: BodyType<GrantClientInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof grantPracticeClient>>, TError,{practiceId: string;data: BodyType<GrantClientInput>}, TContext> => {
+
+const mutationKey = ['grantPracticeClient'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof grantPracticeClient>>, {practiceId: string;data: BodyType<GrantClientInput>}> = (props) => {
+          const {practiceId,data} = props ?? {};
+
+          return  grantPracticeClient(practiceId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GrantPracticeClientMutationResult = NonNullable<Awaited<ReturnType<typeof grantPracticeClient>>>
+    export type GrantPracticeClientMutationBody = BodyType<GrantClientInput>
+    export type GrantPracticeClientMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Grant a practice access to a client org
+ */
+export const useGrantPracticeClient = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof grantPracticeClient>>, TError,{practiceId: string;data: BodyType<GrantClientInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof grantPracticeClient>>,
+        TError,
+        {practiceId: string;data: BodyType<GrantClientInput>},
+        TContext
+      > => {
+      return useMutation(getGrantPracticeClientMutationOptions(options));
+    }
+
+export const getSwitchToClientUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/practice/switch/${orgId}`
+}
+
+/**
+ * Asserts the session user's grant, audit-logs the access event against the client org, and returns the client organization.
+ * @summary Switch into a granted client (audited)
+ */
+export const switchToClient = async (orgId: string, options?: RequestInit): Promise<Org> => {
+
+  return customFetch<Org>(getSwitchToClientUrl(orgId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getSwitchToClientMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof switchToClient>>, TError,{orgId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof switchToClient>>, TError,{orgId: string}, TContext> => {
+
+const mutationKey = ['switchToClient'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof switchToClient>>, {orgId: string}> = (props) => {
+          const {orgId} = props ?? {};
+
+          return  switchToClient(orgId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SwitchToClientMutationResult = NonNullable<Awaited<ReturnType<typeof switchToClient>>>
+
+    export type SwitchToClientMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Switch into a granted client (audited)
+ */
+export const useSwitchToClient = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof switchToClient>>, TError,{orgId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof switchToClient>>,
+        TError,
+        {orgId: string},
+        TContext
+      > => {
+      return useMutation(getSwitchToClientMutationOptions(options));
+    }
+
+export const getRunBatchReportUrl = () => {
+
+
+
+
+  return `/api/practice/batch-report`
+}
+
+/**
+ * Runs the report across the requested clients (restricted to granted ones) and returns one tabular sheet per client. Money cells are decimal strings. Rejects ungranted clients unless skipUnauthorized is set.
+ * @summary Run the same report across a book of clients
+ */
+export const runBatchReport = async (batchReportRequest: BatchReportRequest, options?: RequestInit): Promise<BatchReportResponse> => {
+
+  return customFetch<BatchReportResponse>(getRunBatchReportUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(batchReportRequest)
+  }
+);}
+
+
+
+
+
+export const getRunBatchReportMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runBatchReport>>, TError,{data: BodyType<BatchReportRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof runBatchReport>>, TError,{data: BodyType<BatchReportRequest>}, TContext> => {
+
+const mutationKey = ['runBatchReport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof runBatchReport>>, {data: BodyType<BatchReportRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  runBatchReport(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RunBatchReportMutationResult = NonNullable<Awaited<ReturnType<typeof runBatchReport>>>
+    export type RunBatchReportMutationBody = BodyType<BatchReportRequest>
+    export type RunBatchReportMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Run the same report across a book of clients
+ */
+export const useRunBatchReport = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runBatchReport>>, TError,{data: BodyType<BatchReportRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof runBatchReport>>,
+        TError,
+        {data: BodyType<BatchReportRequest>},
+        TContext
+      > => {
+      return useMutation(getRunBatchReportMutationOptions(options));
+    }
+
+export const getCreateClosePeriodUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/clients/${orgId}/close-periods/create`
+}
+
+/**
+ * @summary Open a close period for a client
+ */
+export const createClosePeriod = async (orgId: string,
+    closePeriodInput: ClosePeriodInput, options?: RequestInit): Promise<ClosePeriod> => {
+
+  return customFetch<ClosePeriod>(getCreateClosePeriodUrl(orgId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(closePeriodInput)
+  }
+);}
+
+
+
+
+
+export const getCreateClosePeriodMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createClosePeriod>>, TError,{orgId: string;data: BodyType<ClosePeriodInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createClosePeriod>>, TError,{orgId: string;data: BodyType<ClosePeriodInput>}, TContext> => {
+
+const mutationKey = ['createClosePeriod'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createClosePeriod>>, {orgId: string;data: BodyType<ClosePeriodInput>}> = (props) => {
+          const {orgId,data} = props ?? {};
+
+          return  createClosePeriod(orgId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateClosePeriodMutationResult = NonNullable<Awaited<ReturnType<typeof createClosePeriod>>>
+    export type CreateClosePeriodMutationBody = BodyType<ClosePeriodInput>
+    export type CreateClosePeriodMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Open a close period for a client
+ */
+export const useCreateClosePeriod = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createClosePeriod>>, TError,{orgId: string;data: BodyType<ClosePeriodInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createClosePeriod>>,
+        TError,
+        {orgId: string;data: BodyType<ClosePeriodInput>},
+        TContext
+      > => {
+      return useMutation(getCreateClosePeriodMutationOptions(options));
+    }
+
+export const getSetClosePeriodStatusUrl = (orgId: string,
+    periodId: string,) => {
+
+
+
+
+  return `/api/clients/${orgId}/close-periods/${periodId}/set-status`
+}
+
+/**
+ * @summary Move a close period through its lifecycle
+ */
+export const setClosePeriodStatus = async (orgId: string,
+    periodId: string,
+    closePeriodStatusInput: ClosePeriodStatusInput, options?: RequestInit): Promise<ClosePeriod> => {
+
+  return customFetch<ClosePeriod>(getSetClosePeriodStatusUrl(orgId,periodId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(closePeriodStatusInput)
+  }
+);}
+
+
+
+
+
+export const getSetClosePeriodStatusMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setClosePeriodStatus>>, TError,{orgId: string;periodId: string;data: BodyType<ClosePeriodStatusInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setClosePeriodStatus>>, TError,{orgId: string;periodId: string;data: BodyType<ClosePeriodStatusInput>}, TContext> => {
+
+const mutationKey = ['setClosePeriodStatus'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setClosePeriodStatus>>, {orgId: string;periodId: string;data: BodyType<ClosePeriodStatusInput>}> = (props) => {
+          const {orgId,periodId,data} = props ?? {};
+
+          return  setClosePeriodStatus(orgId,periodId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetClosePeriodStatusMutationResult = NonNullable<Awaited<ReturnType<typeof setClosePeriodStatus>>>
+    export type SetClosePeriodStatusMutationBody = BodyType<ClosePeriodStatusInput>
+    export type SetClosePeriodStatusMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Move a close period through its lifecycle
+ */
+export const useSetClosePeriodStatus = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setClosePeriodStatus>>, TError,{orgId: string;periodId: string;data: BodyType<ClosePeriodStatusInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setClosePeriodStatus>>,
+        TError,
+        {orgId: string;periodId: string;data: BodyType<ClosePeriodStatusInput>},
+        TContext
+      > => {
+      return useMutation(getSetClosePeriodStatusMutationOptions(options));
+    }
+
+export const getAddCloseTaskUrl = (orgId: string,
+    periodId: string,) => {
+
+
+
+
+  return `/api/clients/${orgId}/close-periods/${periodId}/tasks`
+}
+
+/**
+ * @summary Add a checklist task to a close period
+ */
+export const addCloseTask = async (orgId: string,
+    periodId: string,
+    closeTaskInput: CloseTaskInput, options?: RequestInit): Promise<CloseTask> => {
+
+  return customFetch<CloseTask>(getAddCloseTaskUrl(orgId,periodId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(closeTaskInput)
+  }
+);}
+
+
+
+
+
+export const getAddCloseTaskMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addCloseTask>>, TError,{orgId: string;periodId: string;data: BodyType<CloseTaskInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof addCloseTask>>, TError,{orgId: string;periodId: string;data: BodyType<CloseTaskInput>}, TContext> => {
+
+const mutationKey = ['addCloseTask'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addCloseTask>>, {orgId: string;periodId: string;data: BodyType<CloseTaskInput>}> = (props) => {
+          const {orgId,periodId,data} = props ?? {};
+
+          return  addCloseTask(orgId,periodId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AddCloseTaskMutationResult = NonNullable<Awaited<ReturnType<typeof addCloseTask>>>
+    export type AddCloseTaskMutationBody = BodyType<CloseTaskInput>
+    export type AddCloseTaskMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Add a checklist task to a close period
+ */
+export const useAddCloseTask = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addCloseTask>>, TError,{orgId: string;periodId: string;data: BodyType<CloseTaskInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof addCloseTask>>,
+        TError,
+        {orgId: string;periodId: string;data: BodyType<CloseTaskInput>},
+        TContext
+      > => {
+      return useMutation(getAddCloseTaskMutationOptions(options));
+    }
+
+export const getSetCloseTaskStatusUrl = (orgId: string,
+    taskId: string,) => {
+
+
+
+
+  return `/api/clients/${orgId}/close-tasks/${taskId}/set-status`
+}
+
+/**
+ * @summary Update a checklist task's status
+ */
+export const setCloseTaskStatus = async (orgId: string,
+    taskId: string,
+    closeTaskStatusInput: CloseTaskStatusInput, options?: RequestInit): Promise<CloseTask> => {
+
+  return customFetch<CloseTask>(getSetCloseTaskStatusUrl(orgId,taskId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(closeTaskStatusInput)
+  }
+);}
+
+
+
+
+
+export const getSetCloseTaskStatusMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setCloseTaskStatus>>, TError,{orgId: string;taskId: string;data: BodyType<CloseTaskStatusInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setCloseTaskStatus>>, TError,{orgId: string;taskId: string;data: BodyType<CloseTaskStatusInput>}, TContext> => {
+
+const mutationKey = ['setCloseTaskStatus'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setCloseTaskStatus>>, {orgId: string;taskId: string;data: BodyType<CloseTaskStatusInput>}> = (props) => {
+          const {orgId,taskId,data} = props ?? {};
+
+          return  setCloseTaskStatus(orgId,taskId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetCloseTaskStatusMutationResult = NonNullable<Awaited<ReturnType<typeof setCloseTaskStatus>>>
+    export type SetCloseTaskStatusMutationBody = BodyType<CloseTaskStatusInput>
+    export type SetCloseTaskStatusMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Update a checklist task's status
+ */
+export const useSetCloseTaskStatus = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setCloseTaskStatus>>, TError,{orgId: string;taskId: string;data: BodyType<CloseTaskStatusInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setCloseTaskStatus>>,
+        TError,
+        {orgId: string;taskId: string;data: BodyType<CloseTaskStatusInput>},
+        TContext
+      > => {
+      return useMutation(getSetCloseTaskStatusMutationOptions(options));
+    }
+
+export const getCreatePbcRequestUrl = (orgId: string,
+    periodId: string,) => {
+
+
+
+
+  return `/api/clients/${orgId}/close-periods/${periodId}/pbc`
+}
+
+/**
+ * @summary Ask the client to prepare something (PBC request)
+ */
+export const createPbcRequest = async (orgId: string,
+    periodId: string,
+    pbcRequestInput: PbcRequestInput, options?: RequestInit): Promise<PbcRequest> => {
+
+  return customFetch<PbcRequest>(getCreatePbcRequestUrl(orgId,periodId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(pbcRequestInput)
+  }
+);}
+
+
+
+
+
+export const getCreatePbcRequestMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPbcRequest>>, TError,{orgId: string;periodId: string;data: BodyType<PbcRequestInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createPbcRequest>>, TError,{orgId: string;periodId: string;data: BodyType<PbcRequestInput>}, TContext> => {
+
+const mutationKey = ['createPbcRequest'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createPbcRequest>>, {orgId: string;periodId: string;data: BodyType<PbcRequestInput>}> = (props) => {
+          const {orgId,periodId,data} = props ?? {};
+
+          return  createPbcRequest(orgId,periodId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreatePbcRequestMutationResult = NonNullable<Awaited<ReturnType<typeof createPbcRequest>>>
+    export type CreatePbcRequestMutationBody = BodyType<PbcRequestInput>
+    export type CreatePbcRequestMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Ask the client to prepare something (PBC request)
+ */
+export const useCreatePbcRequest = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPbcRequest>>, TError,{orgId: string;periodId: string;data: BodyType<PbcRequestInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createPbcRequest>>,
+        TError,
+        {orgId: string;periodId: string;data: BodyType<PbcRequestInput>},
+        TContext
+      > => {
+      return useMutation(getCreatePbcRequestMutationOptions(options));
+    }
+
+export const getAcceptPbcRequestUrl = (orgId: string,
+    requestId: string,) => {
+
+
+
+
+  return `/api/clients/${orgId}/pbc/${requestId}/accept`
+}
+
+/**
+ * @summary Accept a provided PBC request (practice side)
+ */
+export const acceptPbcRequest = async (orgId: string,
+    requestId: string, options?: RequestInit): Promise<PbcRequest> => {
+
+  return customFetch<PbcRequest>(getAcceptPbcRequestUrl(orgId,requestId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getAcceptPbcRequestMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof acceptPbcRequest>>, TError,{orgId: string;requestId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof acceptPbcRequest>>, TError,{orgId: string;requestId: string}, TContext> => {
+
+const mutationKey = ['acceptPbcRequest'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof acceptPbcRequest>>, {orgId: string;requestId: string}> = (props) => {
+          const {orgId,requestId} = props ?? {};
+
+          return  acceptPbcRequest(orgId,requestId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AcceptPbcRequestMutationResult = NonNullable<Awaited<ReturnType<typeof acceptPbcRequest>>>
+
+    export type AcceptPbcRequestMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Accept a provided PBC request (practice side)
+ */
+export const useAcceptPbcRequest = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof acceptPbcRequest>>, TError,{orgId: string;requestId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof acceptPbcRequest>>,
+        TError,
+        {orgId: string;requestId: string},
+        TContext
+      > => {
+      return useMutation(getAcceptPbcRequestMutationOptions(options));
+    }
+
+export const getGetMyCloseStatusUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/close-status`
+}
+
+/**
+ * The client-facing view of the month-end close: the latest period's checklist progress and the PBC requests the client should respond to. Gated by org membership (reports.read), not a practice grant.
+ * @summary Latest close status for the caller's own org (client side)
+ */
+export const getMyCloseStatus = async (orgId: string, options?: RequestInit): Promise<MyCloseStatus> => {
+
+  return customFetch<MyCloseStatus>(getGetMyCloseStatusUrl(orgId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMyCloseStatusQueryKey = (orgId: string,) => {
+    return [
+    `/api/orgs/${orgId}/close-status`
+    ] as const;
+    }
+
+
+export const getGetMyCloseStatusQueryOptions = <TData = Awaited<ReturnType<typeof getMyCloseStatus>>, TError = ErrorType<ErrorResponse>>(orgId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyCloseStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMyCloseStatusQueryKey(orgId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyCloseStatus>>> = ({ signal }) => getMyCloseStatus(orgId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMyCloseStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMyCloseStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getMyCloseStatus>>>
+export type GetMyCloseStatusQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Latest close status for the caller's own org (client side)
+ */
+
+export function useGetMyCloseStatus<TData = Awaited<ReturnType<typeof getMyCloseStatus>>, TError = ErrorType<ErrorResponse>>(
+ orgId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyCloseStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMyCloseStatusQueryOptions(orgId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getRespondPbcRequestUrl = (orgId: string,
+    requestId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/pbc/${requestId}/respond`
+}
+
+/**
+ * The client supplies what the practice asked for, moving the request to "provided". Gated by org membership (ledger.post), not a practice grant.
+ * @summary Respond to a PBC request (client side)
+ */
+export const respondPbcRequest = async (orgId: string,
+    requestId: string,
+    pbcResponseInput: PbcResponseInput, options?: RequestInit): Promise<PbcRequest> => {
+
+  return customFetch<PbcRequest>(getRespondPbcRequestUrl(orgId,requestId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(pbcResponseInput)
+  }
+);}
+
+
+
+
+
+export const getRespondPbcRequestMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof respondPbcRequest>>, TError,{orgId: string;requestId: string;data: BodyType<PbcResponseInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof respondPbcRequest>>, TError,{orgId: string;requestId: string;data: BodyType<PbcResponseInput>}, TContext> => {
+
+const mutationKey = ['respondPbcRequest'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof respondPbcRequest>>, {orgId: string;requestId: string;data: BodyType<PbcResponseInput>}> = (props) => {
+          const {orgId,requestId,data} = props ?? {};
+
+          return  respondPbcRequest(orgId,requestId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RespondPbcRequestMutationResult = NonNullable<Awaited<ReturnType<typeof respondPbcRequest>>>
+    export type RespondPbcRequestMutationBody = BodyType<PbcResponseInput>
+    export type RespondPbcRequestMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Respond to a PBC request (client side)
+ */
+export const useRespondPbcRequest = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof respondPbcRequest>>, TError,{orgId: string;requestId: string;data: BodyType<PbcResponseInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof respondPbcRequest>>,
+        TError,
+        {orgId: string;requestId: string;data: BodyType<PbcResponseInput>},
+        TContext
+      > => {
+      return useMutation(getRespondPbcRequestMutationOptions(options));
+    }
 
 export const getListMyOrgsUrl = () => {
 

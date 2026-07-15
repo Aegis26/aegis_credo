@@ -1,0 +1,44 @@
+Phases 1–5, the SMB face, and the QuickBooks migration adapter are built,
+tested, and hardened. The accountant/practice engine (Phase 4) already exists and
+is tested. Build the accountant cockpit UI in React, in the SAME app, over the
+EXISTING authenticated API. No engine work; no direct ledger writes; identity
+from the session only; integer money on every path.
+
+BUILD (screens):
+- Practice dashboard: all clients the practice user has been granted, with close
+  status and headline financials per client.
+- Client list and switcher (build on the existing multi-org switcher — the
+  practice user only ever sees clients they've been granted).
+- Close management: per-client close checklists, status tracking, and PBC
+  ("prepared by client") request lists the client can respond to.
+- Batch operations: run or export the same report across a book of clients.
+- First-class export: clean CSV/Excel download of every report and register
+  (reuse the existing export layer).
+
+RULES: a practice user sees only granted clients; all access audit-logged; all
+Phase 1 invariants hold; reuse existing endpoints and services.
+
+ACCESS CONTROL IS THE LOAD-BEARING PART — treat it like the Phase 5A IDOR work.
+Every new endpoint must derive the practice user from the session and enforce the
+grant server-side. The tests must prove the NEGATIVE, not just the positive: a
+practice user with a valid session for their own clients CANNOT reach an
+ungranted client's data through ANY new cockpit endpoint (dashboard, close,
+batch, export). Assert the 403/empty result, not just that granted clients work.
+
+DEFINITION OF DONE (tests):
+- A practice user with several granted clients can switch between them, see the
+  cross-client dashboard, run a batch export, and track close status per client.
+- A practice user CANNOT reach an ungranted client through any cockpit endpoint —
+  regression test proving this, per endpoint.
+- All existing tests still pass.
+
+VERIFICATION (do not claim done without this):
+- Restart the API server and confirm it runs the NEW code before testing (stale
+  server has bitten us before — check it first).
+- Prove it end-to-end through the ACTUAL running API/UI with a fresh signup, not a
+  reconstruction: create a practice user, grant 2 of 3 clients, and show the
+  cockpit lists exactly those 2 and is walled off from the 3rd.
+- If anything is off, diagnose READ-ONLY and report the cause before changing code.
+
+Show me the dashboard, the end-to-end walkthrough, and the passing access-control
+tests (including the ungranted-client regression tests).

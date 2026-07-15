@@ -25,6 +25,11 @@ import Aging from "@/pages/aging";
 import Payroll from "@/pages/payroll";
 import Team from "@/pages/team";
 
+import PracticeDashboard from "@/pages/practice/dashboard";
+import PracticeClientClose from "@/pages/practice/close";
+import PracticeBatch from "@/pages/practice/batch";
+import PracticeSetup from "@/pages/practice/setup";
+
 const queryClient = new QueryClient();
 
 function OrgGuard({ children }: { children: React.ReactNode }) {
@@ -34,23 +39,21 @@ function OrgGuard({ children }: { children: React.ReactNode }) {
   const settledEmpty = !isFetching && orgsData !== undefined && orgsData.orgs.length === 0;
 
   useEffect(() => {
-    if (settledEmpty && location !== "/onboarding") {
+    if (settledEmpty && location !== "/onboarding" && !location.startsWith("/practice/setup")) {
       setLocation("/onboarding");
     }
   }, [settledEmpty, location, setLocation]);
 
-  // Wait while the org list is loading or refetching (e.g. right after
-  // onboarding creates the first org) so we never act on stale-empty data.
   if (isLoading || (isFetching && (!orgsData || orgsData.orgs.length === 0))) {
     return null;
   }
 
-  if (settledEmpty && location !== "/onboarding") {
+  if (settledEmpty && location !== "/onboarding" && !location.startsWith("/practice/setup")) {
     return null;
   }
 
-  if (location === "/onboarding") {
-    return <>{children}</>;
+  if (location === "/onboarding" || location.startsWith("/practice/setup")) {
+    return <AppShell>{children}</AppShell>;
   }
 
   return <AppShell>{children}</AppShell>;
@@ -74,6 +77,12 @@ function ProtectedRouter() {
             <Route path="/reports" component={Reports} />
             <Route path="/taxes" component={Taxes} />
             <Route path="/team" component={Team} />
+            
+            <Route path="/practice" component={PracticeDashboard} />
+            <Route path="/practice/batch" component={PracticeBatch} />
+            <Route path="/practice/setup" component={PracticeSetup} />
+            <Route path="/practice/close/:orgId" component={PracticeClientClose} />
+            
             <Route component={NotFound} />
           </Switch>
         </OrgGuard>

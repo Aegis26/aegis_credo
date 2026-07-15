@@ -202,9 +202,291 @@ export const GetCloseStatusResponse = zod.object({
   "id": zod.string(),
   "title": zod.string(),
   "status": zod.string(),
-  "detail": zod.string().nullish()
+  "detail": zod.string().nullish(),
+  "response": zod.string().nullish()
 }))
 })
+})
+
+
+/**
+ * Creates a practice and adds the session user as its owner member. Membership alone grants NO client access — clients must be granted explicitly.
+ * @summary Create a practice (firm)
+ */
+export const createPracticeBodyNameMax = 200;
+
+
+
+export const CreatePracticeBody = zod.object({
+  "name": zod.string().min(1).max(createPracticeBodyNameMax)
+})
+
+export const CreatePracticeResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+})
+
+
+/**
+ * The caller must hold members.manage on the CLIENT org — the client's admin authorizes their own books to the firm, so a practice member can never self-grant an org they do not administer. Audit-logged against the client org.
+ * @summary Grant a practice access to a client org
+ */
+export const GrantPracticeClientParams = zod.object({
+  "practiceId": zod.coerce.string()
+})
+
+
+
+
+export const GrantPracticeClientBody = zod.object({
+  "orgId": zod.string().min(1)
+})
+
+export const GrantPracticeClientResponse = zod.object({
+  "practiceId": zod.string(),
+  "orgId": zod.string(),
+  "active": zod.boolean()
+})
+
+
+/**
+ * Asserts the session user's grant, audit-logs the access event against the client org, and returns the client organization.
+ * @summary Switch into a granted client (audited)
+ */
+export const SwitchToClientParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+export const SwitchToClientResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "role": zod.string().nullish()
+})
+
+
+/**
+ * Runs the report across the requested clients (restricted to granted ones) and returns one tabular sheet per client. Money cells are decimal strings. Rejects ungranted clients unless skipUnauthorized is set.
+ * @summary Run the same report across a book of clients
+ */
+export const runBatchReportBodySkipUnauthorizedDefault = false;
+
+export const RunBatchReportBody = zod.object({
+  "orgIds": zod.array(zod.string()),
+  "kind": zod.enum(['trialBalance', 'profitAndLoss', 'balanceSheet']),
+  "skipUnauthorized": zod.boolean().default(runBatchReportBodySkipUnauthorizedDefault)
+})
+
+export const RunBatchReportResponse = zod.object({
+  "kind": zod.string(),
+  "clients": zod.array(zod.object({
+  "orgId": zod.string(),
+  "name": zod.string()
+})),
+  "sheets": zod.array(zod.object({
+  "name": zod.string(),
+  "columns": zod.array(zod.string()),
+  "rows": zod.array(zod.array(zod.string()))
+}).describe('One client\'s tabular report. Money cells are decimal strings.'))
+})
+
+
+/**
+ * @summary Open a close period for a client
+ */
+export const CreateClosePeriodParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+export const createClosePeriodBodyPeriodMax = 40;
+
+
+
+export const CreateClosePeriodBody = zod.object({
+  "period": zod.string().min(1).max(createClosePeriodBodyPeriodMax)
+})
+
+export const CreateClosePeriodResponse = zod.object({
+  "id": zod.string(),
+  "period": zod.string(),
+  "status": zod.string()
+})
+
+
+/**
+ * @summary Move a close period through its lifecycle
+ */
+export const SetClosePeriodStatusParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.'),
+  "periodId": zod.coerce.string()
+})
+
+export const SetClosePeriodStatusBody = zod.object({
+  "status": zod.enum(['open', 'in_progress', 'in_review', 'closed'])
+})
+
+export const SetClosePeriodStatusResponse = zod.object({
+  "id": zod.string(),
+  "period": zod.string(),
+  "status": zod.string()
+})
+
+
+/**
+ * @summary Add a checklist task to a close period
+ */
+export const AddCloseTaskParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.'),
+  "periodId": zod.coerce.string()
+})
+
+export const addCloseTaskBodyTitleMax = 300;
+
+
+
+export const AddCloseTaskBody = zod.object({
+  "title": zod.string().min(1).max(addCloseTaskBodyTitleMax),
+  "sortOrder": zod.number().optional()
+})
+
+export const AddCloseTaskResponse = zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "status": zod.string(),
+  "sortOrder": zod.number()
+})
+
+
+/**
+ * @summary Update a checklist task's status
+ */
+export const SetCloseTaskStatusParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.'),
+  "taskId": zod.coerce.string()
+})
+
+export const SetCloseTaskStatusBody = zod.object({
+  "status": zod.enum(['pending', 'in_progress', 'done'])
+})
+
+export const SetCloseTaskStatusResponse = zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "status": zod.string(),
+  "sortOrder": zod.number()
+})
+
+
+/**
+ * @summary Ask the client to prepare something (PBC request)
+ */
+export const CreatePbcRequestParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.'),
+  "periodId": zod.coerce.string()
+})
+
+export const createPbcRequestBodyTitleMax = 300;
+
+
+
+export const CreatePbcRequestBody = zod.object({
+  "title": zod.string().min(1).max(createPbcRequestBodyTitleMax),
+  "detail": zod.string().optional()
+})
+
+export const CreatePbcRequestResponse = zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "status": zod.string(),
+  "detail": zod.string().nullish(),
+  "response": zod.string().nullish()
+})
+
+
+/**
+ * @summary Accept a provided PBC request (practice side)
+ */
+export const AcceptPbcRequestParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.'),
+  "requestId": zod.coerce.string()
+})
+
+export const AcceptPbcRequestResponse = zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "status": zod.string(),
+  "detail": zod.string().nullish(),
+  "response": zod.string().nullish()
+})
+
+
+/**
+ * The client-facing view of the month-end close: the latest period's checklist progress and the PBC requests the client should respond to. Gated by org membership (reports.read), not a practice grant.
+ * @summary Latest close status for the caller's own org (client side)
+ */
+export const GetMyCloseStatusParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+export const GetMyCloseStatusResponse = zod.object({
+  "summary": zod.object({
+  "period": zod.object({
+  "id": zod.string(),
+  "period": zod.string(),
+  "status": zod.string()
+}),
+  "tasks": zod.object({
+  "total": zod.number(),
+  "done": zod.number(),
+  "inProgress": zod.number(),
+  "pending": zod.number(),
+  "progress": zod.number(),
+  "items": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "status": zod.string(),
+  "sortOrder": zod.number()
+}))
+}),
+  "pbc": zod.object({
+  "total": zod.number(),
+  "requested": zod.number(),
+  "provided": zod.number(),
+  "accepted": zod.number(),
+  "open": zod.number(),
+  "items": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "status": zod.string(),
+  "detail": zod.string().nullish(),
+  "response": zod.string().nullish()
+}))
+})
+}).nullable()
+})
+
+
+/**
+ * The client supplies what the practice asked for, moving the request to "provided". Gated by org membership (ledger.post), not a practice grant.
+ * @summary Respond to a PBC request (client side)
+ */
+export const RespondPbcRequestParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.'),
+  "requestId": zod.coerce.string()
+})
+
+
+
+
+export const RespondPbcRequestBody = zod.object({
+  "response": zod.string().min(1)
+})
+
+export const RespondPbcRequestResponse = zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "status": zod.string(),
+  "detail": zod.string().nullish(),
+  "response": zod.string().nullish()
 })
 
 

@@ -141,6 +141,7 @@ export interface PbcRequest {
   title: string;
   status: string;
   detail?: string | null;
+  response?: string | null;
 }
 
 export type CloseStatusSummaryTasks = {
@@ -720,6 +721,127 @@ export interface AccountantInput {
   /** @minLength 1 */
   email: string;
   name?: string;
+}
+
+export interface PracticeInput {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  name: string;
+}
+
+export interface Practice {
+  id: string;
+  name: string;
+}
+
+export interface GrantClientInput {
+  /** @minLength 1 */
+  orgId: string;
+}
+
+export interface ClientGrant {
+  practiceId: string;
+  orgId: string;
+  active: boolean;
+}
+
+export type BatchReportRequestKind = typeof BatchReportRequestKind[keyof typeof BatchReportRequestKind];
+
+
+export const BatchReportRequestKind = {
+  trialBalance: 'trialBalance',
+  profitAndLoss: 'profitAndLoss',
+  balanceSheet: 'balanceSheet',
+} as const;
+
+export interface BatchReportRequest {
+  orgIds: string[];
+  kind: BatchReportRequestKind;
+  skipUnauthorized?: boolean;
+}
+
+/**
+ * One client's tabular report. Money cells are decimal strings.
+ */
+export interface ReportSheet {
+  name: string;
+  columns: string[];
+  rows: string[][];
+}
+
+export type BatchReportResponseClientsItem = {
+  orgId: string;
+  name: string;
+};
+
+export interface BatchReportResponse {
+  kind: string;
+  clients: BatchReportResponseClientsItem[];
+  sheets: ReportSheet[];
+}
+
+export interface ClosePeriodInput {
+  /**
+     * @minLength 1
+     * @maxLength 40
+     */
+  period: string;
+}
+
+export type ClosePeriodStatusInputStatus = typeof ClosePeriodStatusInputStatus[keyof typeof ClosePeriodStatusInputStatus];
+
+
+export const ClosePeriodStatusInputStatus = {
+  open: 'open',
+  in_progress: 'in_progress',
+  in_review: 'in_review',
+  closed: 'closed',
+} as const;
+
+export interface ClosePeriodStatusInput {
+  status: ClosePeriodStatusInputStatus;
+}
+
+export interface CloseTaskInput {
+  /**
+     * @minLength 1
+     * @maxLength 300
+     */
+  title: string;
+  sortOrder?: number;
+}
+
+export type CloseTaskStatusInputStatus = typeof CloseTaskStatusInputStatus[keyof typeof CloseTaskStatusInputStatus];
+
+
+export const CloseTaskStatusInputStatus = {
+  pending: 'pending',
+  in_progress: 'in_progress',
+  done: 'done',
+} as const;
+
+export interface CloseTaskStatusInput {
+  status: CloseTaskStatusInputStatus;
+}
+
+export interface PbcRequestInput {
+  /**
+     * @minLength 1
+     * @maxLength 300
+     */
+  title: string;
+  detail?: string;
+}
+
+export interface PbcResponseInput {
+  /** @minLength 1 */
+  response: string;
+}
+
+export interface MyCloseStatus {
+  summary: CloseStatusSummary | null;
 }
 
 export type GetPracticeDashboardParams = {

@@ -287,6 +287,419 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /practice:
+    post:
+      operationId: createPractice
+      tags: [practice]
+      summary: Create a practice (firm)
+      description: >-
+        Creates a practice and adds the session user as its owner member.
+        Membership alone grants NO client access — clients must be granted
+        explicitly.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PracticeInput"
+      responses:
+        "201":
+          description: The created practice
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Practice"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /practice/{practiceId}/clients:
+    post:
+      operationId: grantPracticeClient
+      tags: [practice]
+      summary: Grant a practice access to a client org
+      description: >-
+        The caller must hold members.manage on the CLIENT org — the client's
+        admin authorizes their own books to the firm, so a practice member can
+        never self-grant an org they do not administer. Audit-logged against
+        the client org.
+      parameters:
+        - name: practiceId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GrantClientInput"
+      responses:
+        "201":
+          description: The active grant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientGrant"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller is not a practice member or lacks members.manage on the client org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /practice/switch/{orgId}:
+    post:
+      operationId: switchToClient
+      tags: [practice]
+      summary: Switch into a granted client (audited)
+      description: >-
+        Asserts the session user's grant, audit-logs the access event against
+        the client org, and returns the client organization.
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      responses:
+        "200":
+          description: The client organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Org"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: The user was not granted this client
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /practice/batch-report:
+    post:
+      operationId: runBatchReport
+      tags: [practice]
+      summary: Run the same report across a book of clients
+      description: >-
+        Runs the report across the requested clients (restricted to granted
+        ones) and returns one tabular sheet per client. Money cells are decimal
+        strings. Rejects ungranted clients unless skipUnauthorized is set.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BatchReportRequest"
+      responses:
+        "200":
+          description: One sheet per client
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BatchReportResponse"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: The request referenced an ungranted client
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /clients/{orgId}/close-periods/create:
+    post:
+      operationId: createClosePeriod
+      tags: [close]
+      summary: Open a close period for a client
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClosePeriodInput"
+      responses:
+        "201":
+          description: The created close period
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClosePeriod"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: The user was not granted this client
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /clients/{orgId}/close-periods/{periodId}/set-status:
+    post:
+      operationId: setClosePeriodStatus
+      tags: [close]
+      summary: Move a close period through its lifecycle
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+        - name: periodId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClosePeriodStatusInput"
+      responses:
+        "200":
+          description: The updated close period
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClosePeriod"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: The user was not granted this client
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /clients/{orgId}/close-periods/{periodId}/tasks:
+    post:
+      operationId: addCloseTask
+      tags: [close]
+      summary: Add a checklist task to a close period
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+        - name: periodId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CloseTaskInput"
+      responses:
+        "201":
+          description: The created task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CloseTask"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: The user was not granted this client
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /clients/{orgId}/close-tasks/{taskId}/set-status:
+    post:
+      operationId: setCloseTaskStatus
+      tags: [close]
+      summary: Update a checklist task's status
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CloseTaskStatusInput"
+      responses:
+        "200":
+          description: The updated task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CloseTask"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: The user was not granted this client
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /clients/{orgId}/close-periods/{periodId}/pbc:
+    post:
+      operationId: createPbcRequest
+      tags: [close]
+      summary: Ask the client to prepare something (PBC request)
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+        - name: periodId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PbcRequestInput"
+      responses:
+        "201":
+          description: The created PBC request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PbcRequest"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: The user was not granted this client
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /clients/{orgId}/pbc/{requestId}/accept:
+    post:
+      operationId: acceptPbcRequest
+      tags: [close]
+      summary: Accept a provided PBC request (practice side)
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The accepted PBC request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PbcRequest"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: The user was not granted this client
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /orgs/{orgId}/close-status:
+    get:
+      operationId: getMyCloseStatus
+      tags: [close]
+      summary: Latest close status for the caller's own org (client side)
+      description: >-
+        The client-facing view of the month-end close: the latest period's
+        checklist progress and the PBC requests the client should respond to.
+        Gated by org membership (reports.read), not a practice grant.
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      responses:
+        "200":
+          description: The latest close status, or null when no close exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyCloseStatus"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: The user is not a member of this org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /orgs/{orgId}/pbc/{requestId}/respond:
+    post:
+      operationId: respondPbcRequest
+      tags: [close]
+      summary: Respond to a PBC request (client side)
+      description: >-
+        The client supplies what the practice asked for, moving the request to
+        "provided". Gated by org membership (ledger.post), not a practice grant.
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PbcResponseInput"
+      responses:
+        "200":
+          description: The provided PBC request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PbcRequest"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: The user is not a member of this org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /orgs:
     get:
       operationId: listMyOrgs
@@ -1510,6 +1923,9 @@ components:
         detail:
           type: string
           nullable: true
+        response:
+          type: string
+          nullable: true
       required: [id, title, status]
     CloseStatusSummary:
       type: object
@@ -2423,3 +2839,144 @@ components:
         name:
           type: string
       required: [email]
+    PracticeInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+      required: [name]
+    Practice:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+      required: [id, name]
+    GrantClientInput:
+      type: object
+      properties:
+        orgId:
+          type: string
+          minLength: 1
+      required: [orgId]
+    ClientGrant:
+      type: object
+      properties:
+        practiceId:
+          type: string
+        orgId:
+          type: string
+        active:
+          type: boolean
+      required: [practiceId, orgId, active]
+    BatchReportRequest:
+      type: object
+      properties:
+        orgIds:
+          type: array
+          items:
+            type: string
+        kind:
+          type: string
+          enum: [trialBalance, profitAndLoss, balanceSheet]
+        skipUnauthorized:
+          type: boolean
+          default: false
+      required: [orgIds, kind]
+    ReportSheet:
+      type: object
+      description: One client's tabular report. Money cells are decimal strings.
+      properties:
+        name:
+          type: string
+        columns:
+          type: array
+          items:
+            type: string
+        rows:
+          type: array
+          items:
+            type: array
+            items:
+              type: string
+      required: [name, columns, rows]
+    BatchReportResponse:
+      type: object
+      properties:
+        kind:
+          type: string
+        clients:
+          type: array
+          items:
+            type: object
+            properties:
+              orgId:
+                type: string
+              name:
+                type: string
+            required: [orgId, name]
+        sheets:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReportSheet"
+      required: [kind, clients, sheets]
+    ClosePeriodInput:
+      type: object
+      properties:
+        period:
+          type: string
+          minLength: 1
+          maxLength: 40
+      required: [period]
+    ClosePeriodStatusInput:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [open, in_progress, in_review, closed]
+      required: [status]
+    CloseTaskInput:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 300
+        sortOrder:
+          type: integer
+      required: [title]
+    CloseTaskStatusInput:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [pending, in_progress, done]
+      required: [status]
+    PbcRequestInput:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 300
+        detail:
+          type: string
+      required: [title]
+    PbcResponseInput:
+      type: object
+      properties:
+        response:
+          type: string
+          minLength: 1
+      required: [response]
+    MyCloseStatus:
+      type: object
+      properties:
+        summary:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/CloseStatusSummary"
+      required: [summary]

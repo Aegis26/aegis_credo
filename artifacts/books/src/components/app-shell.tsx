@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { 
   useGetSession, 
-  useLogout 
+  useLogout,
+  useListPracticeClients
 } from "@workspace/api-client-react";
 import { useCurrentOrg } from "@/hooks/use-current-org";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,8 @@ import {
   PieChart,
   Users,
   UsersRound,
+  Building,
+  Briefcase
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
@@ -44,6 +47,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { data: session } = useGetSession();
   const { orgId, setOrg, orgs, isLoading: isLoadingOrgs } = useCurrentOrg();
+  const { data: practiceData } = useListPracticeClients();
   const logout = useLogout();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -55,6 +59,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
+
+  const hasPractice = (practiceData?.clients?.length ?? 0) > 0;
 
   const navigation = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -70,6 +76,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     { name: "Team", href: "/team", icon: UsersRound },
   ];
 
+  const practiceNavigation = [
+    { name: "Dashboard", href: "/practice", icon: Briefcase },
+    { name: "Batch Reports", href: "/practice/batch", icon: LineChart },
+    { name: "Manage Clients", href: "/practice/setup", icon: Building },
+  ];
+
   const handleLogout = () => {
     logout.mutate(undefined, {
       onSuccess: () => {
@@ -80,8 +92,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const NavLinks = () => (
     <>
+      <div className="px-3 mb-2 mt-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+        Client Books
+      </div>
       {navigation.map((item) => {
-        const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
+        const isActive = location === item.href;
         return (
           <Link 
             key={item.name} 
@@ -98,6 +113,48 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </Link>
         );
       })}
+
+      {hasPractice && (
+        <>
+          <div className="px-3 mb-2 mt-6 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Practice
+          </div>
+          {practiceNavigation.map((item) => {
+            const isActive = location === item.href || (item.href !== "/practice" && location.startsWith(item.href));
+            return (
+              <Link 
+                key={item.name} 
+                href={item.href}
+                onClick={() => setMobileMenuOpen(false)}
+                className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  isActive 
+                    ? "bg-primary text-primary-foreground" 
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                <item.icon className="w-4 h-4" />
+                {item.name}
+              </Link>
+            );
+          })}
+        </>
+      )}
+
+      {!hasPractice && (
+        <div className="mt-8 px-3">
+          <Link href="/practice/setup">
+            <div className="p-3 bg-muted/40 border rounded-md text-sm hover:bg-muted cursor-pointer transition-colors">
+              <div className="flex items-center gap-2 font-medium text-foreground mb-1">
+                <Briefcase className="w-4 h-4 text-primary" />
+                Are you an accountant?
+              </div>
+              <div className="text-xs text-muted-foreground leading-tight">
+                Setup your practice cockpit to manage multiple clients.
+              </div>
+            </div>
+          </Link>
+        </div>
+      )}
     </>
   );
 
