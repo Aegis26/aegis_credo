@@ -19,6 +19,13 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Cell as PieCell } from 'recharts';
 
+const leafName = (name: string) => {
+  const parts = name.split(":");
+  return parts[parts.length - 1].trim();
+};
+
+const truncate = (s: string, max = 20) => (s.length > max ? s.slice(0, max - 1) + "\u2026" : s);
+
 export default function Dashboard() {
   const { orgId } = useCurrentOrg();
   const queryClient = useQueryClient();
@@ -71,14 +78,24 @@ export default function Dashboard() {
       .filter(item => parseFloat(item.amount) > 0)
       .sort((a, b) => parseFloat(b.amount) - parseFloat(a.amount))
       .slice(0, 5) // top 5
-      .map(item => ({ name: item.name, value: parseFloat(item.amount) }));
+      .map(item => ({
+        name: truncate(leafName(item.name)),
+        fullName: item.name,
+        amount: item.amount,
+        value: parseFloat(item.amount),
+      }));
   }, [pnl]);
 
   const pnlRevenueData = useMemo(() => {
     if (!pnl || !pnl.revenue) return [];
     return pnl.revenue
       .filter(item => parseFloat(item.amount) > 0)
-      .map(item => ({ name: item.name, value: parseFloat(item.amount) }));
+      .map(item => ({
+        name: truncate(leafName(item.name), 26),
+        fullName: item.name,
+        amount: item.amount,
+        value: parseFloat(item.amount),
+      }));
   }, [pnl]);
 
   const COLORS = ['#1E90FF', '#2b6cb0', '#2c5282', '#1a365d', '#4299e1'];
@@ -183,26 +200,37 @@ export default function Dashboard() {
 
       {/* Charts Row */}
       {pnl && (
-        <div className="grid gap-4 md:grid-cols-2">
-          <Card className="shadow-none border-border bg-card">
-            <CardHeader>
+        <div className="grid gap-4 md:grid-cols-5">
+          <Card className="shadow-none border-border bg-card md:col-span-3">
+            <CardHeader className="pb-2 flex flex-row items-baseline justify-between space-y-0">
               <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Top Expenses</CardTitle>
+              <span className="text-xs font-mono text-muted-foreground">Total ${pnl.totalExpenses}</span>
             </CardHeader>
             <CardContent>
               {pnlExpenseData.length > 0 ? (
-                <div className="h-[250px] w-full">
+                <div className="h-[240px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={pnlExpenseData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                    <BarChart data={pnlExpenseData} layout="vertical" margin={{ top: 5, right: 24, left: 0, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#1E2126" />
-                      <XAxis type="number" tickFormatter={(val) => `$${val}`} stroke="#B8C0C8" fontSize={12} tickLine={false} axisLine={false} />
-                      <YAxis dataKey="name" type="category" width={100} stroke="#B8C0C8" fontSize={12} tickLine={false} axisLine={false} />
-                      <Tooltip 
-                        cursor={{fill: '#1E2126'}} 
+                      <XAxis type="number" tickFormatter={(val) => `$${val}`} stroke="#B8C0C8" fontSize={11} tickLine={false} axisLine={false} />
+                      <YAxis
+                        dataKey="name"
+                        type="category"
+                        width={140}
+                        stroke="#B8C0C8"
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                        interval={0}
+                      />
+                      <Tooltip
+                        cursor={{fill: '#1E2126'}}
                         contentStyle={{backgroundColor: '#16181C', borderColor: '#1E2126', color: '#E8EAED', borderRadius: '6px'}}
                         itemStyle={{color: '#1E90FF'}}
-                        formatter={(value: number) => [`$${value.toFixed(2)}`, 'Expense']}
+                        labelFormatter={(_label, payload) => payload?.[0]?.payload?.fullName ?? _label}
+                        formatter={(_value: number, _name, entry) => [`$${entry?.payload?.amount}`, 'Expense']}
                       />
-                      <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={24}>
+                      <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={22}>
                         {pnlExpenseData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
@@ -211,44 +239,59 @@ export default function Dashboard() {
                   </ResponsiveContainer>
                 </div>
               ) : (
-                <div className="h-[250px] flex items-center justify-center text-muted-foreground text-sm">No expense data</div>
+                <div className="h-[240px] flex items-center justify-center text-muted-foreground text-sm">No expense data</div>
               )}
             </CardContent>
           </Card>
 
-          <Card className="shadow-none border-border bg-card">
-            <CardHeader>
+          <Card className="shadow-none border-border bg-card md:col-span-2">
+            <CardHeader className="pb-2 flex flex-row items-baseline justify-between space-y-0">
               <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Revenue Breakdown</CardTitle>
+              <span className="text-xs font-mono text-muted-foreground">Total ${pnl.totalRevenue}</span>
             </CardHeader>
             <CardContent>
               {pnlRevenueData.length > 0 ? (
-                <div className="h-[250px] w-full flex items-center justify-center">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={pnlRevenueData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={90}
-                        paddingAngle={2}
-                        dataKey="value"
-                        stroke="none"
-                      >
-                        {pnlRevenueData.map((entry, index) => (
-                          <PieCell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip 
-                        contentStyle={{backgroundColor: '#16181C', borderColor: '#1E2126', color: '#E8EAED', borderRadius: '6px'}}
-                        itemStyle={{color: '#3CB54A'}}
-                        formatter={(value: number) => [`$${value.toFixed(2)}`, 'Revenue']}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
+                <div className="h-[240px] w-full flex items-center gap-2">
+                  <div className="h-full flex-1 min-w-0">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={pnlRevenueData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={55}
+                          outerRadius={85}
+                          paddingAngle={2}
+                          dataKey="value"
+                          stroke="none"
+                        >
+                          {pnlRevenueData.map((entry, index) => (
+                            <PieCell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{backgroundColor: '#16181C', borderColor: '#1E2126', color: '#E8EAED', borderRadius: '6px'}}
+                          itemStyle={{color: '#3CB54A'}}
+                          labelFormatter={(_label, payload) => payload?.[0]?.payload?.fullName ?? _label}
+                          formatter={(_value: number, _name, entry) => [`$${entry?.payload?.amount}`, 'Revenue']}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <ul className="w-[45%] max-h-full overflow-y-auto space-y-2 pr-1" data-testid="legend-revenue-breakdown">
+                    {pnlRevenueData.map((entry, index) => (
+                      <li key={entry.fullName} className="flex items-center justify-between gap-2 text-xs" title={entry.fullName}>
+                        <span className="flex items-center gap-2 min-w-0">
+                          <span className="h-2.5 w-2.5 rounded-sm shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                          <span className="truncate text-muted-foreground">{entry.name}</span>
+                        </span>
+                        <span className="font-mono text-foreground shrink-0">${entry.amount}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               ) : (
-                <div className="h-[250px] flex items-center justify-center text-muted-foreground text-sm">No revenue data</div>
+                <div className="h-[240px] flex items-center justify-center text-muted-foreground text-sm">No revenue data</div>
               )}
             </CardContent>
           </Card>
