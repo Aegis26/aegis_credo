@@ -6,6 +6,9 @@ import { groupsTable } from "./groups";
 export const organizationsTable = pgTable("organizations", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
+  // ISO 4217 base/reporting currency for this org's books. Display metadata
+  // only for now — ledger amounts are currency-agnostic integer minor units.
+  baseCurrency: text("base_currency").notNull().default("USD"),
   // Optional parent group. When set, this org (entity) is included in the
   // group's read-only consolidated reporting. Its own books stay independent.
   groupId: uuid("group_id").references(() => groupsTable.id),

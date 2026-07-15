@@ -57,11 +57,12 @@ export interface SeededOrg {
 export async function seedOrganization(
   name: string,
   actor = "system",
+  options: { baseCurrency?: string } = {},
 ): Promise<SeededOrg> {
   return db.transaction(async (tx) => {
     const [organization] = await tx
       .insert(organizationsTable)
-      .values({ name })
+      .values({ name, baseCurrency: options.baseCurrency ?? "USD" })
       .returning();
 
     const accounts = await tx

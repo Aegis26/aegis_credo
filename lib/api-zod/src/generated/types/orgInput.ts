@@ -12,4 +12,6 @@ export interface OrgInput {
      * @maxLength 200
      */
   name: string;
+  /** @pattern ^[A-Z]{3}$ */
+  baseCurrency?: string;
 }

@@ -174,11 +174,14 @@ export interface OrgInput {
      * @maxLength 200
      */
   name: string;
+  /** @pattern ^[A-Z]{3}$ */
+  baseCurrency?: string;
 }
 
 export interface Org {
   id: string;
   name: string;
+  baseCurrency?: string;
   role?: string | null;
 }
 

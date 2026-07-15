@@ -72,9 +72,13 @@ router.get("/orgs", async (req, res) => {
 
 router.post("/orgs", async (req, res) => {
   try {
+    // Identity is session-only: the org is owned by the logged-in user. Any
+    // client-supplied userId in the body is simply not part of the schema.
     const userId = getSessionUserId(req);
-    const { name } = CreateOrgBody.parse(req.body);
-    const { organization } = await seedOrganization(name, userId);
+    const { name, baseCurrency } = CreateOrgBody.parse(req.body);
+    const { organization } = await seedOrganization(name, userId, {
+      baseCurrency: baseCurrency ?? "USD",
+    });
     await addMember(organization.id, userId, "owner", { actor: userId });
     res
       .status(201)
@@ -82,6 +86,7 @@ router.post("/orgs", async (req, res) => {
         CreateOrgResponse.parse({
           id: organization.id,
           name: organization.name,
+          baseCurrency: organization.baseCurrency,
           role: "owner",
         }),
       );

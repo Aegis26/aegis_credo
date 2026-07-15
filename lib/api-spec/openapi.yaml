@@ -2500,6 +2500,10 @@ components:
           type: string
           minLength: 1
           maxLength: 200
+        baseCurrency:
+          type: string
+          pattern: "^[A-Z]{3}$"
+          default: USD
       required: [name]
     Org:
       type: object
@@ -2507,6 +2511,8 @@ components:
         id:
           type: string
         name:
+          type: string
+        baseCurrency:
           type: string
         role:
           type: string

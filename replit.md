@@ -205,12 +205,15 @@ Phase 6 adds a vendor-export ADAPTER layer in front of the frozen import engine
 
 ## Known gaps
 
-- **No user-facing "create organization" flow after onboarding.** `POST /orgs`
-  exists (creates + seeds an org) and onboarding uses it for the FIRST org, but
-  the org switcher in the Books UI only switches between existing orgs — a
-  logged-in user (or accountant) cannot create an additional org from the UI.
-  Dev workaround: `cd artifacts/api-server && npx tsx src/dev-seed-second-org.ts
-  <userId>` creates a second org from the Craig's TB fixture.
+- (none currently tracked) — "create organization from the UI" shipped: the org
+  switcher (`artifacts/books/src/components/org-switcher.tsx`, used in both
+  desktop and mobile shells) has a "Create organization" option that opens a
+  dialog (name required, base currency default USD → `organizations.base_currency`).
+  It calls the existing `POST /orgs` (session identity only, `seedOrganization`
+  + `addMember` owner), invalidates the org-list query, and switches into the
+  new org. Tests: `artifacts/api-server/src/create-org.test.ts` (ownership,
+  spoofed-userId ignored, seeded COA, zero balanced TB, cross-user 403).
+  Dev seed helper still exists: `npx tsx src/dev-seed-second-org.ts <userId>`.
 
 ## User preferences
 

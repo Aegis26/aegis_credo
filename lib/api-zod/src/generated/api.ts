@@ -260,6 +260,7 @@ export const SwitchToClientParams = zod.object({
 export const SwitchToClientResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
+  "baseCurrency": zod.string().optional(),
   "role": zod.string().nullish()
 })
 
@@ -498,6 +499,7 @@ export const ListMyOrgsResponse = zod.object({
   "orgs": zod.array(zod.object({
   "id": zod.string(),
   "name": zod.string(),
+  "baseCurrency": zod.string().optional(),
   "role": zod.string().nullish()
 }))
 })
@@ -509,15 +511,19 @@ export const ListMyOrgsResponse = zod.object({
  */
 export const createOrgBodyNameMax = 200;
 
+export const createOrgBodyBaseCurrencyDefault = `USD`;
+export const createOrgBodyBaseCurrencyRegExp = new RegExp('^[A-Z]{3}$');
 
 
 export const CreateOrgBody = zod.object({
-  "name": zod.string().min(1).max(createOrgBodyNameMax)
+  "name": zod.string().min(1).max(createOrgBodyNameMax),
+  "baseCurrency": zod.string().regex(createOrgBodyBaseCurrencyRegExp).default(createOrgBodyBaseCurrencyDefault)
 })
 
 export const CreateOrgResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
+  "baseCurrency": zod.string().optional(),
   "role": zod.string().nullish()
 })
 

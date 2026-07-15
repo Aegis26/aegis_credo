@@ -6,6 +6,7 @@ import {
   useListPracticeClients
 } from "@workspace/api-client-react";
 import { useCurrentOrg } from "@/hooks/use-current-org";
+import { OrgSwitcher } from "@/components/org-switcher";
 import { Button } from "@/components/ui/button";
 import { 
   Select, 
@@ -203,18 +204,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         
         {orgs.length > 0 && (
           <div className="p-4 border-b border-border">
-            <Select value={orgId || ""} onValueChange={setOrg}>
-              <SelectTrigger className="w-full bg-background">
-                <SelectValue placeholder="Select Organization" />
-              </SelectTrigger>
-              <SelectContent>
-                {orgs.map((org) => (
-                  <SelectItem key={org.id} value={org.id}>
-                    {org.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <OrgSwitcher />
           </div>
         )}
 
@@ -269,20 +259,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <div className="font-serif text-xl font-semibold text-primary mb-4">
                 Books
               </div>
-              {orgs.length > 0 && (
-                <Select value={orgId || ""} onValueChange={setOrg}>
-                  <SelectTrigger className="w-full bg-background">
-                    <SelectValue placeholder="Select Organization" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {orgs.map((org) => (
-                      <SelectItem key={org.id} value={org.id}>
-                        {org.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+              {orgs.length > 0 && <OrgSwitcher />}
             </div>
             
             <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
