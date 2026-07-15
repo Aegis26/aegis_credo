@@ -1,7 +1,6 @@
 import { Router, type IRouter } from "express";
 import fs from "node:fs";
 import path from "node:path";
-import Papa from "papaparse";
 import ExcelJS from "exceljs";
 import {
   PreviewImportParams,
@@ -10,6 +9,7 @@ import {
 } from "@workspace/api-zod";
 import {
   requirePermission,
+  csvToRows,
   parseQboTrialBalance,
   toImportFileInput,
   TrialBalanceParseError,
@@ -40,12 +40,6 @@ function captureUploadForFixture(contentType: "csv" | "xlsx", content: string): 
   } catch {
     // Best-effort capture only — never block the preview.
   }
-}
-
-/** Parse CSV text into a grid of string cells, respecting quoted commas. */
-function csvToRows(text: string): string[][] {
-  const result = Papa.parse<string[]>(text, { skipEmptyLines: false });
-  return result.data.map((row) => row.map((cell) => (cell ?? "").toString()));
 }
 
 /**

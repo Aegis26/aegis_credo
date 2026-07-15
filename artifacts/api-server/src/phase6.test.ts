@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import { describe, it, expect, afterAll } from "vitest";
 import request from "supertest";
 import ExcelJS from "exceljs";
@@ -228,65 +230,28 @@ describe("QBO Trial Balance CSV adapter (preview → post → reconcile)", () =>
     expect(afterSecond).toBe(afterFirst);
   });
 
-  it("imports the full real Craig's TB: zero-balance account lands in the COA with NO journal lines, and clear expenses are typed expense", async () => {
+  it("imports the full real Craig's TB (verbatim fixture): zero-balance account lands in the COA with NO journal lines, and clear expenses are typed expense", async () => {
     const { agent } = await newUser("qbo-craig-full");
     const orgId = await newOrg(agent, `QBO Craig ${nonce}`);
 
-    // The real QBO sample-company export shape: colon-hierarchy sub-accounts,
-    // a zero-balance account row (name only), and a TOTAL row.
-    const csv = [
-      "Craig's Design and Landscaping Services",
-      "Trial Balance",
-      '"As of Jul 9, 2026"',
-      "",
-      "Account Name,Debit,Credit",
-      'Checking,"1,201.00",',
-      "Savings,800.00,",
-      'Accounts Receivable (A/R),"5,281.52",',
-      "Inventory Asset,596.25,",
-      'Undeposited Funds,"2,062.52",',
-      'Truck:Original Cost,"13,495.00",',
-      "Uncategorized Asset,0.00,0.00",
-      "Advertising,74.86,",
-      "Automobile:Fuel,349.41,",
-      "Equipment Rental,112.00,",
-      "Insurance,241.23,",
-      "Job Expenses,155.07,",
-      "Job Expenses:Job Materials:Decks and Patios,234.04,",
-      "Legal & Professional Fees,75.00,",
-      "Maintenance and Repair:Equipment Repairs,185.00,",
-      "Meals and Entertainment,28.49,",
-      "Miscellaneous,100.00,",
-      "Office Expenses,18.08,",
-      "Rent or Lease,240.00,",
-      "Utilities:Gas and Electric,114.09,",
-      "Discounts given,89.50,",
-      "Ask My Accountant,100.00,",
-      'Accounts Payable (A/P),,"1,602.67"',
-      "Mastercard,,157.72",
-      "Visa,,900.00",
-      "Arizona Dept. of Revenue Payable,,",
-      "Board of Equalization Payable,,370.94",
-      'Loan Payable,,"4,000.00"',
-      'Opening Balance Equity,,"9,337.50"',
-      "Retained Earnings,,604.94",
-      'Design income,,"2,500.00"',
-      'Landscaping Services,,"3,161.27"',
-      'Landscaping Services:Job Materials:Fountains and Garden Lighting,,"1,501.72"',
-      "Sales of Product Income,,912.75",
-      "Services,,503.55",
-      "Uncategorized Income,,0.00",
-      'TOTAL,"25,553.06","25,553.06"',
-      "",
-      '"Accrual Basis Thursday, July 09, 2026 02:52 PM GMTZ",,',
-    ].join("\n");
+    // THE REAL FILE — the user's actual QuickBooks Trial Balance export,
+    // captured verbatim from an app upload (CRLF, "$"-prefixed TOTAL row,
+    // report footer and all). Never hand-edit this fixture.
+    const csv = fs.readFileSync(
+      path.join(
+        __dirname,
+        "../../../lib/ledger/src/import-adapters/fixtures/craigs-trial-balance.csv",
+      ),
+      "utf8",
+    );
 
     const preview = await agent
       .post(`/api/orgs/${orgId}/import/preview`)
       .send({ report: "qbo_trial_balance", contentType: "csv", content: csv });
     expect(preview.status).toBe(200);
     expect(preview.body.balanced).toBe(true);
-    expect(preview.body.totalDebit).toBe("2555306");
+    expect(preview.body.totalDebit).toBe("4142160");
+    expect(preview.body.totalCredit).toBe("4142160");
 
     type PreviewAccount = {
       name: string;
@@ -321,24 +286,32 @@ describe("QBO Trial Balance CSV adapter (preview → post → reconcile)", () =>
     expect(byName("Discounts given").type).toBe("revenue");
     expect(byName("Discounts given").typeSource).toBe("ambiguous");
     expect(byName("Miscellaneous").typeSource).toBe("ambiguous");
-    expect(preview.body.ambiguousCount).toBe(4);
+    expect(preview.body.ambiguousCount).toBe(2);
 
-    // Zero-balance rows in the explicit "0.00" shapes are also kept as accounts.
-    expect(byName("Uncategorized Asset").debit).toBe("0");
-    expect(byName("Uncategorized Asset").credit).toBe("0");
-    expect(byName("Uncategorized Income").credit).toBe("0");
+    // Real-file types beyond the regressions above.
+    expect(byName("Cost of Goods Sold").type).toBe("expense");
+    expect(byName("Notes Payable").type).toBe("liability");
+    expect(byName("Pest Control Services").type).toBe("revenue");
+    // Opening Balance Equity is a DEBIT in this file — still equity.
+    expect(byName("Opening Balance Equity").type).toBe("equity");
+    expect(byName("Opening Balance Equity").debit).toBe("933750");
 
-    // The report footer must NOT be ingested as an account.
+    // The report footer / TOTAL scaffolding must NOT be ingested as accounts.
     expect(
       preview.body.accounts.some((a: { name: string }) =>
         /^(accrual|cash)\s+basis/i.test(a.name),
       ),
     ).toBe(false);
+    expect(
+      preview.body.accounts.some((a: { name: string }) =>
+        /^total$/i.test(a.name),
+      ),
+    ).toBe(false);
 
-    // Post the draft — 33 opening lines; the zero-balance accounts must NOT
+    // Post the draft — 45 opening lines; the zero-balance account must NOT
     // produce a "lines[i] must have exactly one of debit/credit" 400.
-    expect(preview.body.draft.accounts).toHaveLength(36);
-    expect(preview.body.draft.openingBalances).toHaveLength(33);
+    expect(preview.body.draft.accounts).toHaveLength(46);
+    expect(preview.body.draft.openingBalances).toHaveLength(45);
     const posted = await agent
       .post(`/api/orgs/${orgId}/import`)
       .send(preview.body.draft);

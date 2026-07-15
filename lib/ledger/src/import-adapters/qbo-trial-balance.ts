@@ -1,4 +1,5 @@
 import type { AccountType } from "@workspace/db";
+import Papa from "papaparse";
 import { parseDecimalToMinor, type Money } from "../money";
 
 /**
@@ -321,6 +322,16 @@ function findPreamble(
     }
   }
   return { companyName, asOf };
+}
+
+/**
+ * Parse CSV text into a grid of string cells, respecting quoted commas. This is
+ * the SAME parser the preview endpoint uses, so tests that read a fixture file
+ * exercise the exact production CSV path.
+ */
+export function csvToRows(text: string): string[][] {
+  const result = Papa.parse<string[]>(text, { skipEmptyLines: false });
+  return result.data.map((row) => row.map((cell) => (cell ?? "").toString()));
 }
 
 /**

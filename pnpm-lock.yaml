@@ -695,6 +695,9 @@ importers:
       drizzle-orm:
         specifier: 'catalog:'
         version: 0.45.2(@types/pg@8.20.0)(pg@8.22.0)
+      papaparse:
+        specifier: ^5.5.4
+        version: 5.5.4
       zod:
         specifier: 'catalog:'
         version: 3.25.76
@@ -702,6 +705,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 25.9.4
+      '@types/papaparse':
+        specifier: ^5.5.2
+        version: 5.5.2
       tsx:
         specifier: 'catalog:'
         version: 4.23.0

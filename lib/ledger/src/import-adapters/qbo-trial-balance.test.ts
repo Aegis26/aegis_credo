@@ -1,6 +1,9 @@
+import fs from "node:fs";
+import path from "node:path";
 import { describe, it, expect } from "vitest";
 import { parseDecimalToMinor } from "../money";
 import {
+  csvToRows,
   parseQboTrialBalance,
   resolveAccountType,
   toImportFileInput,
@@ -8,65 +11,26 @@ import {
 } from "./qbo-trial-balance";
 
 /**
- * The real QuickBooks Online "Trial Balance" export shape for the sample
- * company (Craig's Design and Landscaping Services), as a grid of cells:
- * preamble rows, a header row, a flat account list using QBO's colon-delimited
- * parent:child hierarchy, a ZERO-balance account (QuickBooks lists accounts
- * with no balance — "Arizona Dept. of Revenue Payable"), and a TOTAL row.
- * Balanced at 25,553.06 on both sides.
+ * THE REAL FILE. `fixtures/craigs-trial-balance.csv` is the user's actual
+ * QuickBooks Online "Trial Balance" export for Craig's Design and Landscaping
+ * Services, captured VERBATIM from an upload through the app (byte-for-byte,
+ * CRLF line endings and all). It contains: preamble rows, the header row,
+ * 46 accounts using QBO's colon-delimited parent:child hierarchy, a
+ * ZERO-balance account listed with an explicit one-sided "0.00" ("Arizona
+ * Dept. of Revenue Payable"), a TOTAL row with "$"-prefixed amounts, blank
+ * rows, and the report footer ("Accrual Basis Thursday, July 09, 2026 02:52
+ * PM GMTZ"). Balanced at 41,421.60 on both sides.
+ *
+ * Do NOT hand-edit this fixture — it must stay the verbatim export.
  */
-const CRAIG_ROWS: string[][] = [
-  ["Craig's Design and Landscaping Services", "", ""],
-  ["Trial Balance", "", ""],
-  ["As of Jul 9, 2026", "", ""],
-  ["", "", ""],
-  ["Account Name", "Debit", "Credit"],
-  ["Checking", "1,201.00", ""],
-  ["Savings", "800.00", ""],
-  ["Accounts Receivable (A/R)", "5,281.52", ""],
-  ["Inventory Asset", "596.25", ""],
-  ["Undeposited Funds", "2,062.52", ""],
-  ["Truck:Original Cost", "13,495.00", ""],
-  ["Uncategorized Asset", "0.00", "0.00"], // zero balance, explicit 0.00 shape
-  ["Advertising", "74.86", ""],
-  ["Automobile:Fuel", "349.41", ""],
-  ["Equipment Rental", "112.00", ""],
-  ["Insurance", "241.23", ""],
-  ["Job Expenses", "155.07", ""],
-  ["Job Expenses:Job Materials:Decks and Patios", "234.04", ""],
-  ["Legal & Professional Fees", "75.00", ""],
-  ["Maintenance and Repair:Equipment Repairs", "185.00", ""],
-  ["Meals and Entertainment", "28.49", ""],
-  ["Miscellaneous", "100.00", ""],
-  ["Office Expenses", "18.08", ""],
-  ["Rent or Lease", "240.00", ""],
-  ["Utilities:Gas and Electric", "114.09", ""],
-  ["Discounts given", "89.50", ""],
-  ["Ask My Accountant", "100.00", ""],
-  ["Accounts Payable (A/P)", "", "1,602.67"],
-  ["Mastercard", "", "157.72"],
-  ["Visa", "", "900.00"],
-  ["Arizona Dept. of Revenue Payable", "", ""], // ZERO balance — real account
-  ["Board of Equalization Payable", "", "370.94"],
-  ["Loan Payable", "", "4,000.00"],
-  ["Opening Balance Equity", "", "9,337.50"],
-  ["Retained Earnings", "", "604.94"],
-  ["Design income", "", "2,500.00"],
-  ["Landscaping Services", "", "3,161.27"],
-  [
-    "Landscaping Services:Job Materials:Fountains and Garden Lighting",
-    "",
-    "1,501.72",
-  ],
-  ["Sales of Product Income", "", "912.75"],
-  ["Services", "", "503.55"],
-  ["Uncategorized Income", "", "0.00"], // zero balance, one-sided 0.00 shape
-  ["TOTAL", "25,553.06", "25,553.06"], // must be skipped, never imported
-  ["", "", ""], // trailing blank row
-  // QuickBooks report FOOTER — basis/timestamp scaffolding, never an account.
-  ["Accrual Basis Thursday, July 09, 2026 02:52 PM GMTZ", "", ""],
-  ["Thursday, July 09, 2026 02:52 PM GMTZ", "", ""],
-];
+const FIXTURE_PATH = path.join(
+  __dirname,
+  "fixtures",
+  "craigs-trial-balance.csv",
+);
+const CRAIG_CSV = fs.readFileSync(FIXTURE_PATH, "utf8");
+// Parsed with the SAME csvToRows the preview endpoint uses in production.
+const CRAIG_ROWS: string[][] = csvToRows(CRAIG_CSV);
 
 describe("parseDecimalToMinor", () => {
   it("parses thousands separators and quoted-style dollars into minor units", () => {
@@ -200,7 +164,7 @@ describe("resolveAccountType", () => {
   });
 });
 
-describe("parseQboTrialBalance (real Craig's file)", () => {
+describe("parseQboTrialBalance (real Craig's file, verbatim fixture)", () => {
   const parse = parseQboTrialBalance(CRAIG_ROWS);
 
   it("extracts preamble metadata", () => {
@@ -209,7 +173,7 @@ describe("parseQboTrialBalance (real Craig's file)", () => {
   });
 
   it("keeps every real account (including zero-balance) and skips scaffolding (TOTAL, footer, blanks)", () => {
-    expect(parse.accounts).toHaveLength(36);
+    expect(parse.accounts).toHaveLength(46);
     expect(parse.accounts.some((a) => /^total/i.test(a.name))).toBe(false);
     // The report footer must never be ingested as an account.
     expect(
@@ -232,8 +196,7 @@ describe("parseQboTrialBalance (real Craig's file)", () => {
     ]);
   });
 
-  it("keeps zero-balance accounts in BOTH QBO shapes (blank and explicit 0.00)", () => {
-    // Blank-cells shape.
+  it("keeps the real file's zero-balance account (explicit one-sided 0.00 shape)", () => {
     const az = parse.accounts.find(
       (a) => a.name === "Arizona Dept. of Revenue Payable",
     )!;
@@ -242,17 +205,23 @@ describe("parseQboTrialBalance (real Craig's file)", () => {
     expect(az.credit).toBe("0");
     expect(az.type).toBe("liability"); // "payable" wins over "revenue"
     expect(az.typeSource).toBe("mapped");
-    // Explicit "0.00","0.00" shape.
-    const ua = parse.accounts.find((a) => a.name === "Uncategorized Asset")!;
-    expect(ua).toBeDefined();
-    expect(ua.debit).toBe("0");
-    expect(ua.credit).toBe("0");
-    // One-sided "0.00" shape.
-    const ui = parse.accounts.find((a) => a.name === "Uncategorized Income")!;
-    expect(ui).toBeDefined();
-    expect(ui.debit).toBe("0");
-    expect(ui.credit).toBe("0");
-    expect(ui.type).toBe("revenue");
+  });
+
+  it("keeps zero-balance accounts in the OTHER QBO shapes too (blank cells, 0.00/0.00)", () => {
+    const rows = [
+      ["Account Name", "Debit", "Credit"],
+      ["Checking", "10.00", ""],
+      ["Sales", "", "10.00"],
+      ["Blank Cells Account", "", ""], // blank shape
+      ["Double Zero Account", "0.00", "0.00"], // explicit both-sides shape
+    ];
+    const p = parseQboTrialBalance(rows);
+    for (const name of ["Blank Cells Account", "Double Zero Account"]) {
+      const a = p.accounts.find((x) => x.name === name)!;
+      expect(a).toBeDefined();
+      expect(a.debit).toBe("0");
+      expect(a.credit).toBe("0");
+    }
   });
 
   it("parses amounts into integer minor units and balances", () => {
@@ -263,8 +232,8 @@ describe("parseQboTrialBalance (real Craig's file)", () => {
       a.name.startsWith("Accounts Receivable"),
     )!;
     expect(ar.debit).toBe("528152");
-    expect(parse.totalDebit).toBe("2555306");
-    expect(parse.totalCredit).toBe("2555306");
+    expect(parse.totalDebit).toBe("4142160");
+    expect(parse.totalCredit).toBe("4142160");
     expect(parse.balanced).toBe(true);
   });
 
@@ -280,12 +249,17 @@ describe("parseQboTrialBalance (real Craig's file)", () => {
     );
     expect(byName("Rent or Lease").type).toBe("expense");
     expect(byName("Utilities:Gas and Electric").type).toBe("expense");
+    expect(byName("Cost of Goods Sold").type).toBe("expense");
     // Sub-income stays revenue despite "Job Materials" in the name.
     expect(
       byName("Landscaping Services:Job Materials:Fountains and Garden Lighting")
         .type,
     ).toBe("revenue");
     expect(byName("Truck:Original Cost").type).toBe("asset");
+    expect(byName("Notes Payable").type).toBe("liability");
+    expect(byName("Pest Control Services").type).toBe("revenue");
+    // Opening Balance Equity is a DEBIT in this file — still equity.
+    expect(byName("Opening Balance Equity").type).toBe("equity");
   });
 
   it("surfaces exactly the ambiguous accounts for review", () => {
@@ -293,10 +267,8 @@ describe("parseQboTrialBalance (real Craig's file)", () => {
       (a) => a.typeSource === "ambiguous",
     );
     expect(ambiguous.map((a) => a.name).sort()).toEqual([
-      "Ask My Accountant",
       "Discounts given",
       "Miscellaneous",
-      "Uncategorized Asset",
     ]);
     // Discounts given is surfaced as contra-revenue, not defaulted to Asset.
     const discounts = ambiguous.find((a) => a.name === "Discounts given")!;
@@ -304,7 +276,7 @@ describe("parseQboTrialBalance (real Craig's file)", () => {
     const inherited = parse.accounts.filter(
       (a) => a.typeSource === "inherited",
     );
-    expect(inherited).toHaveLength(6);
+    expect(inherited).toHaveLength(16);
   });
 
   it("throws a friendly error when the header is missing", () => {
@@ -327,15 +299,11 @@ describe("toImportFileInput", () => {
     const parse = parseQboTrialBalance(CRAIG_ROWS);
     const draft = toImportFileInput(parse);
     expect(draft.source).toBe("quickbooks");
-    // All 36 accounts (incl. the three zero-balance ones) go to the COA…
-    expect(draft.accounts).toHaveLength(36);
-    // …but only the 33 with a balance become opening journal lines.
-    expect(draft.openingBalances).toHaveLength(33);
-    for (const name of [
-      "Arizona Dept. of Revenue Payable",
-      "Uncategorized Asset",
-      "Uncategorized Income",
-    ]) {
+    // All 46 accounts (incl. the zero-balance one) go to the COA…
+    expect(draft.accounts).toHaveLength(46);
+    // …but only the 45 with a balance become opening journal lines.
+    expect(draft.openingBalances).toHaveLength(45);
+    for (const name of ["Arizona Dept. of Revenue Payable"]) {
       const zero = draft.accounts.find((a) => a.name === name)!;
       expect(zero).toBeDefined();
       expect(
@@ -357,7 +325,7 @@ describe("toImportFileInput", () => {
       0n,
     );
     expect(totalDebit).toBe(totalCredit);
-    expect(totalDebit).toBe(2555306n);
+    expect(totalDebit).toBe(4142160n);
     // The file is balanced, so no plug was added.
     expect(
       draft.accounts.filter((a) => a.name === "Opening Balance Equity"),
@@ -367,13 +335,9 @@ describe("toImportFileInput", () => {
   it("applies user type overrides from the review step", () => {
     const parse = parseQboTrialBalance(CRAIG_ROWS);
     const draft = toImportFileInput(parse, {
-      "Ask My Accountant": "expense",
       Miscellaneous: "expense",
       "Discounts given": "revenue",
     });
-    expect(
-      draft.accounts.find((a) => a.name === "Ask My Accountant")!.type,
-    ).toBe("expense");
     expect(draft.accounts.find((a) => a.name === "Miscellaneous")!.type).toBe(
       "expense",
     );

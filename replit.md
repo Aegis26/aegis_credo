@@ -176,9 +176,14 @@ Phase 6 adds a vendor-export ADAPTER layer in front of the frozen import engine
 - **UI wizard** (`artifacts/books/src/pages/import.tsx`): upload → review
   (ambiguous accounts start with an EMPTY type dropdown; Import is disabled
   until every one has an explicit choice) → import & reconcile.
-- Tests: adapter unit suite against a real Craig's-file fixture
-  (`qbo-trial-balance.test.ts`) + API e2e (`phase6.test.ts`) asserting account
-  TYPES and DB state, not just balance.
+- Tests: the committed fixture
+  (`lib/ledger/src/import-adapters/fixtures/craigs-trial-balance.csv`) is the
+  user's ACTUAL QuickBooks export captured VERBATIM from an app upload — never
+  hand-edit it. Both the adapter unit suite (`qbo-trial-balance.test.ts`) and
+  the API e2e (`phase6.test.ts`) read it via `readFileSync` and parse it with
+  the same exported `csvToRows` (papaparse, now in `@workspace/ledger`) the
+  preview endpoint uses, asserting account TYPES and DB state, not just
+  balance.
 
 ## User preferences
 
