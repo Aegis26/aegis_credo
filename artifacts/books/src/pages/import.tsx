@@ -3,10 +3,13 @@ import { useCurrentOrg } from "@/hooks/use-current-org";
 import {
   useImportAccountingFile,
   usePreviewImport,
+  useCreateOrg,
   getGetOrgDashboardQueryKey,
   getListInvoicesQueryKey,
   getGetArAgingQueryKey,
   getListBillsQueryKey,
+  getListMyOrgsQueryKey,
+  ApiError,
   type ReconciliationReport,
   type ImportPreviewResult,
   type ImportFileInput,
@@ -24,6 +27,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import {
   UploadCloud,
@@ -97,7 +110,7 @@ function readAsText(file: File): Promise<string> {
 }
 
 export default function ImportPage() {
-  const { orgId } = useCurrentOrg();
+  const { orgId, setOrg } = useCurrentOrg();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const fileInput = useRef<HTMLInputElement>(null);
@@ -112,6 +125,10 @@ export default function ImportPage() {
 
   const importFile = useImportAccountingFile();
   const previewImport = usePreviewImport();
+  const createOrg = useCreateOrg();
+  // Multi-import guard dialog state.
+  const [guardOpen, setGuardOpen] = useState(false);
+  const [newOrgName, setNewOrgName] = useState("");
 
   const tryParseJson = (text: string) => {
     setRaw(text);
@@ -209,24 +226,67 @@ export default function ImportPage() {
     };
   };
 
-  const runImport = async () => {
-    if (!orgId || !source) return;
+  /**
+   * Post the import. The multi-import guard: if this org already has imported
+   * opening balances (from a DIFFERENT file), we never silently post — a
+   * dialog offers cancel / new org / replace. The server enforces the same
+   * rule (409) so the guard holds even if the client state is stale.
+   */
+  const runImport = async (opts: { targetOrgId?: string; replace?: boolean } = {}) => {
+    const target = opts.targetOrgId ?? orgId;
+    if (!target || !source) return;
     const draft =
       source.kind === "json" ? source.draft : draftWithChoices(source.preview);
+
+    const hasOpening = (draft.openingBalances?.length ?? 0) > 0;
+    const knownConflict =
+      source.kind === "adapter" && source.preview.hasExistingOpeningBalances;
+    if (!opts.replace && !opts.targetOrgId && hasOpening && knownConflict) {
+      setGuardOpen(true);
+      return;
+    }
+
     try {
-      const result = await importFile.mutateAsync({ orgId, data: draft });
+      const result = await importFile.mutateAsync({
+        orgId: target,
+        data: { ...draft, onExistingOpening: opts.replace ? "replace" : "block" },
+      });
+      setGuardOpen(false);
+      if (opts.targetOrgId && opts.targetOrgId !== orgId) setOrg(opts.targetOrgId);
       setReport(result);
       setStep("done");
-      queryClient.invalidateQueries({ queryKey: getGetOrgDashboardQueryKey(orgId) });
-      queryClient.invalidateQueries({ queryKey: getListInvoicesQueryKey(orgId) });
-      queryClient.invalidateQueries({ queryKey: getListBillsQueryKey(orgId) });
-      queryClient.invalidateQueries({ queryKey: getGetArAgingQueryKey(orgId) });
+      queryClient.invalidateQueries({ queryKey: getGetOrgDashboardQueryKey(target) });
+      queryClient.invalidateQueries({ queryKey: getListInvoicesQueryKey(target) });
+      queryClient.invalidateQueries({ queryKey: getListBillsQueryKey(target) });
+      queryClient.invalidateQueries({ queryKey: getGetArAgingQueryKey(target) });
       toast({ title: "Import complete", description: "Your books have been migrated in." });
     } catch (e) {
+      // Server-side guard: the org already has imported opening balances.
+      if (e instanceof ApiError && e.status === 409) {
+        setGuardOpen(true);
+        return;
+      }
       toast({
         variant: "destructive",
         title: "Import failed",
         description: e instanceof Error ? e.message : "Could not import this file.",
+      });
+    }
+  };
+
+  /** Guard option (b): create a fresh org and import there instead. */
+  const importIntoNewOrg = async () => {
+    if (!newOrgName.trim()) return;
+    try {
+      const org = await createOrg.mutateAsync({ data: { name: newOrgName.trim() } });
+      await queryClient.invalidateQueries({ queryKey: getListMyOrgsQueryKey() });
+      await runImport({ targetOrgId: org.id });
+      setNewOrgName("");
+    } catch {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not create the new organization.",
       });
     }
   };
@@ -372,7 +432,7 @@ export default function ImportPage() {
               ))}
             </div>
             <div className="flex gap-3">
-              <Button onClick={runImport} disabled={importFile.isPending} className="gap-2">
+              <Button onClick={() => runImport()} disabled={importFile.isPending} className="gap-2">
                 {importFile.isPending ? "Importing…" : "Import & reconcile"}
                 {!importFile.isPending && <ArrowRight className="w-4 h-4" />}
               </Button>
@@ -390,11 +450,80 @@ export default function ImportPage() {
           preview={source.preview}
           typeChoices={typeChoices}
           setTypeChoices={setTypeChoices}
-          onImport={runImport}
+          onImport={() => runImport()}
           onReset={reset}
           importing={importFile.isPending}
         />
       )}
+
+      <Dialog open={guardOpen} onOpenChange={setGuardOpen}>
+        <DialogContent data-testid="dialog-import-guard">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-destructive" />
+              This organization already has imported opening balances
+            </DialogTitle>
+            <DialogDescription>
+              Importing another file on top of them would double your books.
+              Choose how to proceed — nothing has been posted yet.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-md border border-border p-3 space-y-2">
+              <p className="text-sm font-medium">Import into a new organization</p>
+              <p className="text-sm text-muted-foreground">
+                Keeps the current books untouched and puts this file into a
+                fresh set of books.
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="guard-new-org-name">New organization name</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="guard-new-org-name"
+                    data-testid="input-guard-new-org-name"
+                    value={newOrgName}
+                    onChange={(e) => setNewOrgName(e.target.value)}
+                    placeholder="Acme LLC (new books)"
+                  />
+                  <Button
+                    variant="secondary"
+                    onClick={importIntoNewOrg}
+                    disabled={!newOrgName.trim() || createOrg.isPending || importFile.isPending}
+                    data-testid="button-guard-new-org"
+                  >
+                    {createOrg.isPending || importFile.isPending ? "Working…" : "Create & import"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-md border border-destructive/40 p-3 space-y-2">
+              <p className="text-sm font-medium">Replace the existing opening balances</p>
+              <p className="text-sm text-muted-foreground">
+                The prior opening entries are reversed with new reversing
+                entries (they stay in the ledger for the audit trail), then
+                this file's opening balances are posted.
+              </p>
+              <Button
+                variant="destructive"
+                onClick={() => runImport({ replace: true })}
+                disabled={importFile.isPending}
+                data-testid="button-guard-replace"
+              >
+                {importFile.isPending ? "Replacing…" : "Reverse & replace"}
+              </Button>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setGuardOpen(false)}
+              data-testid="button-guard-cancel"
+            >
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {step === "done" && report && (
         <Card className="shadow-sm border-border">

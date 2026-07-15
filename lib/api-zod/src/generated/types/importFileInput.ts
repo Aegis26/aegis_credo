@@ -7,6 +7,7 @@
  */
 import type { ImportAccountInput } from './importAccountInput';
 import type { ImportBillInput } from './importBillInput';
+import type { ImportFileInputOnExistingOpening } from './importFileInputOnExistingOpening';
 import type { ImportFileInputSource } from './importFileInputSource';
 import type { ImportInvoiceInput } from './importInvoiceInput';
 import type { ImportLineInput } from './importLineInput';
@@ -22,4 +23,6 @@ export interface ImportFileInput {
   transactions?: ImportTransactionInput[];
   openInvoices?: ImportInvoiceInput[];
   openBills?: ImportBillInput[];
+  /** What to do when this org already has imported opening balances from a different file. "block" (default) rejects with 409 so the books are never silently doubled; "replace" reverses the prior opening entries (append-only reversing entries, originals kept) and then posts the new ones. */
+  onExistingOpening?: ImportFileInputOnExistingOpening;
 }

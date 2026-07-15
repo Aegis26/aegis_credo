@@ -2,6 +2,7 @@
 - [Orval params collision](orval-params-collision.md) — endpoints with BOTH path+query params make `<Op>Params` collide across zod client & types; fix with explicit re-export in the api-zod barrel.
 - [drizzle-kit composite constraints](drizzle-kit-composite-constraints.md) — declare composite `(org_id,id)` uniques as `.on(t.id,t.orgId)` (table-ordinal order) or `push` false-diffs & prompts to truncate forever; BigInt default snapshot bug too.
 - [Orval zod string-format pitfall](orval-zod-string-formats.md) — never use `format: email` in openapi.yaml; orval emits zod v4 `zod.email()` which breaks against the repo's resolved zod v3. minLength/maxLength are safe.
+- [Import guard atomicity](import-guard-atomicity.md) — check-then-act ledger guards need an advisory-lock tx (TOCTOU); reconciliation must compare NET per account or reversals break it.
 - [RHF empty-string defaults](rhf-empty-string-defaults.md) — react-hook-form sends blank optionals as `""`; server `??` fallbacks don't catch them → 500. Use `||`. UI-only bug curl can't repro = empty form fields.
 - [API server serves a one-shot build](api-server-stale-bundle.md) — dev workflow bundles once at startup; after editing lib/* you MUST restart the workflow. Green tests run from source and prove nothing about the running server.
 - [TB adapter typing](tb-adapter-typing.md) — balanced ≠ correctly typed (tests must assert type); never silently default ambiguous accounts; name-only TB rows are zero-balance accounts; QBO colon children inherit parent type.

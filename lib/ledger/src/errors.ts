@@ -27,6 +27,23 @@ export class ForbiddenError extends LedgerError {}
 export class ImportError extends LedgerError {}
 
 /**
+ * Thrown when an import carrying opening balances targets an org that already
+ * has un-reversed imported opening balances from a DIFFERENT file. Silently
+ * posting a second opening entry would double the books, so the caller must
+ * explicitly choose: cancel, import into a new org, or replace (reverse the
+ * prior opening entries first).
+ */
+export class ImportOpeningConflictError extends LedgerError {
+  constructor(
+    message: string,
+    /** Ids of the existing un-reversed opening entries that block the import. */
+    public readonly existingEntryIds: string[] = [],
+  ) {
+    super(message);
+  }
+}
+
+/**
  * Thrown when an action is blocked because a configured approval rule requires
  * sign-off that has not been granted (e.g. paying a bill over the threshold).
  */

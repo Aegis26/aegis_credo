@@ -12,6 +12,7 @@ import {
   csvToRows,
   parseQboTrialBalance,
   toImportFileInput,
+  findUnreversedOpeningImports,
   TrialBalanceParseError,
 } from "@workspace/ledger";
 import { sendLedgerError, HttpError } from "../lib/errors";
@@ -124,6 +125,11 @@ router.post("/orgs/:orgId/import/preview", async (req, res) => {
     const parse = parseQboTrialBalance(rows);
     const draft = toImportFileInput(parse);
 
+    // Multi-import guard signal: does this org already carry un-reversed
+    // imported opening balances? If so the UI must present cancel / new org /
+    // replace before posting.
+    const existingOpenings = await findUnreversedOpeningImports(orgId);
+
     res.json(
       PreviewImportResponse.parse({
         source: "quickbooks",
@@ -136,6 +142,7 @@ router.post("/orgs/:orgId/import/preview", async (req, res) => {
         ambiguousCount: parse.accounts.filter(
           (a) => a.typeSource === "ambiguous",
         ).length,
+        hasExistingOpeningBalances: existingOpenings.length > 0,
         draft,
       }),
     );

@@ -99,6 +99,7 @@ export * from './importAccountInput';
 export * from './importAccountInputType';
 export * from './importBillInput';
 export * from './importFileInput';
+export * from './importFileInputOnExistingOpening';
 export * from './importFileInputSource';
 export * from './importInvoiceInput';
 export * from './importLineInput';

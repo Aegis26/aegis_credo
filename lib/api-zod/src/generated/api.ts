@@ -913,6 +913,8 @@ export const ImportAccountingFileParams = zod.object({
   "orgId": zod.coerce.string().describe('The client organization id.')
 })
 
+export const importAccountingFileBodyOnExistingOpeningDefault = `block`;
+
 export const ImportAccountingFileBody = zod.object({
   "source": zod.enum(['quickbooks', 'xero']),
   "accounts": zod.array(zod.object({
@@ -954,7 +956,8 @@ export const ImportAccountingFileBody = zod.object({
   "amount": zod.string(),
   "apAccountCode": zod.string(),
   "expenseAccountCode": zod.string()
-}).describe('amount is an integer minor-unit string.')).optional()
+}).describe('amount is an integer minor-unit string.')).optional(),
+  "onExistingOpening": zod.enum(['block', 'replace']).default(importAccountingFileBodyOnExistingOpeningDefault).describe('What to do when this org already has imported opening balances from a different file. \"block\" (default) rejects with 409 so the books are never silently doubled; \"replace\" reverses the prior opening entries (append-only reversing entries, originals kept) and then posts the new ones.')
 }).describe('A normalized QBO\/Xero export. All monetary amounts are integer minor-unit strings. The server computes a content hash for idempotency — no client-supplied ref is used.')
 
 export const ImportAccountingFileResponse = zod.object({
@@ -996,6 +999,8 @@ export const PreviewImportBody = zod.object({
   "filename": zod.string().optional()
 }).describe('A raw vendor export to translate into the canonical draft.')
 
+export const previewImportResponseDraftOnExistingOpeningDefault = `block`;
+
 export const PreviewImportResponse = zod.object({
   "source": zod.enum(['quickbooks', 'xero']),
   "companyName": zod.string().optional(),
@@ -1013,6 +1018,7 @@ export const PreviewImportResponse = zod.object({
   "totalCredit": zod.string(),
   "balanced": zod.boolean(),
   "ambiguousCount": zod.number(),
+  "hasExistingOpeningBalances": zod.boolean().describe('True when this org already has un-reversed imported opening balances from a prior import. The client must then present an explicit choice (cancel \/ new org \/ replace) before posting — posting without a choice is rejected with 409.'),
   "draft": zod.object({
   "source": zod.enum(['quickbooks', 'xero']),
   "accounts": zod.array(zod.object({
@@ -1054,7 +1060,8 @@ export const PreviewImportResponse = zod.object({
   "amount": zod.string(),
   "apAccountCode": zod.string(),
   "expenseAccountCode": zod.string()
-}).describe('amount is an integer minor-unit string.')).optional()
+}).describe('amount is an integer minor-unit string.')).optional(),
+  "onExistingOpening": zod.enum(['block', 'replace']).default(previewImportResponseDraftOnExistingOpeningDefault).describe('What to do when this org already has imported opening balances from a different file. \"block\" (default) rejects with 409 so the books are never silently doubled; \"replace\" reverses the prior opening entries (append-only reversing entries, originals kept) and then posts the new ones.')
 }).describe('A normalized QBO\/Xero export. All monetary amounts are integer minor-unit strings. The server computes a content hash for idempotency — no client-supplied ref is used.')
 }).describe('The parsed preview plus the canonical draft to confirm and post. No ledger posting has occurred. Money totals are integer minor units as strings (e.g. \"350100\" = $3,501.00), matching the import format.')
 

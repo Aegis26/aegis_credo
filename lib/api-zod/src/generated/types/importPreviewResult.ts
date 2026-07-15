@@ -21,5 +21,7 @@ export interface ImportPreviewResult {
   totalCredit: string;
   balanced: boolean;
   ambiguousCount: number;
+  /** True when this org already has un-reversed imported opening balances from a prior import. The client must then present an explicit choice (cancel / new org / replace) before posting — posting without a choice is rejected with 409. */
+  hasExistingOpeningBalances: boolean;
   draft: ImportFileInput;
 }

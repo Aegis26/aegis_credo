@@ -96,11 +96,13 @@ export default function Entities() {
     if (!groupName.trim()) return;
     try {
       const group = await createGroup.mutateAsync({ data: { name: groupName.trim() } });
+      // Refetch the group list BEFORE closing the dialog so the new group is
+      // visible immediately (same pattern as the Create Organization flow).
+      await queryClient.invalidateQueries({ queryKey: getListGroupsQueryKey() });
       toast({ title: "Group created", description: `${group.name} is ready.` });
       setGroupName("");
       setCreateOpen(false);
       setSelectedGroupId(group.id);
-      queryClient.invalidateQueries({ queryKey: getListGroupsQueryKey() });
     } catch {
       toast({ variant: "destructive", title: "Error", description: "Could not create the group." });
     }
@@ -110,10 +112,10 @@ export default function Entities() {
     if (!activeGroupId || !addOrgId) return;
     try {
       await addOrgToGroup.mutateAsync({ groupId: activeGroupId, data: { orgId: addOrgId } });
+      await queryClient.invalidateQueries({ queryKey: getListGroupsQueryKey() });
       toast({ title: "Entity added", description: "The org is now part of this group." });
       setAddOrgId("");
       setAddOrgOpen(false);
-      queryClient.invalidateQueries({ queryKey: getListGroupsQueryKey() });
     } catch {
       toast({
         variant: "destructive",

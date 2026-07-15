@@ -5,7 +5,7 @@ import {
   journalLinesTable,
 } from "@workspace/db";
 import { AlreadyReversedError, NotFoundError } from "./errors";
-import { postJournalEntry, type PostedEntry } from "./posting";
+import { postJournalEntry, type PostedEntry, type LedgerTx } from "./posting";
 
 /**
  * Create a balanced reversing entry for a previously posted entry. The original
@@ -17,9 +17,11 @@ export async function reverseJournalEntry(
   entryId: string,
   reason: string,
   actor = "system",
+  tx?: LedgerTx,
 ): Promise<PostedEntry> {
+  const dbc = tx ?? db;
   // Scope strictly by orgId so one tenant cannot reverse another's entry.
-  const [original] = await db
+  const [original] = await dbc
     .select()
     .from(journalEntriesTable)
     .where(
@@ -34,7 +36,7 @@ export async function reverseJournalEntry(
     throw new NotFoundError(`Journal entry ${entryId} not found for org.`);
   }
 
-  const [existingReversal] = await db
+  const [existingReversal] = await dbc
     .select({ id: journalEntriesTable.id })
     .from(journalEntriesTable)
     .where(
@@ -51,7 +53,7 @@ export async function reverseJournalEntry(
     );
   }
 
-  const originalLines = await db
+  const originalLines = await dbc
     .select()
     .from(journalLinesTable)
     .where(
@@ -75,6 +77,6 @@ export async function reverseJournalEntry(
         memo: l.memo ?? undefined,
       })),
     },
-    { actor, reversesEntryId: entryId },
+    { actor, reversesEntryId: entryId, tx },
   );
 }

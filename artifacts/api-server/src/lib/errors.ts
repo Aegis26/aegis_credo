@@ -8,6 +8,7 @@ import {
   InvalidLineError,
   UnbalancedEntryError,
   ImportError,
+  ImportOpeningConflictError,
 } from "@workspace/ledger";
 
 /**
@@ -69,6 +70,12 @@ export class PlaidNotConfiguredError extends HttpError {
 export function sendLedgerError(res: Response, err: unknown): void {
   if (err instanceof HttpError) {
     res.status(err.status).json({ error: err.message });
+    return;
+  }
+  if (err instanceof ImportOpeningConflictError) {
+    // The org already has imported opening balances; the caller must choose
+    // cancel / new org / replace instead of silently doubling the books.
+    res.status(409).json({ error: err.message });
     return;
   }
   if (err instanceof ApprovalRequiredError) {

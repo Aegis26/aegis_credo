@@ -461,6 +461,17 @@ export const ImportFileInputSource = {
 } as const;
 
 /**
+ * What to do when this org already has imported opening balances from a different file. "block" (default) rejects with 409 so the books are never silently doubled; "replace" reverses the prior opening entries (append-only reversing entries, originals kept) and then posts the new ones.
+ */
+export type ImportFileInputOnExistingOpening = typeof ImportFileInputOnExistingOpening[keyof typeof ImportFileInputOnExistingOpening];
+
+
+export const ImportFileInputOnExistingOpening = {
+  block: 'block',
+  replace: 'replace',
+} as const;
+
+/**
  * A normalized QBO/Xero export. All monetary amounts are integer minor-unit strings. The server computes a content hash for idempotency — no client-supplied ref is used.
  */
 export interface ImportFileInput {
@@ -470,6 +481,8 @@ export interface ImportFileInput {
   transactions?: ImportTransactionInput[];
   openInvoices?: ImportInvoiceInput[];
   openBills?: ImportBillInput[];
+  /** What to do when this org already has imported opening balances from a different file. "block" (default) rejects with 409 so the books are never silently doubled; "replace" reverses the prior opening entries (append-only reversing entries, originals kept) and then posts the new ones. */
+  onExistingOpening?: ImportFileInputOnExistingOpening;
 }
 
 /**
@@ -570,6 +583,8 @@ export interface ImportPreviewResult {
   totalCredit: string;
   balanced: boolean;
   ambiguousCount: number;
+  /** True when this org already has un-reversed imported opening balances from a prior import. The client must then present an explicit choice (cancel / new org / replace) before posting — posting without a choice is rejected with 409. */
+  hasExistingOpeningBalances: boolean;
   draft: ImportFileInput;
 }
 

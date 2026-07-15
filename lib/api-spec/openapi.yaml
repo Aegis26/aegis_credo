@@ -1346,6 +1346,15 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: >-
+            The org already has imported opening balances from a different
+            file and no explicit onExistingOpening choice was made — the
+            import is blocked so the books are never silently doubled.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /orgs/{orgId}/import/preview:
     post:
       operationId: previewImport
@@ -3003,6 +3012,16 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ImportBillInput"
+        onExistingOpening:
+          type: string
+          enum: [block, replace]
+          default: block
+          description: >-
+            What to do when this org already has imported opening balances
+            from a different file. "block" (default) rejects with 409 so the
+            books are never silently doubled; "replace" reverses the prior
+            opening entries (append-only reversing entries, originals kept)
+            and then posts the new ones.
       required: [source, accounts]
     ImportPreviewInput:
       type: object
@@ -3086,6 +3105,13 @@ components:
           type: boolean
         ambiguousCount:
           type: integer
+        hasExistingOpeningBalances:
+          type: boolean
+          description: >-
+            True when this org already has un-reversed imported opening
+            balances from a prior import. The client must then present an
+            explicit choice (cancel / new org / replace) before posting —
+            posting without a choice is rejected with 409.
         draft:
           $ref: "#/components/schemas/ImportFileInput"
       required:
@@ -3095,6 +3121,7 @@ components:
         - totalCredit
         - balanced
         - ambiguousCount
+        - hasExistingOpeningBalances
         - draft
     ReconciliationAccountRow:
       type: object

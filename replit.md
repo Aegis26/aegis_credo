@@ -232,9 +232,22 @@ _Populate as you build — explicit user instructions worth remembering across s
   with no HTTP endpoints; `requirePermission` must be called by whatever layer
   eventually exposes these functions. The service functions themselves do not check
   permissions.
-- **Reconciliation compares source vs. ledger trial balance**, not the org's full
-  standing trial balance. Prior activity in the same accounts makes the check
-  stricter (the ledger must still reproduce the imported file), never falser.
+- **Reconciliation compares NET movement per account** (debits minus credits,
+  presented on the natural side), source vs. ledger. Netting is what lets a
+  "replace" import reconcile — the reversed pair nets to zero — while any real
+  prior activity in an account still causes a mismatch. Never switch it back to
+  gross column totals or replace breaks.
+
+- **Multi-import guard: opening balances never silently stack.** `importFile`
+  throws `ImportOpeningConflictError` (HTTP 409) when the org already has
+  un-reversed `import_opening` entries from a DIFFERENT file. Same-file
+  re-import stays idempotent. `onExistingOpening: "replace"` reverses the prior
+  opening entries (append-only) then posts the new one. The check + reversals +
+  new post run in ONE transaction under `pg_advisory_xact_lock('import_opening',
+  orgId)` — concurrent imports serialize, so exactly one wins (regression test:
+  `lib/ledger/src/import-concurrency.test.ts`). Preview returns
+  `hasExistingOpeningBalances`; the UI shows a guard dialog with cancel /
+  import-into-new-org / reverse-and-replace.
 
 - **Consolidation combines by account CODE, not id** — account ids differ per
   entity, so `consolidation.ts` merges and eliminates strictly by code. Both the

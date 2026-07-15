@@ -55,7 +55,10 @@ router.post("/orgs/:orgId/import", async (req, res) => {
       openBills: body.openBills,
     };
 
-    const report = await importFile(orgId, file, { actor: userId });
+    const report = await importFile(orgId, file, {
+      actor: userId,
+      onExistingOpening: body.onExistingOpening ?? "block",
+    });
 
     res.json(
       ImportAccountingFileResponse.parse({

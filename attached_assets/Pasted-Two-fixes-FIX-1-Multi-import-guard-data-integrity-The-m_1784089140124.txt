@@ -1,0 +1,41 @@
+Two fixes.
+
+FIX 1 — Multi-import guard (data integrity). The migration importer posts opening
+balances, but importing a SECOND trial balance into an org that already has
+imported opening balances stacks a second opening entry — silently doubling the
+books. The trial balance still balances, so nothing flags it. Close this.
+
+REQUIRED:
+- Before posting an import, detect whether the org already has imported opening
+  balances (a prior opening/import entry exists).
+- If it does, do NOT silently stack. Stop and present the user a clear choice:
+  (a) Cancel.
+  (b) Import into a NEW org instead.
+  (c) Replace the existing opening balances — which REVERSES the prior opening
+      entries via reversing journal entries (never delete; the ledger is
+      append-only/immutable) and then posts the new ones.
+- After a "replace", the reconciliation report must match the new source file
+  exactly, and the trial balance must net to zero. The original opening entries
+  remain in the ledger as reversed (audit trail intact).
+
+DEFINITION OF DONE (tests):
+- Importing a different file into an org that already has opening balances does
+  NOT double the books — it is blocked/guarded, not silently stacked.
+- "Replace" reverses the prior opening entries (originals preserved, marked
+  reversed) and posts the new ones; final balances equal the new file; trial
+  balance nets to zero.
+- Re-importing the SAME file is still idempotent (existing behavior unchanged).
+
+FIX 2 — Entities group-list refetch. On the Entities page, creating a group shows
+a success toast but the group doesn't appear until a manual page refresh. Apply
+the same cache invalidation/refetch-on-success pattern you just used for the
+Create Organization flow so a new group appears immediately.
+
+VERIFICATION (don't claim done without this):
+- Restart the server, confirm it runs new code.
+- Live in the running app: import a file into an org that already has opening
+  balances, confirm the guard appears (not a silent double); test "replace" and
+  confirm the trial balance still ties out; create an Entities group and confirm
+  it shows without refresh.
+
+Show me the walkthrough and passing tests.
