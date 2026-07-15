@@ -203,6 +203,15 @@ Phase 6 adds a vendor-export ADAPTER layer in front of the frozen import engine
   preview endpoint uses, asserting account TYPES and DB state, not just
   balance.
 
+## Known gaps
+
+- **No user-facing "create organization" flow after onboarding.** `POST /orgs`
+  exists (creates + seeds an org) and onboarding uses it for the FIRST org, but
+  the org switcher in the Books UI only switches between existing orgs — a
+  logged-in user (or accountant) cannot create an additional org from the UI.
+  Dev workaround: `cd artifacts/api-server && npx tsx src/dev-seed-second-org.ts
+  <userId>` creates a second org from the Craig's TB fixture.
+
 ## User preferences
 
 _Populate as you build — explicit user instructions worth remembering across sessions._
