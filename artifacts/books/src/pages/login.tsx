@@ -57,7 +57,7 @@ export default function Login() {
       <div className="absolute -left-20 -top-20 w-96 h-96 bg-[#1E90FF]/20 rounded-full blur-[100px] pointer-events-none" />
       <div className="absolute -right-20 -bottom-20 w-96 h-96 bg-[#3CB54A]/20 rounded-full blur-[100px] pointer-events-none" />
 
-      <div className="relative z-10 w-full max-w-6xl mx-auto grid lg:grid-cols-2 items-center gap-12 lg:gap-16 px-8 lg:px-12 py-12">
+      <div className="relative z-10 w-full max-w-5xl mx-auto grid lg:grid-cols-2 items-center gap-10 lg:gap-12 px-8 lg:px-10">
         {/* Left Hero Side */}
         <div className="hidden lg:flex flex-col items-start max-w-lg">
           <BrandLogo className="h-52 w-auto mb-8 drop-shadow-[0_0_15px_rgba(30,144,255,0.4)]" />
@@ -74,7 +74,7 @@ export default function Login() {
         </div>
 
         {/* Right Login Side */}
-        <div className="w-full max-w-md mx-auto lg:mx-0 lg:justify-self-end space-y-8">
+        <div className="w-full max-w-md mx-auto space-y-8">
           <div className="lg:hidden text-center mb-8 flex flex-col items-center">
             <BrandLogo className="h-32 w-auto mb-4" />
             <h1 className="text-3xl font-serif font-bold text-white mb-2">{BRAND_NAME}</h1>
