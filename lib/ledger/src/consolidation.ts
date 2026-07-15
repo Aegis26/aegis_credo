@@ -22,10 +22,13 @@ export async function createGroup(
   options: { actor?: string } = {},
 ): Promise<Group> {
   const actor = options.actor ?? "system";
-  const [group] = await db.insert(groupsTable).values({ name }).returning();
-  // The group has no org, so its audit rows are keyed to a member org as they
-  // are added (below). Record creation on the first member instead; here we only
-  // return the group. (Group creation itself is not a ledger mutation.)
+  // createdBy makes the empty group visible to (and manageable by) its creator
+  // before the first org is attached. Audit rows are keyed to member orgs as
+  // they are added (below). (Group creation itself is not a ledger mutation.)
+  const [group] = await db
+    .insert(groupsTable)
+    .values({ name, createdBy: options.actor ?? null })
+    .returning();
   void actor;
   return group;
 }

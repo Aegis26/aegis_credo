@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { inArray } from "drizzle-orm";
+import { eq, inArray, or } from "drizzle-orm";
 import { db, groupsTable, organizationsTable } from "@workspace/db";
 import {
   ListGroupsResponse,
@@ -79,26 +79,29 @@ function serializeRow(r: ConsolidatedRow) {
 router.get("/groups", async (req, res) => {
   try {
     const userId = getSessionUserId(req);
+    // A group is visible if (a) one of the caller's orgs belongs to it, or
+    // (b) the caller created it — without (b) a freshly created group with no
+    // member orgs yet would be invisible to its own creator.
     const orgIds = await listOrgsForUser(userId);
-    if (orgIds.length === 0) {
-      res.json(ListGroupsResponse.parse({ groups: [] }));
-      return;
+    const groupIds: string[] = [];
+    if (orgIds.length > 0) {
+      const myOrgs = await db
+        .select({ groupId: organizationsTable.groupId })
+        .from(organizationsTable)
+        .where(inArray(organizationsTable.id, orgIds));
+      groupIds.push(
+        ...myOrgs.map((o) => o.groupId).filter((g): g is string => !!g),
+      );
     }
-    const myOrgs = await db
-      .select({ id: organizationsTable.id, groupId: organizationsTable.groupId })
-      .from(organizationsTable)
-      .where(inArray(organizationsTable.id, orgIds));
-    const groupIds = [
-      ...new Set(myOrgs.map((o) => o.groupId).filter((g): g is string => !!g)),
-    ];
-    if (groupIds.length === 0) {
-      res.json(ListGroupsResponse.parse({ groups: [] }));
-      return;
+    const visibility = [eq(groupsTable.createdBy, userId)];
+    if (groupIds.length > 0) {
+      visibility.push(inArray(groupsTable.id, [...new Set(groupIds)]));
     }
     const groups = await db
       .select()
       .from(groupsTable)
-      .where(inArray(groupsTable.id, groupIds));
+      .where(or(...visibility))
+      .orderBy(groupsTable.createdAt);
     const result = [];
     for (const g of groups) {
       const members = await listOrgsInGroup(g.id);

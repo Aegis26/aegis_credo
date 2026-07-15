@@ -8,6 +8,10 @@ import { z } from "zod/v4";
 export const groupsTable = pgTable("groups", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
+  // Who created the group. A freshly created group has no member orgs yet, so
+  // membership-derived listing alone would make it invisible to its creator —
+  // this column lets the creator see (and populate) an empty group.
+  createdBy: uuid("created_by"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

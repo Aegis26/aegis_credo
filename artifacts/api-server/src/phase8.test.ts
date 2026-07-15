@@ -161,6 +161,29 @@ describe("groups and consolidation", () => {
     );
   });
 
+  it("a freshly created group with no member orgs appears in the creator's list immediately", async () => {
+    const created = await owner
+      .post("/api/groups")
+      .send({ name: `Empty Group ${nonce}` });
+    expect(created.status).toBe(201);
+
+    const list = await owner.get("/api/groups");
+    expect(list.status).toBe(200);
+    const mine = list.body.groups.find(
+      (g: { id: string }) => g.id === created.body.id,
+    );
+    expect(mine).toBeDefined();
+    expect(mine.name).toBe(`Empty Group ${nonce}`);
+    expect(mine.orgs).toEqual([]);
+
+    // ...but NOT in an unrelated user's list.
+    const other = await outsider.get("/api/groups");
+    expect(other.status).toBe(200);
+    expect(
+      other.body.groups.find((g: { id: string }) => g.id === created.body.id),
+    ).toBeUndefined();
+  });
+
   it("an outsider cannot attach someone else's org to a group", async () => {
     const res = await outsider
       .post(`/api/groups/${groupId}/orgs`)
