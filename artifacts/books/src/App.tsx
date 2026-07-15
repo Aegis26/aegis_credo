@@ -24,6 +24,10 @@ import Bills from "@/pages/bills";
 import Aging from "@/pages/aging";
 import Payroll from "@/pages/payroll";
 import Team from "@/pages/team";
+import Entities from "@/pages/entities";
+import Approvals from "@/pages/approvals";
+import ReportBuilder from "@/pages/report-builder";
+import Budgets from "@/pages/budgets";
 
 import PracticeDashboard from "@/pages/practice/dashboard";
 import PracticeClientClose from "@/pages/practice/close";
@@ -75,6 +79,10 @@ function ProtectedRouter() {
             <Route path="/aging" component={Aging} />
             <Route path="/payroll" component={Payroll} />
             <Route path="/reports" component={Reports} />
+            <Route path="/report-builder" component={ReportBuilder} />
+            <Route path="/entities" component={Entities} />
+            <Route path="/approvals" component={Approvals} />
+            <Route path="/budgets" component={Budgets} />
             <Route path="/taxes" component={Taxes} />
             <Route path="/team" component={Team} />
             

@@ -156,6 +156,24 @@ session-authenticated, org-scoped endpoints:
   returns `configured:false` and `bank/link-token` returns 503; the UI degrades to
   a "not set up" message.
 
+Phase 8 exposes the Phase 3 mid-market lib over the API + Books UI (no engine
+changes; all reads over entity ledgers, session identity, `requirePermission`
+per route, money as decimal strings):
+
+- **API** (`artifacts/api-server`): `groups.ts` (`/groups`, attach org, and
+  `/groups/:groupId/consolidated/{trial-balance,profit-and-loss,balance-sheet}`
+  — consolidated reads demand `reports.read` on EVERY member org; attaching an
+  org demands `members.manage` on that org), `approvals.ts` (queue + decide +
+  rules + audit; decide/rule-create are `members.manage`), `analytics.ts`
+  (dimensions, `POST /orgs/:orgId/report` custom reports — group scope requires
+  org∈group + `reports.read` on all members — and budgets + vs-actual).
+  `ApprovalRequiredError` maps to HTTP 409. Tests: `phase8.test.ts` (23) —
+  intercompany elimination correctness, approval blocking/unblocking of bill
+  pay, dimension report ↔ trial-balance reconciliation, outsider 403s.
+- **UI** (`artifacts/books`): `/entities` (groups + consolidated statements
+  with an eliminations table), `/approvals` (queue / rules / audit tabs),
+  `/report-builder`, `/budgets` — all via generated hooks, no money math in UI.
+
 Phase 6 adds a vendor-export ADAPTER layer in front of the frozen import engine
 (`import.ts` unchanged):
 
@@ -258,6 +276,11 @@ _Populate as you build — explicit user instructions worth remembering across s
   line would be rejected by the posting service). A TB export that contains
   decorative section headings would import them as zero-balance accounts; this
   is a deliberate tradeoff in favor of never dropping real accounts.
+
+- **Intercompany posts require the group to exist FIRST.** `postJournalEntry`
+  rejects `counterpartyOrgId` lines unless both orgs already share a group —
+  create the group and attach the orgs before posting intercompany entries
+  (tests and seeds included).
 
 - **Money crosses the API/CSV boundary as a decimal string, never a JS number.**
   JSON and JS `number` cannot carry BigInt safely, so `formatMoney` renders minor

@@ -844,6 +844,287 @@ export interface MyCloseStatus {
   summary: CloseStatusSummary | null;
 }
 
+export interface OkResponse {
+  ok: boolean;
+}
+
+export interface Group {
+  id: string;
+  name: string;
+}
+
+export interface GroupMemberOrg {
+  orgId: string;
+  name: string;
+}
+
+export interface GroupWithOrgs {
+  id: string;
+  name: string;
+  orgs: GroupMemberOrg[];
+}
+
+export interface GroupList {
+  groups: GroupWithOrgs[];
+}
+
+export interface CreateGroupRequest {
+  /** @minLength 1 */
+  name: string;
+}
+
+export interface AddOrgToGroupRequest {
+  orgId: string;
+}
+
+export interface ConsolidatedRow {
+  code: string;
+  name: string;
+  type: string;
+  normalBalance: string;
+  debit: string;
+  credit: string;
+  balance: string;
+}
+
+export interface ConsolidatedTrialBalance {
+  groupId: string;
+  entities: GroupMemberOrg[];
+  combined: ConsolidatedRow[];
+  eliminations: ConsolidatedRow[];
+  consolidated: ConsolidatedRow[];
+  totalDebit: string;
+  totalCredit: string;
+  difference: string;
+}
+
+export interface ConsolidatedProfitAndLoss {
+  groupId: string;
+  entities: GroupMemberOrg[];
+  revenue: string;
+  expenses: string;
+  netIncome: string;
+}
+
+export interface ConsolidatedBalanceSheet {
+  groupId: string;
+  entities: GroupMemberOrg[];
+  assets: string;
+  liabilities: string;
+  equity: string;
+  netIncome: string;
+  equityWithIncome: string;
+  balances: boolean;
+}
+
+export interface ApprovalRule {
+  id: string;
+  entityType: string;
+  threshold: string;
+  active: boolean;
+  createdAt: string;
+}
+
+export interface ApprovalRuleList {
+  rules: ApprovalRule[];
+}
+
+export interface CreateApprovalRuleRequest {
+  /** @minLength 1 */
+  entityType: string;
+  /** @minLength 1 */
+  threshold: string;
+  active?: boolean;
+}
+
+export type ApprovalStatus = typeof ApprovalStatus[keyof typeof ApprovalStatus];
+
+
+export const ApprovalStatus = {
+  pending: 'pending',
+  approved: 'approved',
+  rejected: 'rejected',
+} as const;
+
+export interface Approval {
+  id: string;
+  entityType: string;
+  entityId: string;
+  amount: string;
+  status: ApprovalStatus;
+  note?: string | null;
+  requestedBy?: string | null;
+  decidedBy?: string | null;
+  decidedAt?: string | null;
+  createdAt: string;
+}
+
+export interface ApprovalList {
+  approvals: Approval[];
+}
+
+export type DecideApprovalRequestDecision = typeof DecideApprovalRequestDecision[keyof typeof DecideApprovalRequestDecision];
+
+
+export const DecideApprovalRequestDecision = {
+  approved: 'approved',
+  rejected: 'rejected',
+} as const;
+
+export interface DecideApprovalRequest {
+  decision: DecideApprovalRequestDecision;
+  note?: string;
+}
+
+export interface AuditEvent {
+  id: string;
+  actor: string;
+  action: string;
+  entity: string;
+  entityId: string;
+  createdAt: string;
+}
+
+export interface ApprovalAuditList {
+  events: AuditEvent[];
+}
+
+export type DimensionType = typeof DimensionType[keyof typeof DimensionType];
+
+
+export const DimensionType = {
+  class: 'class',
+  department: 'department',
+  location: 'location',
+} as const;
+
+export interface Dimension {
+  id: string;
+  type: DimensionType;
+  name: string;
+}
+
+export interface DimensionList {
+  dimensions: Dimension[];
+}
+
+export type CreateDimensionRequestType = typeof CreateDimensionRequestType[keyof typeof CreateDimensionRequestType];
+
+
+export const CreateDimensionRequestType = {
+  class: 'class',
+  department: 'department',
+  location: 'location',
+} as const;
+
+export interface CreateDimensionRequest {
+  type: CreateDimensionRequestType;
+  /** @minLength 1 */
+  name: string;
+}
+
+export type RunReportRequestGroupByItem = typeof RunReportRequestGroupByItem[keyof typeof RunReportRequestGroupByItem];
+
+
+export const RunReportRequestGroupByItem = {
+  account: 'account',
+  accountType: 'accountType',
+  class: 'class',
+  department: 'department',
+  location: 'location',
+  entity: 'entity',
+} as const;
+
+export type RunReportRequestFiltersAccountTypesItem = typeof RunReportRequestFiltersAccountTypesItem[keyof typeof RunReportRequestFiltersAccountTypesItem];
+
+
+export const RunReportRequestFiltersAccountTypesItem = {
+  asset: 'asset',
+  liability: 'liability',
+  equity: 'equity',
+  revenue: 'revenue',
+  expense: 'expense',
+} as const;
+
+export type RunReportRequestFilters = {
+  dateFrom?: string;
+  dateTo?: string;
+  accountTypes?: RunReportRequestFiltersAccountTypesItem[];
+  classIds?: string[];
+  departmentIds?: string[];
+  locationIds?: string[];
+};
+
+export interface RunReportRequest {
+  groupId?: string | null;
+  /** @minItems 1 */
+  groupBy: RunReportRequestGroupByItem[];
+  filters?: RunReportRequestFilters;
+}
+
+export type CustomReportRowKeys = {[key: string]: string};
+
+export interface CustomReportRow {
+  keys: CustomReportRowKeys;
+  debit: string;
+  credit: string;
+  balance: string;
+}
+
+export interface CustomReportResult {
+  rows: CustomReportRow[];
+  totalDebit: string;
+  totalCredit: string;
+}
+
+export interface Budget {
+  id: string;
+  name: string;
+  periodStart: string;
+  periodEnd: string;
+}
+
+export interface BudgetList {
+  budgets: Budget[];
+}
+
+export interface CreateBudgetRequest {
+  /** @minLength 1 */
+  name: string;
+  periodStart: string;
+  periodEnd: string;
+}
+
+export interface SetBudgetLineRequest {
+  accountId: string;
+  /** @minLength 1 */
+  amount: string;
+}
+
+export interface BudgetLine {
+  id: string;
+  accountId: string;
+  amount: string;
+}
+
+export interface BudgetVsActualRow {
+  accountId: string;
+  code: string;
+  name: string;
+  type: string;
+  budgeted: string;
+  actual: string;
+  variance: string;
+}
+
+export interface BudgetVsActualReport {
+  budget: Budget;
+  rows: BudgetVsActualRow[];
+  totalBudgeted: string;
+  totalActual: string;
+  totalVariance: string;
+}
+
 export type GetPracticeDashboardParams = {
 /**
  * Restrict to a single practice the user is a member of.
@@ -880,4 +1161,17 @@ export type GetArAgingParams = {
  */
 asOf?: string;
 };
+
+export type ListOrgApprovalsParams = {
+status?: ListOrgApprovalsStatus;
+};
+
+export type ListOrgApprovalsStatus = typeof ListOrgApprovalsStatus[keyof typeof ListOrgApprovalsStatus];
+
+
+export const ListOrgApprovalsStatus = {
+  pending: 'pending',
+  approved: 'approved',
+  rejected: 'rejected',
+} as const;
 

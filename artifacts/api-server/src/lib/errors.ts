@@ -1,6 +1,7 @@
 import type { Response } from "express";
 import { ZodError } from "zod";
 import {
+  ApprovalRequiredError,
   ForbiddenError,
   NotFoundError,
   InvalidEntryError,
@@ -68,6 +69,11 @@ export class PlaidNotConfiguredError extends HttpError {
 export function sendLedgerError(res: Response, err: unknown): void {
   if (err instanceof HttpError) {
     res.status(err.status).json({ error: err.message });
+    return;
+  }
+  if (err instanceof ApprovalRequiredError) {
+    // The money op exists but is blocked pending sign-off.
+    res.status(409).json({ error: err.message });
     return;
   }
   if (err instanceof ForbiddenError) {

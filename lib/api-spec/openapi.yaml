@@ -1698,6 +1698,523 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /groups:
+    get:
+      operationId: listGroups
+      tags: [groups]
+      summary: Groups visible to the caller via org memberships
+      responses:
+        "200":
+          description: Groups with their member orgs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupList"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createGroup
+      tags: [groups]
+      summary: Create a parent group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateGroupRequest"
+      responses:
+        "201":
+          description: The created group
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Group"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /groups/{groupId}/orgs:
+    post:
+      operationId: addOrgToGroup
+      tags: [groups]
+      summary: Add an org to a group (requires members.manage on the org)
+      parameters:
+        - $ref: "#/components/parameters/GroupId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddOrgToGroupRequest"
+      responses:
+        "200":
+          description: Org added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller may not manage this org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /groups/{groupId}/consolidated/trial-balance:
+    get:
+      operationId: getConsolidatedTrialBalanceReport
+      tags: [groups]
+      summary: Consolidated trial balance (requires reports.read on every member org)
+      parameters:
+        - $ref: "#/components/parameters/GroupId"
+      responses:
+        "200":
+          description: Combined, eliminations, and consolidated rows
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsolidatedTrialBalance"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks reports.read on a member org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /groups/{groupId}/consolidated/profit-and-loss:
+    get:
+      operationId: getConsolidatedProfitAndLossReport
+      tags: [groups]
+      summary: Consolidated P&L (requires reports.read on every member org)
+      parameters:
+        - $ref: "#/components/parameters/GroupId"
+      responses:
+        "200":
+          description: Consolidated P&L
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsolidatedProfitAndLoss"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks reports.read on a member org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /groups/{groupId}/consolidated/balance-sheet:
+    get:
+      operationId: getConsolidatedBalanceSheetReport
+      tags: [groups]
+      summary: Consolidated balance sheet (requires reports.read on every member org)
+      parameters:
+        - $ref: "#/components/parameters/GroupId"
+      responses:
+        "200":
+          description: Consolidated balance sheet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsolidatedBalanceSheet"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks reports.read on a member org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /orgs/{orgId}/approvals:
+    get:
+      operationId: listOrgApprovals
+      tags: [approvals]
+      summary: List approvals for an org, newest first
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [pending, approved, rejected]
+      responses:
+        "200":
+          description: Approvals
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApprovalList"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not a member of this org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /orgs/{orgId}/approvals/{approvalId}/decide:
+    post:
+      operationId: decideOrgApproval
+      tags: [approvals]
+      summary: Approve or reject a pending approval (requires members.manage)
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+        - name: approvalId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DecideApprovalRequest"
+      responses:
+        "200":
+          description: The decided approval
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Approval"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller may not decide approvals for this org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /orgs/{orgId}/approvals/audit:
+    get:
+      operationId: getApprovalAudit
+      tags: [approvals]
+      summary: Audit trail for approvals and approval rules
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      responses:
+        "200":
+          description: Audit events, newest first
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApprovalAuditList"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not a member of this org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /orgs/{orgId}/approval-rules:
+    get:
+      operationId: listApprovalRules
+      tags: [approvals]
+      summary: List approval rules for an org
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      responses:
+        "200":
+          description: Rules
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApprovalRuleList"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not a member of this org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createOrgApprovalRule
+      tags: [approvals]
+      summary: Create an approval rule (requires members.manage)
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateApprovalRuleRequest"
+      responses:
+        "201":
+          description: The created rule
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApprovalRule"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller may not manage this org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /orgs/{orgId}/dimensions:
+    get:
+      operationId: listOrgDimensions
+      tags: [dimensions]
+      summary: List reporting dimensions for an org
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      responses:
+        "200":
+          description: Dimensions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DimensionList"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not a member of this org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createOrgDimension
+      tags: [dimensions]
+      summary: Create a reporting dimension (idempotent per org/type/name)
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDimensionRequest"
+      responses:
+        "201":
+          description: The dimension
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dimension"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller may not post to this org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /orgs/{orgId}/report:
+    post:
+      operationId: runCustomReport
+      tags: [reports]
+      summary: Run a custom report scoped to this org or a group it belongs to
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RunReportRequest"
+      responses:
+        "200":
+          description: Report rows and totals
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomReportResult"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not a member, or group scope excludes this org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /orgs/{orgId}/budgets:
+    get:
+      operationId: listOrgBudgets
+      tags: [budgets]
+      summary: List budgets for an org
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      responses:
+        "200":
+          description: Budgets
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BudgetList"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not a member of this org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createOrgBudget
+      tags: [budgets]
+      summary: Create a budget
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBudgetRequest"
+      responses:
+        "201":
+          description: The created budget
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Budget"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller may not post to this org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /orgs/{orgId}/budgets/{budgetId}/lines:
+    post:
+      operationId: setOrgBudgetLine
+      tags: [budgets]
+      summary: Set the planned amount for an account (idempotent per account)
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+        - name: budgetId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetBudgetLineRequest"
+      responses:
+        "200":
+          description: The budget line
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BudgetLine"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller may not post to this org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /orgs/{orgId}/budgets/{budgetId}/vs-actual:
+    get:
+      operationId: getBudgetVsActualReport
+      tags: [budgets]
+      summary: Budget vs actual over the budget period
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+        - name: budgetId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Budget vs actual rows
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BudgetVsActualReport"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not a member of this org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   parameters:
     OrgId:
@@ -1705,6 +2222,13 @@ components:
       in: path
       required: true
       description: The client organization id.
+      schema:
+        type: string
+    GroupId:
+      name: groupId
+      in: path
+      required: true
+      description: The consolidation group id.
       schema:
         type: string
   schemas:
@@ -2980,3 +3504,422 @@ components:
           allOf:
             - $ref: "#/components/schemas/CloseStatusSummary"
       required: [summary]
+    OkResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+      required: [ok]
+    Group:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+      required: [id, name]
+    GroupMemberOrg:
+      type: object
+      properties:
+        orgId:
+          type: string
+        name:
+          type: string
+      required: [orgId, name]
+    GroupWithOrgs:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        orgs:
+          type: array
+          items:
+            $ref: "#/components/schemas/GroupMemberOrg"
+      required: [id, name, orgs]
+    GroupList:
+      type: object
+      properties:
+        groups:
+          type: array
+          items:
+            $ref: "#/components/schemas/GroupWithOrgs"
+      required: [groups]
+    CreateGroupRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+      required: [name]
+    AddOrgToGroupRequest:
+      type: object
+      properties:
+        orgId:
+          type: string
+      required: [orgId]
+    ConsolidatedRow:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        normalBalance:
+          type: string
+        debit:
+          type: string
+        credit:
+          type: string
+        balance:
+          type: string
+      required: [code, name, type, normalBalance, debit, credit, balance]
+    ConsolidatedTrialBalance:
+      type: object
+      properties:
+        groupId:
+          type: string
+        entities:
+          type: array
+          items:
+            $ref: "#/components/schemas/GroupMemberOrg"
+        combined:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConsolidatedRow"
+        eliminations:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConsolidatedRow"
+        consolidated:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConsolidatedRow"
+        totalDebit:
+          type: string
+        totalCredit:
+          type: string
+        difference:
+          type: string
+      required: [groupId, entities, combined, eliminations, consolidated, totalDebit, totalCredit, difference]
+    ConsolidatedProfitAndLoss:
+      type: object
+      properties:
+        groupId:
+          type: string
+        entities:
+          type: array
+          items:
+            $ref: "#/components/schemas/GroupMemberOrg"
+        revenue:
+          type: string
+        expenses:
+          type: string
+        netIncome:
+          type: string
+      required: [groupId, entities, revenue, expenses, netIncome]
+    ConsolidatedBalanceSheet:
+      type: object
+      properties:
+        groupId:
+          type: string
+        entities:
+          type: array
+          items:
+            $ref: "#/components/schemas/GroupMemberOrg"
+        assets:
+          type: string
+        liabilities:
+          type: string
+        equity:
+          type: string
+        netIncome:
+          type: string
+        equityWithIncome:
+          type: string
+        balances:
+          type: boolean
+      required: [groupId, entities, assets, liabilities, equity, netIncome, equityWithIncome, balances]
+    ApprovalRule:
+      type: object
+      properties:
+        id:
+          type: string
+        entityType:
+          type: string
+        threshold:
+          type: string
+        active:
+          type: boolean
+        createdAt:
+          type: string
+      required: [id, entityType, threshold, active, createdAt]
+    ApprovalRuleList:
+      type: object
+      properties:
+        rules:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApprovalRule"
+      required: [rules]
+    CreateApprovalRuleRequest:
+      type: object
+      properties:
+        entityType:
+          type: string
+          minLength: 1
+        threshold:
+          type: string
+          minLength: 1
+        active:
+          type: boolean
+      required: [entityType, threshold]
+    Approval:
+      type: object
+      properties:
+        id:
+          type: string
+        entityType:
+          type: string
+        entityId:
+          type: string
+        amount:
+          type: string
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        note:
+          type: string
+          nullable: true
+        requestedBy:
+          type: string
+          nullable: true
+        decidedBy:
+          type: string
+          nullable: true
+        decidedAt:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+      required: [id, entityType, entityId, amount, status, createdAt]
+    ApprovalList:
+      type: object
+      properties:
+        approvals:
+          type: array
+          items:
+            $ref: "#/components/schemas/Approval"
+      required: [approvals]
+    DecideApprovalRequest:
+      type: object
+      properties:
+        decision:
+          type: string
+          enum: [approved, rejected]
+        note:
+          type: string
+      required: [decision]
+    AuditEvent:
+      type: object
+      properties:
+        id:
+          type: string
+        actor:
+          type: string
+        action:
+          type: string
+        entity:
+          type: string
+        entityId:
+          type: string
+        createdAt:
+          type: string
+      required: [id, actor, action, entity, entityId, createdAt]
+    ApprovalAuditList:
+      type: object
+      properties:
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditEvent"
+      required: [events]
+    Dimension:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [class, department, location]
+        name:
+          type: string
+      required: [id, type, name]
+    DimensionList:
+      type: object
+      properties:
+        dimensions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Dimension"
+      required: [dimensions]
+    CreateDimensionRequest:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [class, department, location]
+        name:
+          type: string
+          minLength: 1
+      required: [type, name]
+    RunReportRequest:
+      type: object
+      properties:
+        groupId:
+          type: string
+          nullable: true
+        groupBy:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            enum: [account, accountType, class, department, location, entity]
+        filters:
+          type: object
+          properties:
+            dateFrom:
+              type: string
+            dateTo:
+              type: string
+            accountTypes:
+              type: array
+              items:
+                type: string
+                enum: [asset, liability, equity, revenue, expense]
+            classIds:
+              type: array
+              items:
+                type: string
+            departmentIds:
+              type: array
+              items:
+                type: string
+            locationIds:
+              type: array
+              items:
+                type: string
+      required: [groupBy]
+    CustomReportRow:
+      type: object
+      properties:
+        keys:
+          type: object
+          additionalProperties:
+            type: string
+        debit:
+          type: string
+        credit:
+          type: string
+        balance:
+          type: string
+      required: [keys, debit, credit, balance]
+    CustomReportResult:
+      type: object
+      properties:
+        rows:
+          type: array
+          items:
+            $ref: "#/components/schemas/CustomReportRow"
+        totalDebit:
+          type: string
+        totalCredit:
+          type: string
+      required: [rows, totalDebit, totalCredit]
+    Budget:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        periodStart:
+          type: string
+        periodEnd:
+          type: string
+      required: [id, name, periodStart, periodEnd]
+    BudgetList:
+      type: object
+      properties:
+        budgets:
+          type: array
+          items:
+            $ref: "#/components/schemas/Budget"
+      required: [budgets]
+    CreateBudgetRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        periodStart:
+          type: string
+        periodEnd:
+          type: string
+      required: [name, periodStart, periodEnd]
+    SetBudgetLineRequest:
+      type: object
+      properties:
+        accountId:
+          type: string
+        amount:
+          type: string
+          minLength: 1
+      required: [accountId, amount]
+    BudgetLine:
+      type: object
+      properties:
+        id:
+          type: string
+        accountId:
+          type: string
+        amount:
+          type: string
+      required: [id, accountId, amount]
+    BudgetVsActualRow:
+      type: object
+      properties:
+        accountId:
+          type: string
+        code:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        budgeted:
+          type: string
+        actual:
+          type: string
+        variance:
+          type: string
+      required: [accountId, code, name, type, budgeted, actual, variance]
+    BudgetVsActualReport:
+      type: object
+      properties:
+        budget:
+          $ref: "#/components/schemas/Budget"
+        rows:
+          type: array
+          items:
+            $ref: "#/components/schemas/BudgetVsActualRow"
+        totalBudgeted:
+          type: string
+        totalActual:
+          type: string
+        totalVariance:
+          type: string
+      required: [budget, rows, totalBudgeted, totalActual, totalVariance]

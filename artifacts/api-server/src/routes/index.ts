@@ -13,6 +13,9 @@ import importPreviewRouter from "./import-preview";
 import billsRouter from "./bills";
 import payrollRouter from "./payroll";
 import membersRouter from "./members";
+import groupsRouter from "./groups";
+import approvalsRouter from "./approvals";
+import analyticsRouter from "./analytics";
 import { requireAuth } from "../middlewares/auth";
 
 export interface RouterOptions {
@@ -42,6 +45,9 @@ export function createRouter(options: RouterOptions = {}): IRouter {
   router.use(billsRouter);
   router.use(payrollRouter);
   router.use(membersRouter);
+  router.use(groupsRouter);
+  router.use(approvalsRouter);
+  router.use(analyticsRouter);
 
   return router;
 }

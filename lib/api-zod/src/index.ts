@@ -11,6 +11,7 @@ export {
   ListBankTransactionsParams,
   GetTaxEstimateParams,
   GetArAgingParams,
+  ListOrgApprovalsParams,
 } from "./generated/api";
 export * from './generated/api';
 export * from './generated/types';

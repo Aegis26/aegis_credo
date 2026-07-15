@@ -22,6 +22,12 @@ import type {
 import type {
   AccountList,
   AccountantInput,
+  AddOrgToGroupRequest,
+  Approval,
+  ApprovalAuditList,
+  ApprovalList,
+  ApprovalRule,
+  ApprovalRuleList,
   ArAgingReport,
   AuthSession,
   BalanceSheetReport,
@@ -39,6 +45,10 @@ import type {
   BillInput,
   BillList,
   BillPaymentInput,
+  Budget,
+  BudgetLine,
+  BudgetList,
+  BudgetVsActualReport,
   CategorizeInput,
   ClientGrant,
   ClientList,
@@ -50,11 +60,24 @@ import type {
   CloseTask,
   CloseTaskInput,
   CloseTaskStatusInput,
+  ConsolidatedBalanceSheet,
+  ConsolidatedProfitAndLoss,
+  ConsolidatedTrialBalance,
+  CreateApprovalRuleRequest,
+  CreateBudgetRequest,
+  CreateDimensionRequest,
+  CreateGroupRequest,
+  CustomReportResult,
+  DecideApprovalRequest,
+  Dimension,
+  DimensionList,
   ErrorResponse,
   GetArAgingParams,
   GetPracticeDashboardParams,
   GetTaxEstimateParams,
   GrantClientInput,
+  Group,
+  GroupList,
   HealthStatus,
   ImportFileInput,
   ImportPreviewInput,
@@ -64,11 +87,13 @@ import type {
   InvoiceList,
   InvoicePaymentInput,
   ListBankTransactionsParams,
+  ListOrgApprovalsParams,
   LoginRequest,
   Member,
   MemberInput,
   MemberList,
   MyCloseStatus,
+  OkResponse,
   Org,
   OrgDashboard,
   OrgInput,
@@ -82,6 +107,8 @@ import type {
   PracticeInput,
   ProfitAndLossReport,
   ReconciliationReport,
+  RunReportRequest,
+  SetBudgetLineRequest,
   SignupRequest,
   TaxEstimate,
   TrialBalanceReport
@@ -3966,4 +3993,1370 @@ export const useInviteAccountant = <TError = ErrorType<ErrorResponse>,
       > => {
       return useMutation(getInviteAccountantMutationOptions(options));
     }
+
+export const getListGroupsUrl = () => {
+
+
+
+
+  return `/api/groups`
+}
+
+/**
+ * @summary Groups visible to the caller via org memberships
+ */
+export const listGroups = async ( options?: RequestInit): Promise<GroupList> => {
+
+  return customFetch<GroupList>(getListGroupsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListGroupsQueryKey = () => {
+    return [
+    `/api/groups`
+    ] as const;
+    }
+
+
+export const getListGroupsQueryOptions = <TData = Awaited<ReturnType<typeof listGroups>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listGroups>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListGroupsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listGroups>>> = ({ signal }) => listGroups({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listGroups>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListGroupsQueryResult = NonNullable<Awaited<ReturnType<typeof listGroups>>>
+export type ListGroupsQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Groups visible to the caller via org memberships
+ */
+
+export function useListGroups<TData = Awaited<ReturnType<typeof listGroups>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listGroups>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListGroupsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateGroupUrl = () => {
+
+
+
+
+  return `/api/groups`
+}
+
+/**
+ * @summary Create a parent group
+ */
+export const createGroup = async (createGroupRequest: CreateGroupRequest, options?: RequestInit): Promise<Group> => {
+
+  return customFetch<Group>(getCreateGroupUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createGroupRequest)
+  }
+);}
+
+
+
+
+
+export const getCreateGroupMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createGroup>>, TError,{data: BodyType<CreateGroupRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createGroup>>, TError,{data: BodyType<CreateGroupRequest>}, TContext> => {
+
+const mutationKey = ['createGroup'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createGroup>>, {data: BodyType<CreateGroupRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createGroup(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateGroupMutationResult = NonNullable<Awaited<ReturnType<typeof createGroup>>>
+    export type CreateGroupMutationBody = BodyType<CreateGroupRequest>
+    export type CreateGroupMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Create a parent group
+ */
+export const useCreateGroup = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createGroup>>, TError,{data: BodyType<CreateGroupRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createGroup>>,
+        TError,
+        {data: BodyType<CreateGroupRequest>},
+        TContext
+      > => {
+      return useMutation(getCreateGroupMutationOptions(options));
+    }
+
+export const getAddOrgToGroupUrl = (groupId: string,) => {
+
+
+
+
+  return `/api/groups/${groupId}/orgs`
+}
+
+/**
+ * @summary Add an org to a group (requires members.manage on the org)
+ */
+export const addOrgToGroup = async (groupId: string,
+    addOrgToGroupRequest: AddOrgToGroupRequest, options?: RequestInit): Promise<OkResponse> => {
+
+  return customFetch<OkResponse>(getAddOrgToGroupUrl(groupId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(addOrgToGroupRequest)
+  }
+);}
+
+
+
+
+
+export const getAddOrgToGroupMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addOrgToGroup>>, TError,{groupId: string;data: BodyType<AddOrgToGroupRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof addOrgToGroup>>, TError,{groupId: string;data: BodyType<AddOrgToGroupRequest>}, TContext> => {
+
+const mutationKey = ['addOrgToGroup'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addOrgToGroup>>, {groupId: string;data: BodyType<AddOrgToGroupRequest>}> = (props) => {
+          const {groupId,data} = props ?? {};
+
+          return  addOrgToGroup(groupId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AddOrgToGroupMutationResult = NonNullable<Awaited<ReturnType<typeof addOrgToGroup>>>
+    export type AddOrgToGroupMutationBody = BodyType<AddOrgToGroupRequest>
+    export type AddOrgToGroupMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Add an org to a group (requires members.manage on the org)
+ */
+export const useAddOrgToGroup = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addOrgToGroup>>, TError,{groupId: string;data: BodyType<AddOrgToGroupRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof addOrgToGroup>>,
+        TError,
+        {groupId: string;data: BodyType<AddOrgToGroupRequest>},
+        TContext
+      > => {
+      return useMutation(getAddOrgToGroupMutationOptions(options));
+    }
+
+export const getGetConsolidatedTrialBalanceReportUrl = (groupId: string,) => {
+
+
+
+
+  return `/api/groups/${groupId}/consolidated/trial-balance`
+}
+
+/**
+ * @summary Consolidated trial balance (requires reports.read on every member org)
+ */
+export const getConsolidatedTrialBalanceReport = async (groupId: string, options?: RequestInit): Promise<ConsolidatedTrialBalance> => {
+
+  return customFetch<ConsolidatedTrialBalance>(getGetConsolidatedTrialBalanceReportUrl(groupId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConsolidatedTrialBalanceReportQueryKey = (groupId: string,) => {
+    return [
+    `/api/groups/${groupId}/consolidated/trial-balance`
+    ] as const;
+    }
+
+
+export const getGetConsolidatedTrialBalanceReportQueryOptions = <TData = Awaited<ReturnType<typeof getConsolidatedTrialBalanceReport>>, TError = ErrorType<ErrorResponse>>(groupId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsolidatedTrialBalanceReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConsolidatedTrialBalanceReportQueryKey(groupId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsolidatedTrialBalanceReport>>> = ({ signal }) => getConsolidatedTrialBalanceReport(groupId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: groupId !== null && groupId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsolidatedTrialBalanceReport>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConsolidatedTrialBalanceReportQueryResult = NonNullable<Awaited<ReturnType<typeof getConsolidatedTrialBalanceReport>>>
+export type GetConsolidatedTrialBalanceReportQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Consolidated trial balance (requires reports.read on every member org)
+ */
+
+export function useGetConsolidatedTrialBalanceReport<TData = Awaited<ReturnType<typeof getConsolidatedTrialBalanceReport>>, TError = ErrorType<ErrorResponse>>(
+ groupId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsolidatedTrialBalanceReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConsolidatedTrialBalanceReportQueryOptions(groupId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetConsolidatedProfitAndLossReportUrl = (groupId: string,) => {
+
+
+
+
+  return `/api/groups/${groupId}/consolidated/profit-and-loss`
+}
+
+/**
+ * @summary Consolidated P&L (requires reports.read on every member org)
+ */
+export const getConsolidatedProfitAndLossReport = async (groupId: string, options?: RequestInit): Promise<ConsolidatedProfitAndLoss> => {
+
+  return customFetch<ConsolidatedProfitAndLoss>(getGetConsolidatedProfitAndLossReportUrl(groupId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConsolidatedProfitAndLossReportQueryKey = (groupId: string,) => {
+    return [
+    `/api/groups/${groupId}/consolidated/profit-and-loss`
+    ] as const;
+    }
+
+
+export const getGetConsolidatedProfitAndLossReportQueryOptions = <TData = Awaited<ReturnType<typeof getConsolidatedProfitAndLossReport>>, TError = ErrorType<ErrorResponse>>(groupId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsolidatedProfitAndLossReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConsolidatedProfitAndLossReportQueryKey(groupId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsolidatedProfitAndLossReport>>> = ({ signal }) => getConsolidatedProfitAndLossReport(groupId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: groupId !== null && groupId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsolidatedProfitAndLossReport>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConsolidatedProfitAndLossReportQueryResult = NonNullable<Awaited<ReturnType<typeof getConsolidatedProfitAndLossReport>>>
+export type GetConsolidatedProfitAndLossReportQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Consolidated P&L (requires reports.read on every member org)
+ */
+
+export function useGetConsolidatedProfitAndLossReport<TData = Awaited<ReturnType<typeof getConsolidatedProfitAndLossReport>>, TError = ErrorType<ErrorResponse>>(
+ groupId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsolidatedProfitAndLossReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConsolidatedProfitAndLossReportQueryOptions(groupId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetConsolidatedBalanceSheetReportUrl = (groupId: string,) => {
+
+
+
+
+  return `/api/groups/${groupId}/consolidated/balance-sheet`
+}
+
+/**
+ * @summary Consolidated balance sheet (requires reports.read on every member org)
+ */
+export const getConsolidatedBalanceSheetReport = async (groupId: string, options?: RequestInit): Promise<ConsolidatedBalanceSheet> => {
+
+  return customFetch<ConsolidatedBalanceSheet>(getGetConsolidatedBalanceSheetReportUrl(groupId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConsolidatedBalanceSheetReportQueryKey = (groupId: string,) => {
+    return [
+    `/api/groups/${groupId}/consolidated/balance-sheet`
+    ] as const;
+    }
+
+
+export const getGetConsolidatedBalanceSheetReportQueryOptions = <TData = Awaited<ReturnType<typeof getConsolidatedBalanceSheetReport>>, TError = ErrorType<ErrorResponse>>(groupId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsolidatedBalanceSheetReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConsolidatedBalanceSheetReportQueryKey(groupId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsolidatedBalanceSheetReport>>> = ({ signal }) => getConsolidatedBalanceSheetReport(groupId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: groupId !== null && groupId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsolidatedBalanceSheetReport>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConsolidatedBalanceSheetReportQueryResult = NonNullable<Awaited<ReturnType<typeof getConsolidatedBalanceSheetReport>>>
+export type GetConsolidatedBalanceSheetReportQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Consolidated balance sheet (requires reports.read on every member org)
+ */
+
+export function useGetConsolidatedBalanceSheetReport<TData = Awaited<ReturnType<typeof getConsolidatedBalanceSheetReport>>, TError = ErrorType<ErrorResponse>>(
+ groupId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsolidatedBalanceSheetReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConsolidatedBalanceSheetReportQueryOptions(groupId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListOrgApprovalsUrl = (orgId: string,
+    params?: ListOrgApprovalsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/orgs/${orgId}/approvals?${stringifiedParams}` : `/api/orgs/${orgId}/approvals`
+}
+
+/**
+ * @summary List approvals for an org, newest first
+ */
+export const listOrgApprovals = async (orgId: string,
+    params?: ListOrgApprovalsParams, options?: RequestInit): Promise<ApprovalList> => {
+
+  return customFetch<ApprovalList>(getListOrgApprovalsUrl(orgId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListOrgApprovalsQueryKey = (orgId: string,
+    params?: ListOrgApprovalsParams,) => {
+    return [
+    `/api/orgs/${orgId}/approvals`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListOrgApprovalsQueryOptions = <TData = Awaited<ReturnType<typeof listOrgApprovals>>, TError = ErrorType<ErrorResponse>>(orgId: string,
+    params?: ListOrgApprovalsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOrgApprovals>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOrgApprovalsQueryKey(orgId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOrgApprovals>>> = ({ signal }) => listOrgApprovals(orgId,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listOrgApprovals>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListOrgApprovalsQueryResult = NonNullable<Awaited<ReturnType<typeof listOrgApprovals>>>
+export type ListOrgApprovalsQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List approvals for an org, newest first
+ */
+
+export function useListOrgApprovals<TData = Awaited<ReturnType<typeof listOrgApprovals>>, TError = ErrorType<ErrorResponse>>(
+ orgId: string,
+    params?: ListOrgApprovalsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOrgApprovals>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListOrgApprovalsQueryOptions(orgId,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getDecideOrgApprovalUrl = (orgId: string,
+    approvalId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/approvals/${approvalId}/decide`
+}
+
+/**
+ * @summary Approve or reject a pending approval (requires members.manage)
+ */
+export const decideOrgApproval = async (orgId: string,
+    approvalId: string,
+    decideApprovalRequest: DecideApprovalRequest, options?: RequestInit): Promise<Approval> => {
+
+  return customFetch<Approval>(getDecideOrgApprovalUrl(orgId,approvalId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(decideApprovalRequest)
+  }
+);}
+
+
+
+
+
+export const getDecideOrgApprovalMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof decideOrgApproval>>, TError,{orgId: string;approvalId: string;data: BodyType<DecideApprovalRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof decideOrgApproval>>, TError,{orgId: string;approvalId: string;data: BodyType<DecideApprovalRequest>}, TContext> => {
+
+const mutationKey = ['decideOrgApproval'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof decideOrgApproval>>, {orgId: string;approvalId: string;data: BodyType<DecideApprovalRequest>}> = (props) => {
+          const {orgId,approvalId,data} = props ?? {};
+
+          return  decideOrgApproval(orgId,approvalId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DecideOrgApprovalMutationResult = NonNullable<Awaited<ReturnType<typeof decideOrgApproval>>>
+    export type DecideOrgApprovalMutationBody = BodyType<DecideApprovalRequest>
+    export type DecideOrgApprovalMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Approve or reject a pending approval (requires members.manage)
+ */
+export const useDecideOrgApproval = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof decideOrgApproval>>, TError,{orgId: string;approvalId: string;data: BodyType<DecideApprovalRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof decideOrgApproval>>,
+        TError,
+        {orgId: string;approvalId: string;data: BodyType<DecideApprovalRequest>},
+        TContext
+      > => {
+      return useMutation(getDecideOrgApprovalMutationOptions(options));
+    }
+
+export const getGetApprovalAuditUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/approvals/audit`
+}
+
+/**
+ * @summary Audit trail for approvals and approval rules
+ */
+export const getApprovalAudit = async (orgId: string, options?: RequestInit): Promise<ApprovalAuditList> => {
+
+  return customFetch<ApprovalAuditList>(getGetApprovalAuditUrl(orgId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetApprovalAuditQueryKey = (orgId: string,) => {
+    return [
+    `/api/orgs/${orgId}/approvals/audit`
+    ] as const;
+    }
+
+
+export const getGetApprovalAuditQueryOptions = <TData = Awaited<ReturnType<typeof getApprovalAudit>>, TError = ErrorType<ErrorResponse>>(orgId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getApprovalAudit>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetApprovalAuditQueryKey(orgId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getApprovalAudit>>> = ({ signal }) => getApprovalAudit(orgId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getApprovalAudit>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetApprovalAuditQueryResult = NonNullable<Awaited<ReturnType<typeof getApprovalAudit>>>
+export type GetApprovalAuditQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Audit trail for approvals and approval rules
+ */
+
+export function useGetApprovalAudit<TData = Awaited<ReturnType<typeof getApprovalAudit>>, TError = ErrorType<ErrorResponse>>(
+ orgId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getApprovalAudit>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetApprovalAuditQueryOptions(orgId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListApprovalRulesUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/approval-rules`
+}
+
+/**
+ * @summary List approval rules for an org
+ */
+export const listApprovalRules = async (orgId: string, options?: RequestInit): Promise<ApprovalRuleList> => {
+
+  return customFetch<ApprovalRuleList>(getListApprovalRulesUrl(orgId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListApprovalRulesQueryKey = (orgId: string,) => {
+    return [
+    `/api/orgs/${orgId}/approval-rules`
+    ] as const;
+    }
+
+
+export const getListApprovalRulesQueryOptions = <TData = Awaited<ReturnType<typeof listApprovalRules>>, TError = ErrorType<ErrorResponse>>(orgId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listApprovalRules>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListApprovalRulesQueryKey(orgId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listApprovalRules>>> = ({ signal }) => listApprovalRules(orgId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listApprovalRules>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListApprovalRulesQueryResult = NonNullable<Awaited<ReturnType<typeof listApprovalRules>>>
+export type ListApprovalRulesQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List approval rules for an org
+ */
+
+export function useListApprovalRules<TData = Awaited<ReturnType<typeof listApprovalRules>>, TError = ErrorType<ErrorResponse>>(
+ orgId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listApprovalRules>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListApprovalRulesQueryOptions(orgId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateOrgApprovalRuleUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/approval-rules`
+}
+
+/**
+ * @summary Create an approval rule (requires members.manage)
+ */
+export const createOrgApprovalRule = async (orgId: string,
+    createApprovalRuleRequest: CreateApprovalRuleRequest, options?: RequestInit): Promise<ApprovalRule> => {
+
+  return customFetch<ApprovalRule>(getCreateOrgApprovalRuleUrl(orgId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createApprovalRuleRequest)
+  }
+);}
+
+
+
+
+
+export const getCreateOrgApprovalRuleMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrgApprovalRule>>, TError,{orgId: string;data: BodyType<CreateApprovalRuleRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createOrgApprovalRule>>, TError,{orgId: string;data: BodyType<CreateApprovalRuleRequest>}, TContext> => {
+
+const mutationKey = ['createOrgApprovalRule'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createOrgApprovalRule>>, {orgId: string;data: BodyType<CreateApprovalRuleRequest>}> = (props) => {
+          const {orgId,data} = props ?? {};
+
+          return  createOrgApprovalRule(orgId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateOrgApprovalRuleMutationResult = NonNullable<Awaited<ReturnType<typeof createOrgApprovalRule>>>
+    export type CreateOrgApprovalRuleMutationBody = BodyType<CreateApprovalRuleRequest>
+    export type CreateOrgApprovalRuleMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Create an approval rule (requires members.manage)
+ */
+export const useCreateOrgApprovalRule = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrgApprovalRule>>, TError,{orgId: string;data: BodyType<CreateApprovalRuleRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createOrgApprovalRule>>,
+        TError,
+        {orgId: string;data: BodyType<CreateApprovalRuleRequest>},
+        TContext
+      > => {
+      return useMutation(getCreateOrgApprovalRuleMutationOptions(options));
+    }
+
+export const getListOrgDimensionsUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/dimensions`
+}
+
+/**
+ * @summary List reporting dimensions for an org
+ */
+export const listOrgDimensions = async (orgId: string, options?: RequestInit): Promise<DimensionList> => {
+
+  return customFetch<DimensionList>(getListOrgDimensionsUrl(orgId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListOrgDimensionsQueryKey = (orgId: string,) => {
+    return [
+    `/api/orgs/${orgId}/dimensions`
+    ] as const;
+    }
+
+
+export const getListOrgDimensionsQueryOptions = <TData = Awaited<ReturnType<typeof listOrgDimensions>>, TError = ErrorType<ErrorResponse>>(orgId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOrgDimensions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOrgDimensionsQueryKey(orgId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOrgDimensions>>> = ({ signal }) => listOrgDimensions(orgId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listOrgDimensions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListOrgDimensionsQueryResult = NonNullable<Awaited<ReturnType<typeof listOrgDimensions>>>
+export type ListOrgDimensionsQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List reporting dimensions for an org
+ */
+
+export function useListOrgDimensions<TData = Awaited<ReturnType<typeof listOrgDimensions>>, TError = ErrorType<ErrorResponse>>(
+ orgId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOrgDimensions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListOrgDimensionsQueryOptions(orgId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateOrgDimensionUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/dimensions`
+}
+
+/**
+ * @summary Create a reporting dimension (idempotent per org/type/name)
+ */
+export const createOrgDimension = async (orgId: string,
+    createDimensionRequest: CreateDimensionRequest, options?: RequestInit): Promise<Dimension> => {
+
+  return customFetch<Dimension>(getCreateOrgDimensionUrl(orgId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createDimensionRequest)
+  }
+);}
+
+
+
+
+
+export const getCreateOrgDimensionMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrgDimension>>, TError,{orgId: string;data: BodyType<CreateDimensionRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createOrgDimension>>, TError,{orgId: string;data: BodyType<CreateDimensionRequest>}, TContext> => {
+
+const mutationKey = ['createOrgDimension'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createOrgDimension>>, {orgId: string;data: BodyType<CreateDimensionRequest>}> = (props) => {
+          const {orgId,data} = props ?? {};
+
+          return  createOrgDimension(orgId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateOrgDimensionMutationResult = NonNullable<Awaited<ReturnType<typeof createOrgDimension>>>
+    export type CreateOrgDimensionMutationBody = BodyType<CreateDimensionRequest>
+    export type CreateOrgDimensionMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Create a reporting dimension (idempotent per org/type/name)
+ */
+export const useCreateOrgDimension = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrgDimension>>, TError,{orgId: string;data: BodyType<CreateDimensionRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createOrgDimension>>,
+        TError,
+        {orgId: string;data: BodyType<CreateDimensionRequest>},
+        TContext
+      > => {
+      return useMutation(getCreateOrgDimensionMutationOptions(options));
+    }
+
+export const getRunCustomReportUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/report`
+}
+
+/**
+ * @summary Run a custom report scoped to this org or a group it belongs to
+ */
+export const runCustomReport = async (orgId: string,
+    runReportRequest: RunReportRequest, options?: RequestInit): Promise<CustomReportResult> => {
+
+  return customFetch<CustomReportResult>(getRunCustomReportUrl(orgId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(runReportRequest)
+  }
+);}
+
+
+
+
+
+export const getRunCustomReportMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runCustomReport>>, TError,{orgId: string;data: BodyType<RunReportRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof runCustomReport>>, TError,{orgId: string;data: BodyType<RunReportRequest>}, TContext> => {
+
+const mutationKey = ['runCustomReport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof runCustomReport>>, {orgId: string;data: BodyType<RunReportRequest>}> = (props) => {
+          const {orgId,data} = props ?? {};
+
+          return  runCustomReport(orgId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RunCustomReportMutationResult = NonNullable<Awaited<ReturnType<typeof runCustomReport>>>
+    export type RunCustomReportMutationBody = BodyType<RunReportRequest>
+    export type RunCustomReportMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Run a custom report scoped to this org or a group it belongs to
+ */
+export const useRunCustomReport = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runCustomReport>>, TError,{orgId: string;data: BodyType<RunReportRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof runCustomReport>>,
+        TError,
+        {orgId: string;data: BodyType<RunReportRequest>},
+        TContext
+      > => {
+      return useMutation(getRunCustomReportMutationOptions(options));
+    }
+
+export const getListOrgBudgetsUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/budgets`
+}
+
+/**
+ * @summary List budgets for an org
+ */
+export const listOrgBudgets = async (orgId: string, options?: RequestInit): Promise<BudgetList> => {
+
+  return customFetch<BudgetList>(getListOrgBudgetsUrl(orgId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListOrgBudgetsQueryKey = (orgId: string,) => {
+    return [
+    `/api/orgs/${orgId}/budgets`
+    ] as const;
+    }
+
+
+export const getListOrgBudgetsQueryOptions = <TData = Awaited<ReturnType<typeof listOrgBudgets>>, TError = ErrorType<ErrorResponse>>(orgId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOrgBudgets>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOrgBudgetsQueryKey(orgId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOrgBudgets>>> = ({ signal }) => listOrgBudgets(orgId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listOrgBudgets>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListOrgBudgetsQueryResult = NonNullable<Awaited<ReturnType<typeof listOrgBudgets>>>
+export type ListOrgBudgetsQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List budgets for an org
+ */
+
+export function useListOrgBudgets<TData = Awaited<ReturnType<typeof listOrgBudgets>>, TError = ErrorType<ErrorResponse>>(
+ orgId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOrgBudgets>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListOrgBudgetsQueryOptions(orgId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateOrgBudgetUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/budgets`
+}
+
+/**
+ * @summary Create a budget
+ */
+export const createOrgBudget = async (orgId: string,
+    createBudgetRequest: CreateBudgetRequest, options?: RequestInit): Promise<Budget> => {
+
+  return customFetch<Budget>(getCreateOrgBudgetUrl(orgId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createBudgetRequest)
+  }
+);}
+
+
+
+
+
+export const getCreateOrgBudgetMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrgBudget>>, TError,{orgId: string;data: BodyType<CreateBudgetRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createOrgBudget>>, TError,{orgId: string;data: BodyType<CreateBudgetRequest>}, TContext> => {
+
+const mutationKey = ['createOrgBudget'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createOrgBudget>>, {orgId: string;data: BodyType<CreateBudgetRequest>}> = (props) => {
+          const {orgId,data} = props ?? {};
+
+          return  createOrgBudget(orgId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateOrgBudgetMutationResult = NonNullable<Awaited<ReturnType<typeof createOrgBudget>>>
+    export type CreateOrgBudgetMutationBody = BodyType<CreateBudgetRequest>
+    export type CreateOrgBudgetMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Create a budget
+ */
+export const useCreateOrgBudget = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrgBudget>>, TError,{orgId: string;data: BodyType<CreateBudgetRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createOrgBudget>>,
+        TError,
+        {orgId: string;data: BodyType<CreateBudgetRequest>},
+        TContext
+      > => {
+      return useMutation(getCreateOrgBudgetMutationOptions(options));
+    }
+
+export const getSetOrgBudgetLineUrl = (orgId: string,
+    budgetId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/budgets/${budgetId}/lines`
+}
+
+/**
+ * @summary Set the planned amount for an account (idempotent per account)
+ */
+export const setOrgBudgetLine = async (orgId: string,
+    budgetId: string,
+    setBudgetLineRequest: SetBudgetLineRequest, options?: RequestInit): Promise<BudgetLine> => {
+
+  return customFetch<BudgetLine>(getSetOrgBudgetLineUrl(orgId,budgetId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(setBudgetLineRequest)
+  }
+);}
+
+
+
+
+
+export const getSetOrgBudgetLineMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setOrgBudgetLine>>, TError,{orgId: string;budgetId: string;data: BodyType<SetBudgetLineRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setOrgBudgetLine>>, TError,{orgId: string;budgetId: string;data: BodyType<SetBudgetLineRequest>}, TContext> => {
+
+const mutationKey = ['setOrgBudgetLine'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setOrgBudgetLine>>, {orgId: string;budgetId: string;data: BodyType<SetBudgetLineRequest>}> = (props) => {
+          const {orgId,budgetId,data} = props ?? {};
+
+          return  setOrgBudgetLine(orgId,budgetId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetOrgBudgetLineMutationResult = NonNullable<Awaited<ReturnType<typeof setOrgBudgetLine>>>
+    export type SetOrgBudgetLineMutationBody = BodyType<SetBudgetLineRequest>
+    export type SetOrgBudgetLineMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Set the planned amount for an account (idempotent per account)
+ */
+export const useSetOrgBudgetLine = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setOrgBudgetLine>>, TError,{orgId: string;budgetId: string;data: BodyType<SetBudgetLineRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setOrgBudgetLine>>,
+        TError,
+        {orgId: string;budgetId: string;data: BodyType<SetBudgetLineRequest>},
+        TContext
+      > => {
+      return useMutation(getSetOrgBudgetLineMutationOptions(options));
+    }
+
+export const getGetBudgetVsActualReportUrl = (orgId: string,
+    budgetId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/budgets/${budgetId}/vs-actual`
+}
+
+/**
+ * @summary Budget vs actual over the budget period
+ */
+export const getBudgetVsActualReport = async (orgId: string,
+    budgetId: string, options?: RequestInit): Promise<BudgetVsActualReport> => {
+
+  return customFetch<BudgetVsActualReport>(getGetBudgetVsActualReportUrl(orgId,budgetId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetBudgetVsActualReportQueryKey = (orgId: string,
+    budgetId: string,) => {
+    return [
+    `/api/orgs/${orgId}/budgets/${budgetId}/vs-actual`
+    ] as const;
+    }
+
+
+export const getGetBudgetVsActualReportQueryOptions = <TData = Awaited<ReturnType<typeof getBudgetVsActualReport>>, TError = ErrorType<ErrorResponse>>(orgId: string,
+    budgetId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBudgetVsActualReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetBudgetVsActualReportQueryKey(orgId,budgetId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBudgetVsActualReport>>> = ({ signal }) => getBudgetVsActualReport(orgId,budgetId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined && budgetId !== null && budgetId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBudgetVsActualReport>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetBudgetVsActualReportQueryResult = NonNullable<Awaited<ReturnType<typeof getBudgetVsActualReport>>>
+export type GetBudgetVsActualReportQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Budget vs actual over the budget period
+ */
+
+export function useGetBudgetVsActualReport<TData = Awaited<ReturnType<typeof getBudgetVsActualReport>>, TError = ErrorType<ErrorResponse>>(
+ orgId: string,
+    budgetId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBudgetVsActualReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetBudgetVsActualReportQueryOptions(orgId,budgetId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 

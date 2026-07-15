@@ -1275,3 +1275,421 @@ export const InviteAccountantResponse = zod.object({
 })
 
 
+/**
+ * @summary Groups visible to the caller via org memberships
+ */
+export const ListGroupsResponse = zod.object({
+  "groups": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "orgs": zod.array(zod.object({
+  "orgId": zod.string(),
+  "name": zod.string()
+}))
+}))
+})
+
+
+/**
+ * @summary Create a parent group
+ */
+
+
+
+export const CreateGroupBody = zod.object({
+  "name": zod.string().min(1)
+})
+
+export const CreateGroupResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+})
+
+
+/**
+ * @summary Add an org to a group (requires members.manage on the org)
+ */
+export const AddOrgToGroupParams = zod.object({
+  "groupId": zod.coerce.string().describe('The consolidation group id.')
+})
+
+export const AddOrgToGroupBody = zod.object({
+  "orgId": zod.string()
+})
+
+export const AddOrgToGroupResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
+ * @summary Consolidated trial balance (requires reports.read on every member org)
+ */
+export const GetConsolidatedTrialBalanceReportParams = zod.object({
+  "groupId": zod.coerce.string().describe('The consolidation group id.')
+})
+
+export const GetConsolidatedTrialBalanceReportResponse = zod.object({
+  "groupId": zod.string(),
+  "entities": zod.array(zod.object({
+  "orgId": zod.string(),
+  "name": zod.string()
+})),
+  "combined": zod.array(zod.object({
+  "code": zod.string(),
+  "name": zod.string(),
+  "type": zod.string(),
+  "normalBalance": zod.string(),
+  "debit": zod.string(),
+  "credit": zod.string(),
+  "balance": zod.string()
+})),
+  "eliminations": zod.array(zod.object({
+  "code": zod.string(),
+  "name": zod.string(),
+  "type": zod.string(),
+  "normalBalance": zod.string(),
+  "debit": zod.string(),
+  "credit": zod.string(),
+  "balance": zod.string()
+})),
+  "consolidated": zod.array(zod.object({
+  "code": zod.string(),
+  "name": zod.string(),
+  "type": zod.string(),
+  "normalBalance": zod.string(),
+  "debit": zod.string(),
+  "credit": zod.string(),
+  "balance": zod.string()
+})),
+  "totalDebit": zod.string(),
+  "totalCredit": zod.string(),
+  "difference": zod.string()
+})
+
+
+/**
+ * @summary Consolidated P&L (requires reports.read on every member org)
+ */
+export const GetConsolidatedProfitAndLossReportParams = zod.object({
+  "groupId": zod.coerce.string().describe('The consolidation group id.')
+})
+
+export const GetConsolidatedProfitAndLossReportResponse = zod.object({
+  "groupId": zod.string(),
+  "entities": zod.array(zod.object({
+  "orgId": zod.string(),
+  "name": zod.string()
+})),
+  "revenue": zod.string(),
+  "expenses": zod.string(),
+  "netIncome": zod.string()
+})
+
+
+/**
+ * @summary Consolidated balance sheet (requires reports.read on every member org)
+ */
+export const GetConsolidatedBalanceSheetReportParams = zod.object({
+  "groupId": zod.coerce.string().describe('The consolidation group id.')
+})
+
+export const GetConsolidatedBalanceSheetReportResponse = zod.object({
+  "groupId": zod.string(),
+  "entities": zod.array(zod.object({
+  "orgId": zod.string(),
+  "name": zod.string()
+})),
+  "assets": zod.string(),
+  "liabilities": zod.string(),
+  "equity": zod.string(),
+  "netIncome": zod.string(),
+  "equityWithIncome": zod.string(),
+  "balances": zod.boolean()
+})
+
+
+/**
+ * @summary List approvals for an org, newest first
+ */
+export const ListOrgApprovalsParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+export const ListOrgApprovalsQueryParams = zod.object({
+  "status": zod.enum(['pending', 'approved', 'rejected']).optional()
+})
+
+export const ListOrgApprovalsResponse = zod.object({
+  "approvals": zod.array(zod.object({
+  "id": zod.string(),
+  "entityType": zod.string(),
+  "entityId": zod.string(),
+  "amount": zod.string(),
+  "status": zod.enum(['pending', 'approved', 'rejected']),
+  "note": zod.string().nullish(),
+  "requestedBy": zod.string().nullish(),
+  "decidedBy": zod.string().nullish(),
+  "decidedAt": zod.string().nullish(),
+  "createdAt": zod.string()
+}))
+})
+
+
+/**
+ * @summary Approve or reject a pending approval (requires members.manage)
+ */
+export const DecideOrgApprovalParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.'),
+  "approvalId": zod.coerce.string()
+})
+
+export const DecideOrgApprovalBody = zod.object({
+  "decision": zod.enum(['approved', 'rejected']),
+  "note": zod.string().optional()
+})
+
+export const DecideOrgApprovalResponse = zod.object({
+  "id": zod.string(),
+  "entityType": zod.string(),
+  "entityId": zod.string(),
+  "amount": zod.string(),
+  "status": zod.enum(['pending', 'approved', 'rejected']),
+  "note": zod.string().nullish(),
+  "requestedBy": zod.string().nullish(),
+  "decidedBy": zod.string().nullish(),
+  "decidedAt": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Audit trail for approvals and approval rules
+ */
+export const GetApprovalAuditParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+export const GetApprovalAuditResponse = zod.object({
+  "events": zod.array(zod.object({
+  "id": zod.string(),
+  "actor": zod.string(),
+  "action": zod.string(),
+  "entity": zod.string(),
+  "entityId": zod.string(),
+  "createdAt": zod.string()
+}))
+})
+
+
+/**
+ * @summary List approval rules for an org
+ */
+export const ListApprovalRulesParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+export const ListApprovalRulesResponse = zod.object({
+  "rules": zod.array(zod.object({
+  "id": zod.string(),
+  "entityType": zod.string(),
+  "threshold": zod.string(),
+  "active": zod.boolean(),
+  "createdAt": zod.string()
+}))
+})
+
+
+/**
+ * @summary Create an approval rule (requires members.manage)
+ */
+export const CreateOrgApprovalRuleParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+
+
+
+
+export const CreateOrgApprovalRuleBody = zod.object({
+  "entityType": zod.string().min(1),
+  "threshold": zod.string().min(1),
+  "active": zod.boolean().optional()
+})
+
+export const CreateOrgApprovalRuleResponse = zod.object({
+  "id": zod.string(),
+  "entityType": zod.string(),
+  "threshold": zod.string(),
+  "active": zod.boolean(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary List reporting dimensions for an org
+ */
+export const ListOrgDimensionsParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+export const ListOrgDimensionsResponse = zod.object({
+  "dimensions": zod.array(zod.object({
+  "id": zod.string(),
+  "type": zod.enum(['class', 'department', 'location']),
+  "name": zod.string()
+}))
+})
+
+
+/**
+ * @summary Create a reporting dimension (idempotent per org/type/name)
+ */
+export const CreateOrgDimensionParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+
+
+
+export const CreateOrgDimensionBody = zod.object({
+  "type": zod.enum(['class', 'department', 'location']),
+  "name": zod.string().min(1)
+})
+
+export const CreateOrgDimensionResponse = zod.object({
+  "id": zod.string(),
+  "type": zod.enum(['class', 'department', 'location']),
+  "name": zod.string()
+})
+
+
+/**
+ * @summary Run a custom report scoped to this org or a group it belongs to
+ */
+export const RunCustomReportParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+
+
+
+export const RunCustomReportBody = zod.object({
+  "groupId": zod.string().nullish(),
+  "groupBy": zod.array(zod.enum(['account', 'accountType', 'class', 'department', 'location', 'entity'])).min(1),
+  "filters": zod.object({
+  "dateFrom": zod.string().optional(),
+  "dateTo": zod.string().optional(),
+  "accountTypes": zod.array(zod.enum(['asset', 'liability', 'equity', 'revenue', 'expense'])).optional(),
+  "classIds": zod.array(zod.string()).optional(),
+  "departmentIds": zod.array(zod.string()).optional(),
+  "locationIds": zod.array(zod.string()).optional()
+}).optional()
+})
+
+export const RunCustomReportResponse = zod.object({
+  "rows": zod.array(zod.object({
+  "keys": zod.record(zod.string(), zod.string()),
+  "debit": zod.string(),
+  "credit": zod.string(),
+  "balance": zod.string()
+})),
+  "totalDebit": zod.string(),
+  "totalCredit": zod.string()
+})
+
+
+/**
+ * @summary List budgets for an org
+ */
+export const ListOrgBudgetsParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+export const ListOrgBudgetsResponse = zod.object({
+  "budgets": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "periodStart": zod.string(),
+  "periodEnd": zod.string()
+}))
+})
+
+
+/**
+ * @summary Create a budget
+ */
+export const CreateOrgBudgetParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+
+
+
+export const CreateOrgBudgetBody = zod.object({
+  "name": zod.string().min(1),
+  "periodStart": zod.string(),
+  "periodEnd": zod.string()
+})
+
+export const CreateOrgBudgetResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "periodStart": zod.string(),
+  "periodEnd": zod.string()
+})
+
+
+/**
+ * @summary Set the planned amount for an account (idempotent per account)
+ */
+export const SetOrgBudgetLineParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.'),
+  "budgetId": zod.coerce.string()
+})
+
+
+
+
+export const SetOrgBudgetLineBody = zod.object({
+  "accountId": zod.string(),
+  "amount": zod.string().min(1)
+})
+
+export const SetOrgBudgetLineResponse = zod.object({
+  "id": zod.string(),
+  "accountId": zod.string(),
+  "amount": zod.string()
+})
+
+
+/**
+ * @summary Budget vs actual over the budget period
+ */
+export const GetBudgetVsActualReportParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.'),
+  "budgetId": zod.coerce.string()
+})
+
+export const GetBudgetVsActualReportResponse = zod.object({
+  "budget": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "periodStart": zod.string(),
+  "periodEnd": zod.string()
+}),
+  "rows": zod.array(zod.object({
+  "accountId": zod.string(),
+  "code": zod.string(),
+  "name": zod.string(),
+  "type": zod.string(),
+  "budgeted": zod.string(),
+  "actual": zod.string(),
+  "variance": zod.string()
+})),
+  "totalBudgeted": zod.string(),
+  "totalActual": zod.string(),
+  "totalVariance": zod.string()
+})
+
+

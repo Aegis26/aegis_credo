@@ -39,7 +39,11 @@ import {
   Users,
   UsersRound,
   Building,
-  Briefcase
+  Briefcase,
+  Network,
+  ShieldCheck,
+  SlidersHorizontal,
+  Wallet
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
@@ -76,6 +80,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     { name: "Team", href: "/team", icon: UsersRound },
   ];
 
+  const midMarketNavigation = [
+    { name: "Entities", href: "/entities", icon: Network },
+    { name: "Approvals", href: "/approvals", icon: ShieldCheck },
+    { name: "Report Builder", href: "/report-builder", icon: SlidersHorizontal },
+    { name: "Budgets", href: "/budgets", icon: Wallet },
+  ];
+
   const practiceNavigation = [
     { name: "Dashboard", href: "/practice", icon: Briefcase },
     { name: "Batch Reports", href: "/practice/batch", icon: LineChart },
@@ -105,6 +116,28 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
               isActive 
                 ? "bg-primary text-primary-foreground" 
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+          >
+            <item.icon className="w-4 h-4" />
+            {item.name}
+          </Link>
+        );
+      })}
+
+      <div className="px-3 mb-2 mt-6 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+        Multi-Entity
+      </div>
+      {midMarketNavigation.map((item) => {
+        const isActive = location === item.href;
+        return (
+          <Link
+            key={item.name}
+            href={item.href}
+            onClick={() => setMobileMenuOpen(false)}
+            className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              isActive
+                ? "bg-primary text-primary-foreground"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
             }`}
           >
