@@ -51,12 +51,42 @@ function csvField(field: string): string {
   return `"${field.replace(/"/g, '""')}"`;
 }
 
+/** Matches a plain decimal number (e.g. "-123.45", "0.00", "42") — the shape
+ * formatMoney and numeric cells produce. Such values are NEVER formulas. */
+const PLAIN_NUMBER = /^-?\d+(\.\d+)?$/;
+
+/**
+ * Neutralize CSV formula injection (OWASP): a STRING cell starting with
+ * = + @ tab or CR is prefixed with a single quote so Excel treats it as text.
+ * A leading "-" is only dangerous when the cell is NOT a plain number —
+ * money strings like "-123.45" pass through unchanged. Applies to CSV only;
+ * SpreadsheetML emits typed String cells that Excel never evaluates.
+ */
+function sanitizeCsvText(field: string): string {
+  if (field.length === 0) return field;
+  const first = field[0];
+  if (first === "=" || first === "+" || first === "@" || first === "\t" || first === "\r") {
+    return `'${field}`;
+  }
+  if (first === "-" && !PLAIN_NUMBER.test(field)) {
+    return `'${field}`;
+  }
+  return field;
+}
+
+/** CSV cell: numeric/bigint cells bypass sanitization entirely (they cannot
+ * be formulas); only string cells are checked. */
+function csvCell(cell: Cell): string {
+  if (isNumericCell(cell)) return cellToText(cell);
+  return csvField(sanitizeCsvText(cellToText(cell)));
+}
+
 /** Serialize a single sheet to an RFC-4180 CSV string (CRLF line endings). */
 export function toCsv(sheet: Sheet): string {
   const lines: string[] = [];
-  lines.push(sheet.columns.map(csvField).join(","));
+  lines.push(sheet.columns.map((c) => csvField(sanitizeCsvText(c))).join(","));
   for (const row of sheet.rows) {
-    lines.push(row.map((c) => csvField(cellToText(c))).join(","));
+    lines.push(row.map(csvCell).join(","));
   }
   return lines.join("\r\n");
 }
