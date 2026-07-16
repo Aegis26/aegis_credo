@@ -290,9 +290,8 @@ _Populate as you build — explicit user instructions worth remembering across s
   skipped by pattern — and footer patterns only apply when the amount cells are
   empty, so a real account that resembles a footer but carries a balance
   survives. Zero-balance accounts must never be filtered by "has no amounts".
-  Dev-only: every preview upload is captured to
-  `artifacts/api-server/import-uploads/` (gitignored) so a real export can be
-  promoted to a test fixture verbatim.
+  (The former dev-only upload-capture-to-disk helper was removed for security;
+  uploads are never written to disk.)
 
 - **TB adapter treats name-only rows as zero-balance ACCOUNTS, not section
   headers.** QuickBooks lists zero-balance accounts with blank amounts (e.g.
