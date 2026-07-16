@@ -1,5 +1,6 @@
 import type { Response } from "express";
 import { ZodError } from "zod";
+import { logger } from "./logger";
 import {
   ApprovalRequiredError,
   ForbiddenError,
@@ -102,6 +103,12 @@ export function sendLedgerError(res: Response, err: unknown): void {
     res.status(400).json({ error: message });
     return;
   }
-  const message = err instanceof Error ? err.message : "Internal error.";
-  res.status(500).json({ error: message });
+  // Unexpected error: NEVER echo err.message to the client — driver/SQL/SDK
+  // messages can leak constraint names, table names, or internal detail. Log
+  // the real error server-side and return a generic body.
+  const log = (res.req as { log?: { error: (obj: unknown, msg?: string) => void } })
+    .log;
+  if (log) log.error({ err }, "Unhandled error in request handler");
+  else logger.error({ err }, "Unhandled error in request handler");
+  res.status(500).json({ error: "Internal error." });
 }

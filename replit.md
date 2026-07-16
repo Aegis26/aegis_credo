@@ -12,7 +12,7 @@ A multi-tenant, double-entry ledger engine: schema, a balancing posting service,
 - `pnpm --filter @workspace/api-server run test` — run the API auth test suite (vitest + supertest)
 - `pnpm --filter @workspace/ledger run test` — run the ledger test suite
 - Required env: `DATABASE_URL` — Postgres connection string; `SESSION_SECRET` — session cookie signing secret (required in production)
-- Optional env: `AUTH_RATE_LIMIT_MAX` — max auth requests per IP per 15-min window (default 50); `ALLOW_PUBLIC_SIGNUP` — public signup is DISABLED unless this is exactly `"true"` (fail closed; unset/empty/`false`/`0`/anything else → 403)
+- Optional env: `AUTH_RATE_LIMIT_MAX` — max auth requests per IP per 15-min window (default 50); `API_RATE_LIMIT_MAX` — global /api cap per IP per 15-min window (default 1000); `HEAVY_RATE_LIMIT_MAX` — cap for expensive endpoints (import preview, batch export/report, custom report, consolidated statements; default 60); non-numeric values fall back to defaults; `ALLOW_PUBLIC_SIGNUP` — public signup is DISABLED unless this is exactly `"true"` (fail closed; unset/empty/`false`/`0`/anything else → 403)
 - Create a user (invite-only provisioning, shell-only — never an HTTP route): `cd artifacts/api-server && npx tsx src/create-user.ts <email> <password> [name]` (argon2id hash + audit-logged via the same signup service). For production users, run it with the production `DATABASE_URL` exported.
 
 ## Stack

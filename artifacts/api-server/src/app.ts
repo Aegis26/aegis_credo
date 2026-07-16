@@ -11,6 +11,10 @@ import { originCheck } from "./middlewares/origin-check";
 export interface AppOptions {
   /** Max auth requests per IP per window. Overridable for tests. */
   authRateLimitMax?: number;
+  /** Max requests per IP per window across the whole API. Overridable for tests. */
+  apiRateLimitMax?: number;
+  /** Max requests per IP per window on expensive endpoints. Overridable for tests. */
+  heavyRateLimitMax?: number;
 }
 
 export function createApp(options: AppOptions = {}): Express {
@@ -32,6 +36,8 @@ export function createApp(options: AppOptions = {}): Express {
   // Behind Replit's reverse proxy: trust one hop so req.ip and Secure cookies
   // reflect the real client and the TLS-terminated origin.
   app.set("trust proxy", 1);
+  // Don't advertise the framework.
+  app.disable("x-powered-by");
 
   app.use(
     pinoHttp({
@@ -81,7 +87,41 @@ export function createApp(options: AppOptions = {}): Express {
     }),
   );
 
-  app.use("/api", createRouter({ authRateLimitMax: options.authRateLimitMax }));
+  app.use(
+    "/api",
+    createRouter({
+      authRateLimitMax: options.authRateLimitMax,
+      apiRateLimitMax: options.apiRateLimitMax,
+      heavyRateLimitMax: options.heavyRateLimitMax,
+    }),
+  );
+
+  // Final safety net: anything that escapes route-level handling (most
+  // commonly a malformed-JSON body rejected by express.json) gets a uniform
+  // JSON body instead of Express's default HTML error page, and the real
+  // error is logged server-side. Never echo err.message to the client here.
+  app.use(
+    (
+      err: unknown,
+      req: express.Request,
+      res: express.Response,
+      next: express.NextFunction,
+    ) => {
+      if (res.headersSent) return next(err);
+      const isBodyParseError =
+        typeof err === "object" &&
+        err !== null &&
+        ((err as { type?: string }).type === "entity.parse.failed" ||
+          (err instanceof SyntaxError &&
+            (err as { status?: number }).status === 400));
+      req.log?.error({ err }, "Unhandled error reached final middleware");
+      if (isBodyParseError) {
+        res.status(400).json({ error: "Invalid request." });
+      } else {
+        res.status(500).json({ error: "Internal error." });
+      }
+    },
+  );
 
   return app;
 }
