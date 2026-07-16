@@ -5,6 +5,10 @@ export default defineConfig({
     conditions: ["workspace"],
   },
   test: {
+    // Most suites exercise flows that begin with a signup; the flag is
+    // fail-closed in real deployments and only enabled here for tests.
+    // signup-disabled.test.ts deletes/overrides it per-case.
+    env: { ALLOW_PUBLIC_SIGNUP: "true" },
     include: ["src/**/*.test.ts"],
     environment: "node",
     testTimeout: 30000,

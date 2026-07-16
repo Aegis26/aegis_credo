@@ -38,6 +38,15 @@ export interface AuthRouterOptions {
   rateLimitMax?: number;
 }
 
+/**
+ * FAIL CLOSED: public signup is enabled only when ALLOW_PUBLIC_SIGNUP is the
+ * exact string "true". Unset, empty, "false", "0", "TRUE", or any other value
+ * all leave signup DISABLED. Read at request time so tests can toggle it.
+ */
+export function isPublicSignupEnabled(): boolean {
+  return process.env.ALLOW_PUBLIC_SIGNUP === "true";
+}
+
 export function createAuthRouter(options: AuthRouterOptions = {}): IRouter {
   const router = Router();
   const max =
@@ -53,6 +62,10 @@ export function createAuthRouter(options: AuthRouterOptions = {}): IRouter {
 
   router.post("/auth/signup", limiter, async (req, res) => {
     try {
+      if (!isPublicSignupEnabled()) {
+        res.status(403).json({ error: "Signup is disabled." });
+        return;
+      }
       const body = SignupBody.parse(req.body);
       const user = await signup({
         email: body.email,

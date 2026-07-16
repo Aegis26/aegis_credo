@@ -125,10 +125,7 @@ export default function Login() {
             </CardContent>
             <CardFooter className="flex justify-center border-t border-border/50 pt-6">
               <p className="text-sm text-muted-foreground">
-                Don't have an account?{" "}
-                <Button variant="link" className="p-0 h-auto font-semibold text-primary" onClick={() => setLocation("/signup")}>
-                  Request access
-                </Button>
+                Access is invite-only. Contact your administrator for an account.
               </p>
             </CardFooter>
           </Card>

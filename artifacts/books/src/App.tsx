@@ -11,7 +11,6 @@ import { AppShell } from "@/components/app-shell";
 import { CurrentOrgProvider } from "@/hooks/use-current-org";
 
 import Login from "@/pages/login";
-import Signup from "@/pages/signup";
 import Onboarding from "@/pages/onboarding";
 import Dashboard from "@/pages/dashboard";
 import Bank from "@/pages/bank";
@@ -99,11 +98,20 @@ function ProtectedRouter() {
   );
 }
 
+function RedirectToLogin() {
+  const [, setLocation] = useLocation();
+  useEffect(() => {
+    setLocation("/login", { replace: true });
+  }, [setLocation]);
+  return null;
+}
+
 function Router() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
-      <Route path="/signup" component={Signup} />
+      {/* Public signup is disabled (invite-only); redirect to login. */}
+      <Route path="/signup" component={RedirectToLogin} />
       <Route component={ProtectedRouter} />
     </Switch>
   );
