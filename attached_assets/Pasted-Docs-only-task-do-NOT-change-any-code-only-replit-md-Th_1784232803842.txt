@@ -1,0 +1,43 @@
+Docs-only task — do NOT change any code, only replit.md.
+
+The file has grown large. Restructure it in TWO steps:
+
+STEP 1 — Before condensing anything, create a clearly-labeled section at the TOP
+titled "CRITICAL CONSTRAINTS — DO NOT BREAK" that consolidates every security and
+operational invariant currently recorded anywhere in the file. It MUST include (add
+any others you have recorded):
+- Money is integer minor units (bigint), never float, on every path.
+- Double-entry: posted entries are immutable; corrections are reversing entries;
+  debits must equal credits.
+- Identity is always derived server-side from the session; never accept a
+  client-supplied userId/orgId. Tenancy uses the double-where (org_id + id) pattern
+  at the service layer.
+- ALLOW_PUBLIC_SIGNUP fails closed (enabled only if exactly "true"); public signup
+  is otherwise 403. create-user.ts is the shell-only provisioning path (argon2id).
+- TOKEN_ENCRYPTION_KEY fails closed (must decode to 32 bytes); Plaid access tokens
+  are AES-256-GCM encrypted at rest (v1:iv:ciphertext:tag), decrypted only
+  server-side, never logged, never in an API response. SESSION_SECRET required in
+  prod.
+- Imports are idempotent (content hash); the multi-import guard uses reverse &
+  replace (never stack a second opening entry).
+- The QuickBooks fixture (craigs-trial-balance.csv) is a VERBATIM export used as a
+  regression fixture — never hand-edit it.
+- No uploaded files are ever written to disk.
+- CSV export sanitizes formula-injection (leading = + @ tab CR, and - when not a
+  plain number); monetary values are never altered.
+- CSRF: Origin-check on non-GET requests against REPLIT_DOMAINS; session cookie is
+  SameSite=Lax/httpOnly/Secure.
+- 500 responses return a generic message and never leak err.message.
+- Account-type resolver never silently defaults to Asset; ambiguous accounts are
+  surfaced for confirmation.
+- Operational: restart/republish before verifying (avoid stale-server); workspace
+  state is not production state.
+- Known build gotchas: orval path+query codegen collision fix; drizzle
+  *_org_id_unique constraint column order.
+
+STEP 2 — Condense the phase-by-phase build history into a brief summary. You may
+shorten or remove narrative history, but you may NOT remove anything captured in
+the Critical Constraints section.
+
+Then show me: (a) the full diff, and (b) a checklist confirming each item in the
+Critical Constraints section is present in the new file.
