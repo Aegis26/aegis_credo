@@ -1,5 +1,4 @@
 import express, { type Express } from "express";
-import cors from "cors";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import pinoHttp from "pino-http";
@@ -7,6 +6,7 @@ import { pool } from "@workspace/db";
 import { createRouter } from "./routes";
 import { logger } from "./lib/logger";
 import { assertTokenKeyAtStartup } from "./lib/token-crypto";
+import { originCheck } from "./middlewares/origin-check";
 
 export interface AppOptions {
   /** Max auth requests per IP per window. Overridable for tests. */
@@ -52,7 +52,10 @@ export function createApp(options: AppOptions = {}): Express {
       },
     }),
   );
-  app.use(cors());
+  // CSRF defense-in-depth: reject state-changing requests whose Origin is not
+  // one of our own domains (REPLIT_DOMAINS + dev domain). The UI is same-origin
+  // behind the shared proxy, so no CORS middleware is needed or wanted.
+  app.use(originCheck);
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 

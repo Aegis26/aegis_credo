@@ -156,6 +156,13 @@ session-authenticated, org-scoped endpoints:
 - **Plaid is optional**: without `PLAID_CLIENT_ID`/`PLAID_SECRET`, `bank/status`
   returns `configured:false` and `bank/link-token` returns 503; the UI degrades to
   a "not set up" message.
+- **CSRF is two independent layers** — the `sid` cookie is `SameSite=Lax`, AND
+  `src/middlewares/origin-check.ts` rejects (403) any state-changing request
+  whose `Origin` header host is not in `REPLIT_DOMAINS` + `REPLIT_DEV_DOMAIN`
+  (env-driven, re-read per request; exact loopback hostnames allowed in dev
+  only; no-Origin requests pass — curl/server-to-server). No CORS middleware —
+  the app is same-origin behind the shared proxy; do not re-add `cors()`.
+  Regression tests: `src/csrf.test.ts` (locks in both layers).
 - **Plaid tokens are encrypted at rest** (AES-256-GCM, `TOKEN_ENCRYPTION_KEY` =
   32 random bytes base64; required in production — app refuses to start without
   it, mirroring `SESSION_SECRET`). Format `v1:<iv>:<ct>:<tag>`, fresh IV per
