@@ -156,6 +156,14 @@ session-authenticated, org-scoped endpoints:
 - **Plaid is optional**: without `PLAID_CLIENT_ID`/`PLAID_SECRET`, `bank/status`
   returns `configured:false` and `bank/link-token` returns 503; the UI degrades to
   a "not set up" message.
+- **Plaid tokens are encrypted at rest** (AES-256-GCM, `TOKEN_ENCRYPTION_KEY` =
+  32 random bytes base64; required in production — app refuses to start without
+  it, mirroring `SESSION_SECRET`). Format `v1:<iv>:<ct>:<tag>`, fresh IV per
+  encryption, auth-tag verified on decrypt (`src/lib/token-crypto.ts`). Encrypt
+  at `/bank/exchange` upsert; decrypt ONLY at the server-side Plaid sync call.
+  One-time idempotent migration `src/migrate-encrypt-plaid-tokens.ts` (backs up
+  originals to `bank_connections_token_backup`, skips `v1:` rows). Never log
+  the plaintext token or the key.
 
 Phase 8 exposes the Phase 3 mid-market lib over the API + Books UI (no engine
 changes; all reads over entity ledgers, session identity, `requirePermission`
