@@ -32,6 +32,7 @@ import {
 } from "@workspace/ledger";
 import { sendLedgerError, HttpError } from "../lib/errors";
 import { parsePlaidAmount } from "../lib/money";
+import { encryptToken, decryptToken } from "../lib/token-crypto";
 import { getSessionUserId } from "../middlewares/auth";
 import { accountByCode } from "./orgs";
 import {
@@ -242,7 +243,8 @@ router.post("/orgs/:orgId/bank/exchange", async (req, res) => {
       .values({
         orgId,
         plaidItemId: itemId,
-        plaidAccessToken: accessToken,
+        // Encrypted at rest (AES-256-GCM); plaintext never touches the DB.
+        plaidAccessToken: encryptToken(accessToken),
         institutionName,
         cursor: null,
         lastSyncError: null,
@@ -251,7 +253,7 @@ router.post("/orgs/:orgId/bank/exchange", async (req, res) => {
         target: bankConnectionsTable.orgId,
         set: {
           plaidItemId: itemId,
-          plaidAccessToken: accessToken,
+          plaidAccessToken: encryptToken(accessToken),
           institutionName,
           cursor: null,
           lastSyncError: null,
@@ -322,7 +324,9 @@ router.post("/orgs/:orgId/bank/sync", async (req, res) => {
     let added = 0;
     try {
       const result = await syncTransactions(
-        connection.plaidAccessToken,
+        // Decrypted only here, server-side, for the Plaid call. Never logged,
+        // never serialized into any response.
+        decryptToken(connection.plaidAccessToken),
         connection.cursor,
       );
 

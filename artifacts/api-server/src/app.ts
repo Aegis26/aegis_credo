@@ -6,6 +6,7 @@ import pinoHttp from "pino-http";
 import { pool } from "@workspace/db";
 import { createRouter } from "./routes";
 import { logger } from "./lib/logger";
+import { assertTokenKeyAtStartup } from "./lib/token-crypto";
 
 export interface AppOptions {
   /** Max auth requests per IP per window. Overridable for tests. */
@@ -22,6 +23,11 @@ export function createApp(options: AppOptions = {}): Express {
       "SESSION_SECRET environment variable is required in production.",
     );
   }
+
+  // FAIL CLOSED like SESSION_SECRET: in production the app refuses to start
+  // without a valid 32-byte base64 TOKEN_ENCRYPTION_KEY. In development a set
+  // key is validated; an unset key is tolerated (bank features throw at use).
+  assertTokenKeyAtStartup(isProduction);
 
   // Behind Replit's reverse proxy: trust one hop so req.ip and Secure cookies
   // reflect the real client and the TLS-terminated origin.
