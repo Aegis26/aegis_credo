@@ -1117,6 +1117,82 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /orgs/{orgId}/bank/statement/extract:
+    post:
+      operationId: extractBankStatement
+      tags: [bank]
+      summary: Extract transactions from an uploaded bank-statement PDF (dry run — nothing is saved)
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BankStatementExtractInput"
+      responses:
+        "200":
+          description: The structured extraction with a server-computed balance check
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BankStatementExtraction"
+        "400":
+          description: Unreadable, oversized, or non-PDF upload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not a member of this org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /orgs/{orgId}/bank/statement/confirm:
+    post:
+      operationId: confirmBankStatement
+      tags: [bank]
+      summary: Insert reviewed statement transactions as uncategorized bank transactions
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BankStatementConfirmInput"
+      responses:
+        "200":
+          description: Insert result (duplicates are skipped, never re-inserted)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BankStatementConfirmResult"
+        "400":
+          description: Invalid transactions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not a member of this org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /orgs/{orgId}/invoices:
     get:
       operationId: listInvoices
@@ -2760,6 +2836,89 @@ components:
           items:
             $ref: "#/components/schemas/BankTransaction"
       required: [transactions]
+    BankStatementExtractInput:
+      type: object
+      properties:
+        content:
+          type: string
+          description: The PDF file body, base64-encoded. Held in memory only.
+        filename:
+          type: string
+      required: [content]
+    BankStatementTxn:
+      type: object
+      description: >-
+        One extracted statement line. `amount` is a signed decimal string in the
+        statement currency (negative = money out), parsed server-side to integer
+        minor units — never a float.
+      properties:
+        date:
+          type: string
+          description: ISO date (YYYY-MM-DD)
+        description:
+          type: string
+        amount:
+          type: string
+        lowConfidence:
+          type: boolean
+          description: True when the model was unsure about this row — review it carefully.
+      required: [date, description, amount, lowConfidence]
+    BankStatementExtraction:
+      type: object
+      description: >-
+        Dry-run extraction result. `balanced` and `discrepancy` are computed
+        server-side in integer minor units — opening + sum(transactions) vs closing.
+      properties:
+        periodStart:
+          type: string
+          nullable: true
+        periodEnd:
+          type: string
+          nullable: true
+        openingBalance:
+          type: string
+        closingBalance:
+          type: string
+        computedClosingBalance:
+          type: string
+        balanced:
+          type: boolean
+        discrepancy:
+          type: string
+          description: closing − (opening + sum), formatted decimal; "0.00" when balanced.
+        transactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/BankStatementTxn"
+        statementHash:
+          type: string
+          description: SHA-256 of the uploaded PDF content.
+      required:
+        [openingBalance, closingBalance, computedClosingBalance, balanced, discrepancy, transactions, statementHash]
+    BankStatementConfirmInput:
+      type: object
+      properties:
+        transactions:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+              description:
+                type: string
+              amount:
+                type: string
+            required: [date, description, amount]
+      required: [transactions]
+    BankStatementConfirmResult:
+      type: object
+      properties:
+        inserted:
+          type: integer
+        skippedDuplicates:
+          type: integer
+      required: [inserted, skippedDuplicates]
     CategorizeInput:
       type: object
       properties:

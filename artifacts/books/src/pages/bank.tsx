@@ -16,6 +16,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/hooks/use-toast";
 import { Landmark, RefreshCw, AlertCircle, CheckCircle, ShieldCheck } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { StatementImport } from "@/components/statement-import";
 
 export default function Bank() {
   const { orgId } = useCurrentOrg();
@@ -191,6 +192,8 @@ export default function Bank() {
           )}
         </Card>
       )}
+
+      <StatementImport orgId={orgId} />
     </div>
   );
 }

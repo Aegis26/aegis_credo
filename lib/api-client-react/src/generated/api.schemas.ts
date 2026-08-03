@@ -313,6 +313,56 @@ export interface BankTransactionList {
   transactions: BankTransaction[];
 }
 
+export interface BankStatementExtractInput {
+  /** The PDF file body, base64-encoded. Held in memory only. */
+  content: string;
+  filename?: string;
+}
+
+/**
+ * One extracted statement line. `amount` is a signed decimal string in the statement currency (negative = money out), parsed server-side to integer minor units — never a float.
+ */
+export interface BankStatementTxn {
+  /** ISO date (YYYY-MM-DD) */
+  date: string;
+  description: string;
+  amount: string;
+  /** True when the model was unsure about this row — review it carefully. */
+  lowConfidence: boolean;
+}
+
+/**
+ * Dry-run extraction result. `balanced` and `discrepancy` are computed server-side in integer minor units — opening + sum(transactions) vs closing.
+ */
+export interface BankStatementExtraction {
+  periodStart?: string | null;
+  periodEnd?: string | null;
+  openingBalance: string;
+  closingBalance: string;
+  computedClosingBalance: string;
+  balanced: boolean;
+  /** closing − (opening + sum), formatted decimal; "0.00" when balanced. */
+  discrepancy: string;
+  transactions: BankStatementTxn[];
+  /** SHA-256 of the uploaded PDF content. */
+  statementHash: string;
+}
+
+export type BankStatementConfirmInputTransactionsItem = {
+  date: string;
+  description: string;
+  amount: string;
+};
+
+export interface BankStatementConfirmInput {
+  transactions: BankStatementConfirmInputTransactionsItem[];
+}
+
+export interface BankStatementConfirmResult {
+  inserted: number;
+  skippedDuplicates: number;
+}
+
 export interface CategorizeInput {
   accountId: string;
 }

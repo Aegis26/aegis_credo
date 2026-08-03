@@ -780,6 +780,57 @@ export const SyncBankResponse = zod.object({
 
 
 /**
+ * @summary Extract transactions from an uploaded bank-statement PDF (dry run — nothing is saved)
+ */
+export const ExtractBankStatementParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+export const ExtractBankStatementBody = zod.object({
+  "content": zod.string().describe('The PDF file body, base64-encoded. Held in memory only.'),
+  "filename": zod.string().optional()
+})
+
+export const ExtractBankStatementResponse = zod.object({
+  "periodStart": zod.string().nullish(),
+  "periodEnd": zod.string().nullish(),
+  "openingBalance": zod.string(),
+  "closingBalance": zod.string(),
+  "computedClosingBalance": zod.string(),
+  "balanced": zod.boolean(),
+  "discrepancy": zod.string().describe('closing − (opening + sum), formatted decimal; \"0.00\" when balanced.'),
+  "transactions": zod.array(zod.object({
+  "date": zod.string().describe('ISO date (YYYY-MM-DD)'),
+  "description": zod.string(),
+  "amount": zod.string(),
+  "lowConfidence": zod.boolean().describe('True when the model was unsure about this row — review it carefully.')
+}).describe('One extracted statement line. `amount` is a signed decimal string in the statement currency (negative = money out), parsed server-side to integer minor units — never a float.')),
+  "statementHash": zod.string().describe('SHA-256 of the uploaded PDF content.')
+}).describe('Dry-run extraction result. `balanced` and `discrepancy` are computed server-side in integer minor units — opening + sum(transactions) vs closing.')
+
+
+/**
+ * @summary Insert reviewed statement transactions as uncategorized bank transactions
+ */
+export const ConfirmBankStatementParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+export const ConfirmBankStatementBody = zod.object({
+  "transactions": zod.array(zod.object({
+  "date": zod.string(),
+  "description": zod.string(),
+  "amount": zod.string()
+}))
+})
+
+export const ConfirmBankStatementResponse = zod.object({
+  "inserted": zod.number(),
+  "skippedDuplicates": zod.number()
+})
+
+
+/**
  * @summary List invoices for an org
  */
 export const ListInvoicesParams = zod.object({

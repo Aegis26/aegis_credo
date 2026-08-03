@@ -44,6 +44,12 @@ A multi-tenant, double-entry accounting platform: ledger engine (lib), authentic
 - **CSV export sanitizes formula injection** (`sanitizeCsvText` in `lib/ledger/src/export.ts`): leading `=` `+` `@` tab CR are prefixed with `'`; `-` only when the cell is not a plain number. Monetary values are never altered (numeric/bigint bypass). XLSX path untouched.
 - **Reconciliation compares NET movement per account** (debits − credits on the natural side), source vs. ledger — netting is what lets "replace" imports reconcile. Never switch back to gross column totals.
 
+### Bank-statement PDF import (AI extraction — prototype conditions)
+
+- **Data handling (for the privacy policy)**: an uploaded statement PDF is held in memory only (never disk, never logged — request logs carry method/URL/status only, no bodies) and sent base64 to a vision LLM through **Replit AI Integrations (Anthropic-compatible proxy)**. We do not persist the PDF or the raw extraction; only the rows the user explicitly confirms are stored (`bank_transactions`). Retention/usage on the AI path is governed by Replit AI Integrations and Anthropic's API terms (Anthropic's commercial API does not train on customer API data by default). Confirm exact proxy retention with Replit docs before publishing a privacy policy.
+- **Portability/cost condition (owner-mandated)**: BEFORE real customer data flows through this, revisit running extraction on our OWN Anthropic API key (cost visibility, model control, portability off Replit). The provider is isolated behind the `StatementExtractor` interface in `artifacts/api-server/src/lib/statement-extraction.ts` — swapping providers means implementing that interface and changing one export, nothing else.
+- **Safety rails**: model output is untrusted data — Zod-validated, every amount re-parsed via `parseMoney` to BigInt (no floats). Extract is a dry run; a human review screen (Bank page) with a server-computed balance check (opening + Σ = closing) must be confirmed before rows are inserted, and they land UNCATEGORIZED — posting still only happens through the reconcile/categorize flow. Dedup reuses the Plaid content key (`date|minor|normalized name`), so re-upload is a no-op. Extraction accuracy is NOT yet validated against real bank statements — owner validation required before trusting it.
+
 ### Consolidation & intercompany
 
 - **Consolidation combines by account CODE, not id** (ids differ per org). Combined and elimination sums are keyed on code in lockstep — change one grouping key and you must change the other.
@@ -53,7 +59,7 @@ A multi-tenant, double-entry accounting platform: ledger engine (lib), authentic
 ### Operational
 
 - **Restart the workflow (dev) / republish (prod) before verifying a change** — a stale server will happily "pass" old code. Workspace state is NOT production state; prod has its own DATABASE_URL, env, and data.
-- **Build gotchas**: (a) Orval — endpoints with BOTH path+query params collide on `<Op>Params` between zod client & types; fix via explicit re-export in the api-zod barrel. Never use `format: email` in openapi.yaml (emits zod v4 `zod.email()` against resolved zod v3). (b) Drizzle — declare composite `(org_id, id)` uniques in table-ordinal order (`.on(t.id, t.orgId)`) or `push` false-diffs and prompts to truncate forever.
+- **Build gotchas**: (a) Orval — endpoints with BOTH path+query params collide on `<Op>Params` between zod client & types; fix via explicit re-export in the api-zod barrel. Never use `format: email` in openapi.yaml (emits zod v4 `zod.email()` against resolved zod v3). (b) Drizzle — declare composite `(org_id, id)` uniques in table-ordinal order (`.on(t.id, t.orgId)`) or `push` false-diffs and prompts to truncate forever. (c) esbuild — `pdfjs-dist` must stay in the `external` list in `artifacts/api-server/build.mjs`; bundling it breaks PDF parsing only in the RUNNING server (vitest still passes).
 
 ## Run & Operate
 

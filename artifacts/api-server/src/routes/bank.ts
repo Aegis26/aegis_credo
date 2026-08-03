@@ -68,7 +68,7 @@ function toBankTxn(txn: BankTxnRow) {
  * normalised name is stable across links, so `onConflictDoNothing` collapses the
  * same economic transaction to one row.
  */
-function makeDedupKey(date: string, amount: bigint, name: string | null): string {
+export function makeDedupKey(date: string, amount: bigint, name: string | null): string {
   const normName = (name ?? "").trim().toUpperCase().replace(/\s+/g, " ");
   return `${date}|${amount.toString()}|${normName}`;
 }

@@ -62,7 +62,15 @@ export function createApp(options: AppOptions = {}): Express {
   // one of our own domains (REPLIT_DOMAINS + dev domain). The UI is same-origin
   // behind the shared proxy, so no CORS middleware is needed or wanted.
   app.use(originCheck);
-  app.use(express.json());
+  // Body parsing: the default 100 KB limit applies everywhere EXCEPT the two
+  // file-upload endpoints (base64 PDFs/XLSX), which get a scoped larger limit
+  // so a huge body cannot be posted to arbitrary routes.
+  const defaultJson = express.json();
+  const uploadJson = express.json({ limit: "15mb" });
+  const UPLOAD_PATHS = /\/(import\/preview|bank\/statement\/extract)$/;
+  app.use((req, res, next) =>
+    (UPLOAD_PATHS.test(req.path) ? uploadJson : defaultJson)(req, res, next),
+  );
   app.use(express.urlencoded({ extended: true }));
 
   const PgStore = connectPgSimple(session);

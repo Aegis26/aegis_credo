@@ -33,6 +33,10 @@ import type {
   BalanceSheetReport,
   BankExchangeInput,
   BankLinkToken,
+  BankStatementConfirmInput,
+  BankStatementConfirmResult,
+  BankStatementExtractInput,
+  BankStatementExtraction,
   BankStatus,
   BankSyncResult,
   BankTransaction,
@@ -2777,6 +2781,150 @@ export const useSyncBank = <TError = ErrorType<ErrorResponse>,
         TContext
       > => {
       return useMutation(getSyncBankMutationOptions(options));
+    }
+
+export const getExtractBankStatementUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/bank/statement/extract`
+}
+
+/**
+ * @summary Extract transactions from an uploaded bank-statement PDF (dry run — nothing is saved)
+ */
+export const extractBankStatement = async (orgId: string,
+    bankStatementExtractInput: BankStatementExtractInput, options?: RequestInit): Promise<BankStatementExtraction> => {
+
+  return customFetch<BankStatementExtraction>(getExtractBankStatementUrl(orgId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(bankStatementExtractInput)
+  }
+);}
+
+
+
+
+
+export const getExtractBankStatementMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof extractBankStatement>>, TError,{orgId: string;data: BodyType<BankStatementExtractInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof extractBankStatement>>, TError,{orgId: string;data: BodyType<BankStatementExtractInput>}, TContext> => {
+
+const mutationKey = ['extractBankStatement'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof extractBankStatement>>, {orgId: string;data: BodyType<BankStatementExtractInput>}> = (props) => {
+          const {orgId,data} = props ?? {};
+
+          return  extractBankStatement(orgId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ExtractBankStatementMutationResult = NonNullable<Awaited<ReturnType<typeof extractBankStatement>>>
+    export type ExtractBankStatementMutationBody = BodyType<BankStatementExtractInput>
+    export type ExtractBankStatementMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Extract transactions from an uploaded bank-statement PDF (dry run — nothing is saved)
+ */
+export const useExtractBankStatement = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof extractBankStatement>>, TError,{orgId: string;data: BodyType<BankStatementExtractInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof extractBankStatement>>,
+        TError,
+        {orgId: string;data: BodyType<BankStatementExtractInput>},
+        TContext
+      > => {
+      return useMutation(getExtractBankStatementMutationOptions(options));
+    }
+
+export const getConfirmBankStatementUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/bank/statement/confirm`
+}
+
+/**
+ * @summary Insert reviewed statement transactions as uncategorized bank transactions
+ */
+export const confirmBankStatement = async (orgId: string,
+    bankStatementConfirmInput: BankStatementConfirmInput, options?: RequestInit): Promise<BankStatementConfirmResult> => {
+
+  return customFetch<BankStatementConfirmResult>(getConfirmBankStatementUrl(orgId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(bankStatementConfirmInput)
+  }
+);}
+
+
+
+
+
+export const getConfirmBankStatementMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmBankStatement>>, TError,{orgId: string;data: BodyType<BankStatementConfirmInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof confirmBankStatement>>, TError,{orgId: string;data: BodyType<BankStatementConfirmInput>}, TContext> => {
+
+const mutationKey = ['confirmBankStatement'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof confirmBankStatement>>, {orgId: string;data: BodyType<BankStatementConfirmInput>}> = (props) => {
+          const {orgId,data} = props ?? {};
+
+          return  confirmBankStatement(orgId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ConfirmBankStatementMutationResult = NonNullable<Awaited<ReturnType<typeof confirmBankStatement>>>
+    export type ConfirmBankStatementMutationBody = BodyType<BankStatementConfirmInput>
+    export type ConfirmBankStatementMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Insert reviewed statement transactions as uncategorized bank transactions
+ */
+export const useConfirmBankStatement = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmBankStatement>>, TError,{orgId: string;data: BodyType<BankStatementConfirmInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof confirmBankStatement>>,
+        TError,
+        {orgId: string;data: BodyType<BankStatementConfirmInput>},
+        TContext
+      > => {
+      return useMutation(getConfirmBankStatementMutationOptions(options));
     }
 
 export const getListInvoicesUrl = (orgId: string,) => {
