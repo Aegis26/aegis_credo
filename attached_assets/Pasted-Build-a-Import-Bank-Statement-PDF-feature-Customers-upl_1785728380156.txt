@@ -1,0 +1,56 @@
+Build a "Import Bank Statement (PDF)" feature. Customers upload a PDF bank
+statement and its transactions flow into the existing Reconcile pipeline. This is
+a NEW ingestion source for raw bank transactions — the same kind of data Plaid
+provides — NOT a trial-balance migration. It lives on the Bank page as an
+alternative to "Connect bank," and it feeds the EXISTING reconcile/categorization
+flow. Do not touch the ledger core; reuse the existing posting service.
+
+EXTRACTION:
+- Use a vision-capable LLM to extract data from the PDF. For digital PDFs with
+  extractable text, you may extract text first; for scanned/image PDFs, render
+  pages to images and use vision. Handle BOTH — customers will have scanned
+  statements.
+- Extract: the statement period, the OPENING balance, the CLOSING balance, and
+  every transaction (date, description, amount, debit/credit direction).
+- Return structured data the app can validate — do not free-form post anything.
+
+MANDATORY SAFETY RAILS:
+1. Balance reconciliation: compute opening_balance + sum(transactions) and compare
+   to closing_balance. Show the result PROMINENTLY on the review screen:
+   "Balanced ✓" if it matches, or a loud warning with the discrepancy amount if it
+   doesn't (meaning a transaction may be missing/duplicated/misread).
+2. Human review before posting: extracted transactions land in a REVIEW screen
+   (like the QuickBooks import review). The user sees every transaction, can
+   edit/add/delete, sees the balance-reconciliation status, and must explicitly
+   CONFIRM before anything is posted. NEVER auto-post extracted data.
+3. Flag low-confidence rows for the user's attention where the model is unsure.
+
+AFTER CONFIRMATION:
+- Push the confirmed transactions into the EXISTING bank-transaction/reconcile
+  pipeline as uncategorized transactions (same as Plaid), so the user categorizes
+  and posts them through the normal flow. Reuse that code — do not duplicate it.
+
+IDEMPOTENCY: content-hash the statement and dedupe at the transaction level so
+re-uploading the same statement does not create duplicates (reuse the existing
+dedup patterns from the import guard and Plaid sync).
+
+SECURITY (this is a new upload/parse surface — just finished a security review):
+- Enforce a file size limit and a page-count limit; reject non-PDF files.
+- Never execute or trust content from the PDF; parse defensively; handle malformed
+  or malicious PDFs gracefully without crashing the server.
+- Do not write uploaded files to disk (per the no-uploads-to-disk constraint).
+- Apply the existing CSV formula-injection sanitization if any extracted text
+  flows to an export.
+
+MONEY: integer minor units on every path; money-parsing reuses parseMoney; no
+float. Server-derived identity/tenancy (session + org scope) as everywhere else.
+
+TESTS + VERIFICATION: unit-test the balance-reconciliation math (matched and
+mismatched cases) and the idempotent re-upload. Note in your report that final
+accuracy MUST be validated by me against multiple REAL bank statements from
+different banks (text and scanned) — a single happy-path test proves nothing for
+PDF extraction.
+
+Report the plan and the approach BEFORE building (read-only first): show me how
+you'll do extraction, where it plugs into the reconcile pipeline, and the review-
+screen design. Then build on my approval.

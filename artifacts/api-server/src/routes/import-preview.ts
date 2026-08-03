@@ -15,6 +15,7 @@ import {
 } from "@workspace/ledger";
 import { sendLedgerError, HttpError } from "../lib/errors";
 import { getSessionUserId } from "../middlewares/auth";
+import { pdfToRows } from "../lib/pdf-table";
 
 const router: IRouter = Router();
 
@@ -79,6 +80,9 @@ router.post("/orgs/:orgId/import/preview", async (req, res) => {
     try {
       if (body.contentType === "csv") {
         rows = csvToRows(body.content);
+      } else if (body.contentType === "pdf") {
+        const buf = Buffer.from(body.content, "base64");
+        rows = await pdfToRows(new Uint8Array(buf));
       } else {
         const buf = Buffer.from(body.content, "base64");
         const ab = buf.buffer.slice(
@@ -90,7 +94,7 @@ router.post("/orgs/:orgId/import/preview", async (req, res) => {
     } catch {
       throw new HttpError(
         400,
-        "We couldn't read this file. Please upload the CSV or Excel you exported from Reports > Trial Balance.",
+        "We couldn't read this file. Please upload the CSV, Excel, or PDF you exported from Reports > Trial Balance.",
       );
     }
 

@@ -14,9 +14,9 @@ import type { ImportPreviewInputReport } from './importPreviewInputReport';
 export interface ImportPreviewInput {
   /** Which vendor report/adapter to apply. */
   report: ImportPreviewInputReport;
-  /** Encoding of `content` — CSV text, or base64-encoded XLSX. */
+  /** Encoding of `content` — CSV text, or base64-encoded XLSX/PDF. */
   contentType: ImportPreviewInputContentType;
-  /** The file body (CSV text, or base64 for xlsx). */
+  /** The file body (CSV text, or base64 for xlsx/pdf). */
   content: string;
   filename?: string;
 }

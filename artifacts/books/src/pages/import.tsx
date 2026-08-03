@@ -166,7 +166,7 @@ export default function ImportPage() {
   };
 
   const runPreview = async (
-    contentType: "csv" | "xlsx",
+    contentType: "csv" | "xlsx" | "pdf",
     content: string,
     filename?: string,
   ) => {
@@ -203,6 +203,8 @@ export default function ImportPage() {
         tryParseJson(await readAsText(file));
       } else if (name.endsWith(".xlsx")) {
         await runPreview("xlsx", await readAsBase64(file), file.name);
+      } else if (name.endsWith(".pdf") || file.type === "application/pdf") {
+        await runPreview("pdf", await readAsBase64(file), file.name);
       } else {
         // Treat everything else (.csv, .txt) as CSV text.
         await runPreview("csv", await readAsText(file), file.name);
@@ -309,9 +311,9 @@ export default function ImportPage() {
       <div>
         <h1 className="text-3xl font-serif font-semibold tracking-tight text-primary">Migrate your books</h1>
         <p className="text-muted-foreground mt-1">
-          Bring your history over from QuickBooks or Xero. Upload a Trial Balance (CSV or Excel)
-          or a normalized JSON export — every balance posts through the double-entry ledger and we
-          prove the numbers reconcile, exactly.
+          Bring your history over from QuickBooks or Xero. Upload a Trial Balance (CSV, Excel or
+          PDF) or a normalized JSON export — every balance posts through the double-entry ledger
+          and we prove the numbers reconcile, exactly.
         </p>
       </div>
 
@@ -348,8 +350,8 @@ export default function ImportPage() {
           <CardHeader>
             <CardTitle>Upload your export file</CardTitle>
             <CardDescription>
-              A QuickBooks "Trial Balance" export (.csv or .xlsx), or a normalized QuickBooks/Xero
-              JSON file.
+              A QuickBooks "Trial Balance" export (.csv, .xlsx or .pdf), or a normalized
+              QuickBooks/Xero JSON file.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -369,11 +371,11 @@ export default function ImportPage() {
               <p className="font-medium">
                 {previewing ? "Reading your file…" : "Drop your export here, or click to browse"}
               </p>
-              <p className="text-sm text-muted-foreground mt-1">.csv, .xlsx or .json</p>
+              <p className="text-sm text-muted-foreground mt-1">.csv, .xlsx, .pdf or .json</p>
               <input
                 ref={fileInput}
                 type="file"
-                accept=".csv,.xlsx,.json,text/csv,application/json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                accept=".csv,.xlsx,.json,.pdf,text/csv,application/json,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 className="hidden"
                 onChange={(e) => {
                   const f = e.target.files?.[0];

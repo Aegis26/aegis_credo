@@ -994,8 +994,8 @@ export const PreviewImportParams = zod.object({
 
 export const PreviewImportBody = zod.object({
   "report": zod.enum(['qbo_trial_balance']).describe('Which vendor report\/adapter to apply.'),
-  "contentType": zod.enum(['csv', 'xlsx']).describe('Encoding of `content` — CSV text, or base64-encoded XLSX.'),
-  "content": zod.string().describe('The file body (CSV text, or base64 for xlsx).'),
+  "contentType": zod.enum(['csv', 'xlsx', 'pdf']).describe('Encoding of `content` — CSV text, or base64-encoded XLSX\/PDF.'),
+  "content": zod.string().describe('The file body (CSV text, or base64 for xlsx\/pdf).'),
   "filename": zod.string().optional()
 }).describe('A raw vendor export to translate into the canonical draft.')
 

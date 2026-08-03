@@ -3033,11 +3033,12 @@ components:
           enum: [qbo_trial_balance]
         contentType:
           type: string
-          description: Encoding of `content` — CSV text, or base64-encoded XLSX.
-          enum: [csv, xlsx]
+          description: >-
+            Encoding of `content` — CSV text, or base64-encoded XLSX/PDF.
+          enum: [csv, xlsx, pdf]
         content:
           type: string
-          description: The file body (CSV text, or base64 for xlsx).
+          description: The file body (CSV text, or base64 for xlsx/pdf).
         filename:
           type: string
       required: [report, contentType, content]

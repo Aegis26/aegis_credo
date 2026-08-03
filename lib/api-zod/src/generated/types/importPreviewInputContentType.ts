@@ -7,7 +7,7 @@
  */
 
 /**
- * Encoding of `content` — CSV text, or base64-encoded XLSX.
+ * Encoding of `content` — CSV text, or base64-encoded XLSX/PDF.
  */
 export type ImportPreviewInputContentType = typeof ImportPreviewInputContentType[keyof typeof ImportPreviewInputContentType];
 
@@ -15,4 +15,5 @@ export type ImportPreviewInputContentType = typeof ImportPreviewInputContentType
 export const ImportPreviewInputContentType = {
   csv: 'csv',
   xlsx: 'xlsx',
+  pdf: 'pdf',
 } as const;
