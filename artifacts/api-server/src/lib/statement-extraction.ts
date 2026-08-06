@@ -48,6 +48,32 @@ export interface StatementExtractor {
   extract(pdfBase64: string): Promise<RawStatement>;
 }
 
+/**
+ * Typed extraction failure so the route can (a) show the user a SPECIFIC,
+ * actionable message per cause and (b) log the class/status/stop_reason for
+ * diagnosability — WITHOUT ever logging PDF content or model output.
+ */
+export type ExtractionFailureKind =
+  | "too_long" // model output truncated at max_tokens — statement too long for one pass
+  | "rate_limited" // provider 429
+  | "service" // provider 5xx/overloaded/network
+  | "unreadable"; // response was not valid JSON / failed schema validation
+
+export class StatementExtractionError extends Error {
+  readonly name = "StatementExtractionError";
+  constructor(
+    readonly kind: ExtractionFailureKind,
+    /** Safe-to-log metadata only. NEVER put document or model content here. */
+    readonly meta: {
+      errorClass?: string;
+      status?: number;
+      stopReason?: string;
+    } = {},
+  ) {
+    super(`statement extraction failed: ${kind}`);
+  }
+}
+
 const EXTRACTION_PROMPT = `You are extracting data from a bank statement PDF (it may be a digital PDF or a scan — read the page images carefully).
 
 Return ONLY a JSON object, no prose, no markdown fences, with this exact shape:
@@ -90,31 +116,72 @@ class AnthropicStatementExtractor implements StatementExtractor {
     // Lazy import so the module (and its env-var assertions) only load when
     // the feature is actually used.
     const { anthropic } = await import("@workspace/integrations-anthropic-ai");
-    const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 8192,
-      messages: [
-        {
-          role: "user",
-          content: [
+    let message;
+    try {
+      // Long statements need lots of output tokens; 8192 truncated real
+      // statements mid-JSON. 32k covers ~1500+ transaction rows. The SDK
+      // requires streaming for outputs this large (its non-streaming guard
+      // throws upfront), so stream and take the final assembled message.
+      message = await anthropic.messages
+        .stream({
+          model: "claude-sonnet-4-6",
+          max_tokens: 32000,
+          messages: [
             {
-              type: "document",
-              source: {
-                type: "base64",
-                media_type: "application/pdf",
-                data: pdfBase64,
-              },
+              role: "user",
+              content: [
+                {
+                  type: "document",
+                  source: {
+                    type: "base64",
+                    media_type: "application/pdf",
+                    data: pdfBase64,
+                  },
+                },
+                { type: "text", text: EXTRACTION_PROMPT },
+              ],
             },
-            { type: "text", text: EXTRACTION_PROMPT },
           ],
-        },
-      ],
-    });
+        })
+        .finalMessage();
+    } catch (err) {
+      // Provider errors (Anthropic SDK APIError has a numeric `status`;
+      // duck-typed so this file stays provider-agnostic in shape).
+      const status =
+        err && typeof err === "object" && "status" in err
+          ? Number((err as { status: unknown }).status)
+          : undefined;
+      const meta = {
+        errorClass: err instanceof Error ? err.constructor.name : typeof err,
+        status: Number.isFinite(status) ? status : undefined,
+      };
+      throw new StatementExtractionError(
+        status === 429 ? "rate_limited" : "service",
+        meta,
+      );
+    }
+
+    if (message.stop_reason === "max_tokens") {
+      // Output truncated — the JSON is cut off mid-stream; don't even try.
+      throw new StatementExtractionError("too_long", {
+        stopReason: message.stop_reason,
+      });
+    }
+
     const block = message.content.find((b) => b.type === "text");
     if (!block || block.type !== "text") {
-      throw new Error("Model returned no text content.");
+      throw new StatementExtractionError("unreadable", {
+        stopReason: message.stop_reason ?? undefined,
+      });
     }
-    return RawStatementSchema.parse(parseModelJson(block.text));
+    try {
+      return RawStatementSchema.parse(parseModelJson(block.text));
+    } catch (err) {
+      throw new StatementExtractionError("unreadable", {
+        errorClass: err instanceof Error ? err.constructor.name : typeof err,
+        stopReason: message.stop_reason ?? undefined,
+      });
+    }
   }
 }
 

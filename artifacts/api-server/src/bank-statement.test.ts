@@ -12,7 +12,9 @@ import {
   reconcileStatement,
   parseModelJson,
   RawStatementSchema,
+  StatementExtractionError,
 } from "./lib/statement-extraction";
+import { extractionErrorMessage } from "./routes/bank-statement";
 
 const app = createApp();
 const nonce = `bs${Date.now().toString(36)}`;
@@ -69,6 +71,31 @@ describe("model output validation", () => {
   });
 });
 
+describe("extractionErrorMessage (specific, actionable causes)", () => {
+  it("maps each failure kind to a distinct user message", () => {
+    expect(
+      extractionErrorMessage(new StatementExtractionError("too_long")),
+    ).toMatch(/too long to read in one pass/i);
+    expect(
+      extractionErrorMessage(
+        new StatementExtractionError("rate_limited", { status: 429 }),
+      ),
+    ).toMatch(/busy right now/i);
+    expect(
+      extractionErrorMessage(
+        new StatementExtractionError("service", { status: 529 }),
+      ),
+    ).toMatch(/temporarily unavailable/i);
+    expect(
+      extractionErrorMessage(new StatementExtractionError("unreadable")),
+    ).toMatch(/scanned copy|clearer scan/i);
+    // Unknown errors still get a safe generic message.
+    expect(extractionErrorMessage(new Error("boom"))).toMatch(
+      /couldn't extract transactions/i,
+    );
+  });
+});
+
 describe("statement endpoints", () => {
   async function makeOrgAgent() {
     const agent = request.agent(app);
@@ -88,7 +115,34 @@ describe("statement endpoints", () => {
       .post(`/api/orgs/${orgId}/bank/statement/extract`)
       .send({ content: Buffer.from("hello, not a pdf").toString("base64") });
     expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/couldn't read/i);
+    expect(res.body.error).toMatch(/doesn't look like a PDF/i);
+
+    // Over-10MB upload → specific size message (magic bytes present so the
+    // size check is what fires).
+    const big = Buffer.alloc(10 * 1024 * 1024 + 1);
+    big.write("%PDF-1.4", 0, "latin1");
+    const tooBig = await agent
+      .post(`/api/orgs/${orgId}/bank/statement/extract`)
+      .send({ content: big.toString("base64") });
+    expect(tooBig.status).toBe(400);
+    expect(tooBig.body.error).toMatch(/over 10 MB/i);
+
+    // Password-protected PDF → specific password message.
+    const PDFDocument = (await import("pdfkit")).default;
+    const encrypted: Buffer = await new Promise((resolve, reject) => {
+      const doc = new PDFDocument({ userPassword: "secret" });
+      const chunks: Buffer[] = [];
+      doc.on("data", (c: Buffer) => chunks.push(c));
+      doc.on("end", () => resolve(Buffer.concat(chunks)));
+      doc.on("error", reject);
+      doc.text("locked statement");
+      doc.end();
+    });
+    const locked = await agent
+      .post(`/api/orgs/${orgId}/bank/statement/extract`)
+      .send({ content: encrypted.toString("base64") });
+    expect(locked.status).toBe(400);
+    expect(locked.body.error).toMatch(/password-protected/i);
 
     // Confirm endpoint validates rows strictly.
     const zero = await agent

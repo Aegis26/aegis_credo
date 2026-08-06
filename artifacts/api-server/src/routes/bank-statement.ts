@@ -35,6 +35,7 @@ import { makeDedupKey } from "./bank";
 import {
   statementExtractor,
   reconcileStatement,
+  StatementExtractionError,
 } from "../lib/statement-extraction";
 
 const router: IRouter = Router();
@@ -42,17 +43,37 @@ const router: IRouter = Router();
 const MAX_STATEMENT_BYTES = 10 * 1024 * 1024;
 const MAX_STATEMENT_PAGES = 60;
 
-const BAD_FILE = new HttpError(
-  400,
-  "We couldn't read this file. Please upload the PDF statement you downloaded from your bank (under 10 MB).",
-);
+/** Map a typed extraction failure to a specific, actionable user message. */
+export function extractionErrorMessage(err: unknown): string {
+  if (err instanceof StatementExtractionError) {
+    switch (err.kind) {
+      case "too_long":
+        return "This statement is too long to read in one pass. Try uploading a shorter date range, or split the statement into parts.";
+      case "rate_limited":
+        return "The statement reader is busy right now. Please wait a minute and try again.";
+      case "service":
+        return "The statement reader is temporarily unavailable. Please try again shortly.";
+      case "unreadable":
+        return "We couldn't reliably read this statement. If it's a scanned copy, try a clearer scan — or upload the original digital PDF from your bank.";
+    }
+  }
+  return "We couldn't extract transactions from this statement. Please try again, or use a clearer copy.";
+}
 
 /** Validate the upload is a real, reasonably-sized PDF before anything else. */
 async function validatePdf(buf: Buffer): Promise<void> {
-  if (buf.byteLength > MAX_STATEMENT_BYTES) throw BAD_FILE;
+  if (buf.byteLength > MAX_STATEMENT_BYTES) {
+    throw new HttpError(
+      400,
+      "This statement is over 10 MB. Please upload a smaller PDF — most bank statements are well under 10 MB.",
+    );
+  }
   // %PDF- magic bytes — reject non-PDF uploads outright.
   if (buf.byteLength < 5 || buf.toString("latin1", 0, 5) !== "%PDF-") {
-    throw BAD_FILE;
+    throw new HttpError(
+      400,
+      "This file doesn't look like a PDF. Please upload the PDF statement you downloaded from your bank.",
+    );
   }
   // Page-count cap: parse the structure only (defensive — pdfjs handles
   // malformed files by throwing, which we map to a friendly 400).
@@ -60,8 +81,23 @@ async function validatePdf(buf: Buffer): Promise<void> {
   let doc;
   try {
     doc = await getDocument({ data: new Uint8Array(buf) }).promise;
-  } catch {
-    throw BAD_FILE;
+  } catch (err) {
+    // pdfjs throws PasswordException for encrypted PDFs — tell the user
+    // exactly that instead of a generic "couldn't read it".
+    const name =
+      err && typeof err === "object" && "name" in err
+        ? String((err as { name: unknown }).name)
+        : undefined;
+    if (name === "PasswordException") {
+      throw new HttpError(
+        400,
+        "This PDF is password-protected. Please remove the password (for example, open it and save/print to a new PDF) and re-upload.",
+      );
+    }
+    throw new HttpError(
+      400,
+      "We couldn't open this PDF — it may be corrupted. Try downloading a fresh copy from your bank.",
+    );
   }
   try {
     if (doc.numPages > MAX_STATEMENT_PAGES) {
@@ -89,11 +125,17 @@ router.post("/orgs/:orgId/bank/statement/extract", async (req, res) => {
     try {
       raw = await statementExtractor.extract(buf.toString("base64"));
     } catch (err) {
-      req.log?.warn({ msg: "statement extraction failed" });
-      throw new HttpError(
-        400,
-        "We couldn't extract transactions from this statement. Please try again, or use a clearer copy.",
-      );
+      // Diagnosability: log the error CLASS/status/stop_reason only — never
+      // the PDF, the model output, or provider error message bodies.
+      const meta =
+        err instanceof StatementExtractionError
+          ? { kind: err.kind, ...err.meta }
+          : {
+              errorClass:
+                err instanceof Error ? err.constructor.name : typeof err,
+            };
+      req.log?.warn(meta, "statement extraction failed");
+      throw new HttpError(400, extractionErrorMessage(err));
     }
 
     // Re-parse EVERY money value through the strict decimal parser — the

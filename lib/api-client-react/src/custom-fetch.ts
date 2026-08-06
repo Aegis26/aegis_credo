@@ -171,6 +171,22 @@ function buildErrorMessage(response: Response, data: unknown): string {
   return prefix;
 }
 
+/**
+ * Extract the server's human-readable error message from a failed request.
+ *
+ * Our API sends error bodies as `{ error: string }`, and `customFetch` throws
+ * `ApiError` with that parsed body on `.data` (NOT `.response.data` — that is
+ * axios's shape; here `.response` is the raw fetch Response). UI error
+ * handlers should use this helper instead of digging into the error shape.
+ */
+export function getApiErrorMessage(err: unknown, fallback: string): string {
+  if (err && typeof err === "object" && "data" in err) {
+    const message = getStringField((err as { data?: unknown }).data, "error");
+    if (message) return message;
+  }
+  return fallback;
+}
+
 export class ApiError<T = unknown> extends Error {
   readonly name = "ApiError";
   readonly status: number;

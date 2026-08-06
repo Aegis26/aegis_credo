@@ -4,6 +4,7 @@ import {
   useConfirmBankStatement,
   getGetBankStatusQueryKey,
   getListBankTransactionsQueryKey,
+  getApiErrorMessage,
 } from "@workspace/api-client-react";
 import type { BankStatementExtraction } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -75,9 +76,7 @@ export function StatementImport({ orgId }: { orgId: string }) {
       setExtraction(result);
       setTxns(result.transactions.map((t) => ({ ...t })));
     } catch (e: unknown) {
-      const msg =
-        (e as { response?: { data?: { error?: string } } })?.response?.data?.error ??
-        "We couldn't read this statement. Please try again.";
+      const msg = getApiErrorMessage(e, "We couldn't read this statement. Please try again.");
       toast({ variant: "destructive", title: "Extraction failed", description: msg });
     }
   };
@@ -116,9 +115,7 @@ export function StatementImport({ orgId }: { orgId: string }) {
       queryClient.invalidateQueries({ queryKey: getGetBankStatusQueryKey(orgId) });
       queryClient.invalidateQueries({ queryKey: getListBankTransactionsQueryKey(orgId) });
     } catch (e: unknown) {
-      const msg =
-        (e as { response?: { data?: { error?: string } } })?.response?.data?.error ??
-        "Import failed. Please check the rows and try again.";
+      const msg = getApiErrorMessage(e, "Import failed. Please check the rows and try again.");
       toast({ variant: "destructive", title: "Import failed", description: msg });
     }
   };

@@ -8,4 +8,5 @@
 - [TB adapter typing](tb-adapter-typing.md) — balanced ≠ correctly typed (tests must assert type); never silently default ambiguous accounts; name-only TB rows are zero-balance accounts; QBO colon children inherit parent type.
 - [QBO Trial Balance adapter](qbo-trial-balance-adapter.md) — vendor-export adapters scoped to one-TB-into-fresh-org; XLSX numeric cells → `String()` not `toFixed` (no float).
 - [API zod response drift](api-zod-response-drift.md) — `<Op>Response.parse()` is runtime-only; a wrong/renamed response key passes typecheck but 500s. Keep route response keys in lockstep with the OpenAPI schema; test the endpoint.
+- [Statement-extraction errors](statement-extraction-errors.md) — Anthropic SDK needs stream().finalMessage() at big max_tokens; UI error bodies are at ApiError.data.error (not axios shape); log error class only, never content.
 - [Plaid import gotchas](plaid-import-gotchas.md) — PFC `RENT_AND_UTILITIES` primary starts with "RENT" (substring trap); content-dedup on date|amount|name survives id rotation on re-link; opening balance idempotent per connection.
