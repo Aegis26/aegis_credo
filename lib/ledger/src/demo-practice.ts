@@ -87,7 +87,7 @@ async function main(): Promise<void> {
         memo: "Office rent",
         source: "manual",
         lines: [
-          { accountId: client.byCode["5100"].id, debit: 20_000n },
+          { accountId: client.byCode["6400"].id, debit: 20_000n },
           { accountId: client.byCode["1000"].id, credit: 20_000n },
         ],
       },

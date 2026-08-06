@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { mapPlaidCategoryToAccountCode } from "./plaid-category-map";
 
 describe("mapPlaidCategoryToAccountCode", () => {
-  it("maps meals (FOOD_AND_DRINK) to Meals & Entertainment 5400", () => {
+  it("maps meals (FOOD_AND_DRINK) to Meals & Entertainment 6200", () => {
     expect(
       mapPlaidCategoryToAccountCode({
         primary: "FOOD_AND_DRINK",
@@ -10,7 +10,7 @@ describe("mapPlaidCategoryToAccountCode", () => {
         name: "McDon's",
         direction: "out",
       }),
-    ).toBe("5400");
+    ).toBe("6200");
   });
 
   it("maps travel (TRAVEL) to Travel 5500", () => {
@@ -21,7 +21,7 @@ describe("mapPlaidCategoryToAccountCode", () => {
         name: "United Airlines",
         direction: "out",
       }),
-    ).toBe("5500");
+    ).toBe("6550");
   });
 
   it("maps rideshare (TRANSPORTATION_TAXIS_AND_RIDE_SHARES) to Travel 5500", () => {
@@ -32,7 +32,7 @@ describe("mapPlaidCategoryToAccountCode", () => {
         name: "Uber 063015 SF**POOL**",
         direction: "out",
       }),
-    ).toBe("5500");
+    ).toBe("6550");
   });
 
   it("routes payroll/Gusto to Salaries 5200 by merchant name", () => {
@@ -43,7 +43,7 @@ describe("mapPlaidCategoryToAccountCode", () => {
         name: "ACH Electronic CreditGUSTO PAY 123456",
         direction: "out",
       }),
-    ).toBe("5200");
+    ).toBe("6300");
   });
 
   it("routes generic PAYROLL names to Salaries 5200", () => {
@@ -54,7 +54,7 @@ describe("mapPlaidCategoryToAccountCode", () => {
         name: "ADP PAYROLL FEES",
         direction: "out",
       }),
-    ).toBe("5200");
+    ).toBe("6300");
   });
 
   it("maps software by vendor name to Software & Subscriptions 5600", () => {
@@ -65,7 +65,7 @@ describe("mapPlaidCategoryToAccountCode", () => {
         name: "Adobe Creative Cloud",
         direction: "out",
       }),
-    ).toBe("5600");
+    ).toBe("6500");
   });
 
   it("maps GENERAL_SERVICES to Software & Subscriptions 5600", () => {
@@ -76,7 +76,7 @@ describe("mapPlaidCategoryToAccountCode", () => {
         name: "SomeSaaS Co",
         direction: "out",
       }),
-    ).toBe("5600");
+    ).toBe("6500");
   });
 
   it("maps bank fees (BANK_FEES) to Bank Fees 5700", () => {
@@ -87,7 +87,7 @@ describe("mapPlaidCategoryToAccountCode", () => {
         name: "Overdraft Fee",
         direction: "out",
       }),
-    ).toBe("5700");
+    ).toBe("6050");
   });
 
   it("splits RENT_AND_UTILITIES into Rent 5100 vs Utilities 5300", () => {
@@ -98,7 +98,7 @@ describe("mapPlaidCategoryToAccountCode", () => {
         name: "Landlord",
         direction: "out",
       }),
-    ).toBe("5100");
+    ).toBe("6400");
     expect(
       mapPlaidCategoryToAccountCode({
         primary: "RENT_AND_UTILITIES",
@@ -106,10 +106,10 @@ describe("mapPlaidCategoryToAccountCode", () => {
         name: "Power Co",
         direction: "out",
       }),
-    ).toBe("5300");
+    ).toBe("6600");
   });
 
-  it("routes payment processors to Merchant / Processing Fees 6200", () => {
+  it("routes payment processors to Bank & Merchant Fees 6050", () => {
     expect(
       mapPlaidCategoryToAccountCode({
         primary: "GENERAL_SERVICES",
@@ -117,10 +117,10 @@ describe("mapPlaidCategoryToAccountCode", () => {
         name: "STRIPE PROCESSING FEE",
         direction: "out",
       }),
-    ).toBe("6200");
+    ).toBe("6050");
   });
 
-  it("routes advertising platforms to Advertising & Marketing 6100", () => {
+  it("routes advertising platforms to Advertising & Marketing 6000", () => {
     expect(
       mapPlaidCategoryToAccountCode({
         primary: "GENERAL_SERVICES",
@@ -128,7 +128,7 @@ describe("mapPlaidCategoryToAccountCode", () => {
         name: "GOOGLE ADS 8829",
         direction: "out",
       }),
-    ).toBe("6100");
+    ).toBe("6000");
   });
 
   it("routes insurance carriers to Insurance 6000", () => {
@@ -139,7 +139,7 @@ describe("mapPlaidCategoryToAccountCode", () => {
         name: "HISCOX INSURANCE PREMIUM",
         direction: "out",
       }),
-    ).toBe("6000");
+    ).toBe("6150");
   });
 
   it("routes office-supply retailers to Office Supplies 5900", () => {
@@ -150,7 +150,7 @@ describe("mapPlaidCategoryToAccountCode", () => {
         name: "STAPLES STORE #123",
         direction: "out",
       }),
-    ).toBe("5900");
+    ).toBe("6250");
   });
 
   it("routes contractor / professional-services names to Contractor Fees 5800", () => {
@@ -161,7 +161,7 @@ describe("mapPlaidCategoryToAccountCode", () => {
         name: "Upwork Freelance Payment",
         direction: "out",
       }),
-    ).toBe("5800");
+    ).toBe("6350");
   });
 
   it("routes legal/accounting GENERAL_SERVICES detailed to Contractor Fees 5800", () => {
@@ -172,7 +172,7 @@ describe("mapPlaidCategoryToAccountCode", () => {
         name: "Firm & Co",
         direction: "out",
       }),
-    ).toBe("5800");
+    ).toBe("6350");
   });
 
   it("maps any money-in to revenue 4000", () => {

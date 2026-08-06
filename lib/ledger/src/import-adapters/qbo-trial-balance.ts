@@ -184,7 +184,7 @@ const NAME_MAP: { keyword: string; type: AccountType }[] = [
 /**
  * Account codes are assigned deterministically by type band + appearance order
  * (asset 10000+, liability 20000+, …), all well clear of the seed chart of
- * accounts (1000–6300). This makes re-importing the SAME export produce the
+ * accounts (1000–6900). This makes re-importing the SAME export produce the
  * SAME codes, so the frozen importer (which upserts accounts by code) is
  * idempotent. This adapter is designed for the migration workflow it serves:
  * bringing ONE trial balance into a FRESH org. Importing a second, DIFFERENT

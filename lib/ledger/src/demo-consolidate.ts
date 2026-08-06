@@ -92,7 +92,7 @@ async function main(): Promise<void> {
       source: "manual",
       lines: [
         {
-          accountId: child1.byCode["5100"].id,
+          accountId: child1.byCode["6400"].id,
           debit: 50_000n,
           counterpartyOrgId: parent.organization.id,
         },

@@ -139,38 +139,38 @@ export function mapPlaidCategoryToAccountCode(
 
   // Money out → expense. Provider-name overrides win over the generic PFC,
   // because Plaid mis-labels employer payroll and many SaaS charges.
-  if (PAYROLL_NAME_HINTS.some((h) => name.includes(h))) return "5200"; // Salaries
-  if (MERCHANT_FEE_NAME_HINTS.some((h) => name.includes(h))) return "6200"; // Merchant / Processing Fees
-  if (ADVERTISING_NAME_HINTS.some((h) => name.includes(h))) return "6100"; // Advertising & Marketing
-  if (INSURANCE_NAME_HINTS.some((h) => name.includes(h))) return "6000"; // Insurance
-  if (OFFICE_SUPPLY_NAME_HINTS.some((h) => name.includes(h))) return "5900"; // Office Supplies
-  if (CONTRACTOR_NAME_HINTS.some((h) => name.includes(h))) return "5800"; // Contractor / Professional Fees
-  if (SOFTWARE_NAME_HINTS.some((h) => name.includes(h))) return "5600"; // Software
+  if (PAYROLL_NAME_HINTS.some((h) => name.includes(h))) return "6300"; // Payroll / Wages
+  if (MERCHANT_FEE_NAME_HINTS.some((h) => name.includes(h))) return "6050"; // Bank & Merchant Fees
+  if (ADVERTISING_NAME_HINTS.some((h) => name.includes(h))) return "6000"; // Advertising & Marketing
+  if (INSURANCE_NAME_HINTS.some((h) => name.includes(h))) return "6150"; // Insurance
+  if (OFFICE_SUPPLY_NAME_HINTS.some((h) => name.includes(h))) return "6250"; // Office Supplies
+  if (CONTRACTOR_NAME_HINTS.some((h) => name.includes(h))) return "6350"; // Professional Fees
+  if (SOFTWARE_NAME_HINTS.some((h) => name.includes(h))) return "6500"; // Software & Technology
 
   switch (primary) {
     case "FOOD_AND_DRINK":
     case "ENTERTAINMENT":
-      return "5400"; // Meals & Entertainment
+      return "6200"; // Meals & Entertainment
     case "TRANSPORTATION":
     case "TRAVEL":
-      return "5500"; // Travel
+      return "6550"; // Travel
     case "BANK_FEES":
-      return "5700"; // Bank Fees & Charges
+      return "6050"; // Bank & Merchant Fees
     case "GENERAL_SERVICES":
-      // Professional services (legal, accounting, consulting) → Contractor fees;
-      // everything else general → Software & Subscriptions.
+      // Professional services (legal, accounting, consulting) → Professional
+      // Fees; everything else general → Software & Technology.
       if (
         detailed.includes("LEGAL") ||
         detailed.includes("ACCOUNTING") ||
         detailed.includes("CONSULTING")
       ) {
-        return "5800"; // Contractor / Professional Fees
+        return "6350"; // Professional Fees
       }
-      return "5600"; // Software & Subscriptions (professional services)
+      return "6500"; // Software & Technology (professional services)
     case "RENT_AND_UTILITIES":
       // The primary itself starts with "RENT_", so match the rent-specific
       // detailed suffix, not a bare "RENT" substring.
-      return detailed.endsWith("_RENT") ? "5100" : "5300"; // Rent vs Utilities
+      return detailed.endsWith("_RENT") ? "6400" : "6600"; // Rent vs Utilities
     default:
       return null;
   }

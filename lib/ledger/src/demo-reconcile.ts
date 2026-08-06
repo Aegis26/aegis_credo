@@ -30,8 +30,8 @@ const sampleFile: ImportFile = {
     { code: "2000", name: "Accounts Payable", type: "liability" },
     { code: "3000", name: "Owner's Equity", type: "equity" },
     { code: "4000", name: "Sales Revenue", type: "revenue" },
-    { code: "5100", name: "Rent Expense", type: "expense" },
-    { code: "5300", name: "Utilities Expense", type: "expense" },
+    { code: "6400", name: "Rent & Lease", type: "expense" },
+    { code: "6600", name: "Utilities", type: "expense" },
   ],
   openingBalances: [
     { accountCode: "1000", debit: "500000" },
@@ -52,7 +52,7 @@ const sampleFile: ImportFile = {
       date: "2026-01-10",
       memo: "Pay rent",
       lines: [
-        { accountCode: "5100", debit: "80000" },
+        { accountCode: "6400", debit: "80000" },
         { accountCode: "1000", credit: "80000" },
       ],
     },
@@ -78,7 +78,7 @@ const sampleFile: ImportFile = {
       dueDate: "2026-02-15",
       amount: "45000",
       apAccountCode: "2000",
-      expenseAccountCode: "5300",
+      expenseAccountCode: "6600",
     },
   ],
 };

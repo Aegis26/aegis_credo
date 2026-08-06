@@ -1,14 +1,17 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import {
   db,
   pool,
   journalEntriesTable,
   journalLinesTable,
   auditLogTable,
+  accountsTable,
 } from "@workspace/db";
 import {
   seedOrganization,
+  seedMissingDefaultAccounts,
+  STARTER_CHART_OF_ACCOUNTS,
   postJournalEntry,
   reverseJournalEntry,
   getAccountBalance,
@@ -91,6 +94,55 @@ afterAll(async () => {
 function randCents(min: number, max: number): bigint {
   return BigInt(Math.floor(Math.random() * (max - min + 1)) + min);
 }
+
+describe("seedMissingDefaultAccounts (idempotent backfill)", () => {
+  it("adds only missing codes, never touches existing accounts, re-run is a no-op", async () => {
+    const org = await seedOrganization("Backfill Co");
+    const orgId = org.organization.id;
+    // Simulate the thin-chart org: delete a few defaults, keep a custom 1010.
+    await db
+      .delete(accountsTable)
+      .where(
+        and(
+          eq(accountsTable.orgId, orgId),
+          inArray(accountsTable.code, ["1010", "6400", "3200"]),
+        ),
+      );
+    const [custom1010] = await db
+      .insert(accountsTable)
+      .values({
+        orgId,
+        code: "1010",
+        name: "Capital One Simply Checking",
+        type: "asset",
+        normalBalance: "debit",
+      })
+      .returning();
+
+    const added = await seedMissingDefaultAccounts(orgId);
+    const addedCodes = added.map((a) => a.code).sort();
+    expect(addedCodes).toEqual(["3200", "6400"]); // NOT 1010 — user's custom account wins
+
+    const all = await db
+      .select()
+      .from(accountsTable)
+      .where(eq(accountsTable.orgId, orgId));
+    const the1010 = all.filter((a) => a.code === "1010");
+    expect(the1010).toHaveLength(1);
+    expect(the1010[0].id).toBe(custom1010.id);
+    expect(the1010[0].name).toBe("Capital One Simply Checking");
+    // Every default code now present, with the correct type.
+    for (const def of STARTER_CHART_OF_ACCOUNTS) {
+      const match = all.find((a) => a.code === def.code);
+      expect(match).toBeDefined();
+      if (def.code !== "1010") expect(match!.type).toBe(def.type);
+    }
+
+    // Re-run: pure no-op.
+    const again = await seedMissingDefaultAccounts(orgId);
+    expect(again).toHaveLength(0);
+  });
+});
 
 describe("posting service", () => {
   it("posts a balanced entry and derives account balances", async () => {
@@ -264,7 +316,7 @@ describe("ledger invariants over random postings", () => {
   it("trial balance sums to zero after N random balanced entries (DoD 3)", async () => {
     const local = await seedOrganization("Random Trial Co");
     const { byCode } = local;
-    const debitAccounts = [byCode["1000"], byCode["5100"], byCode["5200"]];
+    const debitAccounts = [byCode["1000"], byCode["6400"], byCode["6300"]];
     const creditAccounts = [byCode["4000"], byCode["2000"], byCode["3000"]];
 
     for (let i = 0; i < 50; i++) {
@@ -324,7 +376,7 @@ describe("ledger invariants over random postings", () => {
       entryDate: "2026-04-04",
       source: "manual",
       lines: [
-        { accountId: byCode["5100"].id, debit: 120_000n },
+        { accountId: byCode["6400"].id, debit: 120_000n },
         { accountId: byCode["1000"].id, credit: 120_000n },
       ],
     });
@@ -592,12 +644,12 @@ describe("accounts payable", () => {
       dueDate: "2026-03-01",
       amount: 40000n,
       apAccountId: byCode["2000"].id,
-      expenseAccountId: byCode["5300"].id,
+      expenseAccountId: byCode["6600"].id,
       externalId: "bill-ext-1",
     });
 
     // Dr expense / Cr A/P.
-    const expense = await getAccountBalance(orgId, byCode["5300"].id);
+    const expense = await getAccountBalance(orgId, byCode["6600"].id);
     const ap = await getAccountBalance(orgId, byCode["2000"].id);
     expect(expense.balance).toBe(40000n);
     expect(ap.balance).toBe(40000n);
@@ -610,7 +662,7 @@ describe("accounts payable", () => {
       dueDate: "2026-03-01",
       amount: 40000n,
       apAccountId: byCode["2000"].id,
-      expenseAccountId: byCode["5300"].id,
+      expenseAccountId: byCode["6600"].id,
       externalId: "bill-ext-1",
     });
     expect(again.bill.id).toBe(bill.id);
@@ -698,12 +750,12 @@ describe("payroll ingest (provider output only)", () => {
       grossPay: 100000n,
       taxes: 25000n,
       netPay: 75000n,
-      salariesExpenseAccountId: byCode["5200"].id,
+      salariesExpenseAccountId: byCode["6300"].id,
       cashAccountId: byCode["1000"].id,
       taxLiabilityAccountId: byCode["2200"].id,
     });
     expect(posted.lines).toHaveLength(3);
-    expect((await getAccountBalance(orgId, byCode["5200"].id)).balance).toBe(
+    expect((await getAccountBalance(orgId, byCode["6300"].id)).balance).toBe(
       100000n,
     );
     expect((await getAccountBalance(orgId, byCode["2200"].id)).balance).toBe(
@@ -718,7 +770,7 @@ describe("payroll ingest (provider output only)", () => {
       grossPay: 100000n,
       taxes: 25000n,
       netPay: 75000n,
-      salariesExpenseAccountId: byCode["5200"].id,
+      salariesExpenseAccountId: byCode["6300"].id,
       cashAccountId: byCode["1000"].id,
       taxLiabilityAccountId: byCode["2200"].id,
     });
@@ -733,7 +785,7 @@ describe("payroll ingest (provider output only)", () => {
         grossPay: 100000n,
         taxes: 25000n,
         netPay: 70000n,
-        salariesExpenseAccountId: byCode["5200"].id,
+        salariesExpenseAccountId: byCode["6300"].id,
         cashAccountId: byCode["1000"].id,
         taxLiabilityAccountId: byCode["2200"].id,
       }),
@@ -875,7 +927,7 @@ describe("configurable approval workflows (Phase 3)", () => {
       dueDate: "2026-02-05",
       amount: 50_000n,
       apAccountId: byCode["2000"].id,
-      expenseAccountId: byCode["5100"].id,
+      expenseAccountId: byCode["6400"].id,
     });
     expect(small.approval).toBeUndefined();
     await expect(
@@ -894,7 +946,7 @@ describe("configurable approval workflows (Phase 3)", () => {
       dueDate: "2026-02-06",
       amount: 250_000n,
       apAccountId: byCode["2000"].id,
-      expenseAccountId: byCode["5100"].id,
+      expenseAccountId: byCode["6400"].id,
     });
     expect(big.approval).toBeDefined();
     expect(big.approval?.status).toBe("pending");
@@ -937,7 +989,7 @@ describe("configurable approval workflows (Phase 3)", () => {
       dueDate: "2026-04-01",
       amount: 20_000n,
       apAccountId: byCode["2000"].id,
-      expenseAccountId: byCode["5100"].id,
+      expenseAccountId: byCode["6400"].id,
     });
     await decideApproval(orgId, bill.approval!.id, "rejected");
 
@@ -1043,7 +1095,7 @@ describe("multi-entity consolidation with intercompany elimination (Phase 3)", (
         source: "manual",
         lines: [
           {
-            accountId: child1.byCode["5100"].id,
+            accountId: child1.byCode["6400"].id,
             debit: 50_000n,
             counterpartyOrgId: parent.organization.id,
           },
@@ -1195,7 +1247,7 @@ describe("budget vs actual (Phase 3)", () => {
       periodEnd: "2026-03-31",
     });
     await setBudgetLine(orgId, budget.id, byCode["4000"].id, 100_000n);
-    await setBudgetLine(orgId, budget.id, byCode["5100"].id, 40_000n);
+    await setBudgetLine(orgId, budget.id, byCode["6400"].id, 40_000n);
 
     // Actuals inside the window.
     await postJournalEntry(
@@ -1218,7 +1270,7 @@ describe("budget vs actual (Phase 3)", () => {
         memo: "Rent",
         source: "manual",
         lines: [
-          { accountId: byCode["5100"].id, debit: 30_000n },
+          { accountId: byCode["6400"].id, debit: 30_000n },
           { accountId: byCode["1000"].id, credit: 30_000n },
         ],
       },
@@ -1232,7 +1284,7 @@ describe("budget vs actual (Phase 3)", () => {
         memo: "Out of period",
         source: "manual",
         lines: [
-          { accountId: byCode["5100"].id, debit: 99_999n },
+          { accountId: byCode["6400"].id, debit: 99_999n },
           { accountId: byCode["1000"].id, credit: 99_999n },
         ],
       },
@@ -1244,8 +1296,8 @@ describe("budget vs actual (Phase 3)", () => {
     expect(byAccount.get("4000")?.budgeted).toBe(100_000n);
     expect(byAccount.get("4000")?.actual).toBe(120_000n);
     expect(byAccount.get("4000")?.variance).toBe(20_000n);
-    expect(byAccount.get("5100")?.actual).toBe(30_000n); // out-of-period excluded
-    expect(byAccount.get("5100")?.variance).toBe(-10_000n);
+    expect(byAccount.get("6400")?.actual).toBe(30_000n); // out-of-period excluded
+    expect(byAccount.get("6400")?.variance).toBe(-10_000n);
   });
 });
 

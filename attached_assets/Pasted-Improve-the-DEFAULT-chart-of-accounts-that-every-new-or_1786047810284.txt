@@ -1,0 +1,66 @@
+Improve the DEFAULT chart of accounts that every new organization is seeded with.
+The current seed is too thin — a real business can't categorize expenses or owner
+draws because those accounts don't exist. Replace the seed with a proper
+general-purpose small-business chart of accounts, following standard numbering.
+
+Seed these accounts for every new org (adjust names to be clear, keep the standard
+number ranges). This is the DEFAULT seed — do not remove the ability to add more.
+
+ASSETS (1000s)
+- 1000 Cash (keep — the existing default cash/fallback account)
+- 1010 Checking
+- 1020 Savings
+- 1100 Accounts Receivable
+- 1200 Undeposited Funds
+- 1500 Fixed Assets / Equipment
+
+LIABILITIES (2000s)
+- 2000 Accounts Payable
+- 2100 Credit Card Payable
+- 2200 Sales Tax Payable
+- 2300 Payroll Liabilities
+- 2500 Loans Payable
+
+EQUITY (3000s)
+- 3000 Owner's Equity / Opening Balance Equity
+- 3100 Owner's Contributions
+- 3200 Owner's Draw
+- 3900 Retained Earnings
+
+REVENUE (4000s)
+- 4000 Sales Revenue
+- 4100 Service Revenue
+- 4900 Other Income
+
+EXPENSES (5000s–6000s)
+- 5000 Cost of Goods Sold
+- 6000 Advertising & Marketing
+- 6050 Bank & Merchant Fees
+- 6100 Dues & Subscriptions
+- 6150 Insurance
+- 6200 Meals & Entertainment
+- 6250 Office Supplies
+- 6300 Payroll / Wages
+- 6350 Professional Fees (Legal, Accounting)
+- 6400 Rent & Lease
+- 6450 Repairs & Maintenance
+- 6500 Software & Technology
+- 6550 Travel
+- 6600 Utilities
+- 6900 Other / Miscellaneous Expense
+
+REQUIREMENTS:
+- Each account has the correct type (asset/liability/equity/revenue/expense) so it
+  classifies correctly on the P&L and Balance Sheet — this drives reporting, so
+  the types must be right.
+- This is the seed for NEW orgs. For my EXISTING test org that has the thin chart,
+  give me a safe way to add these accounts to it too (a script or an idempotent
+  "seed missing defaults" action) so I can finish categorizing my Capital One
+  import — WITHOUT duplicating the accounts I already created (1010/1020/1030 for
+  my Capital One accounts) or the existing 4000/4100.
+- Do not touch the ledger core, posting logic, or any existing posted data —
+  this is chart-of-accounts data only.
+
+Confirm: a newly created org gets the full chart; my existing org gets the missing
+defaults added idempotently; all existing tests pass. Show me the diff and confirm
+the account types are correct.
