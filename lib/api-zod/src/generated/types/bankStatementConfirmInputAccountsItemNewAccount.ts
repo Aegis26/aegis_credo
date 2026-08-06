@@ -6,8 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type BankStatementConfirmInputTransactionsItem = {
-  date: string;
-  description: string;
-  amount: string;
-};
+export type BankStatementConfirmInputAccountsItemNewAccount = {
+  code: string;
+  name: string;
+} | null;

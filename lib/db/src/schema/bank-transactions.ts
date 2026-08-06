@@ -21,6 +21,10 @@ export const bankTransactionsTable = pgTable(
       .notNull()
       .references(() => organizationsTable.id),
     accountId: uuid("account_id").references(() => accountsTable.id),
+    // Which ledger CASH account this bank row belongs to (multi-account
+    // statement imports). Null = legacy rows; categorize falls back to the
+    // org's code-1000 cash account.
+    cashAccountId: uuid("cash_account_id").references(() => accountsTable.id),
     txnDate: date("txn_date", { mode: "string" }).notNull(),
     // Integer minor units (cents); signed. Negative = money out.
     amount: bigint("amount", { mode: "bigint" }).notNull(),

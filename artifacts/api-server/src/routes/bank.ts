@@ -161,7 +161,25 @@ router.post(
         throw new HttpError(400, "Cannot categorize a zero-amount transaction.");
       }
 
-      const cash = await accountByCode(orgId, "1000");
+      // Statement-imported rows carry their own mapped cash account; legacy
+      // rows (Plaid sync, old imports) fall back to the org's code-1000 cash.
+      let cash;
+      if (txn.cashAccountId) {
+        const [mapped] = await db
+          .select()
+          .from(accountsTable)
+          .where(
+            and(
+              eq(accountsTable.orgId, orgId),
+              eq(accountsTable.id, txn.cashAccountId),
+            ),
+          )
+          .limit(1);
+        if (!mapped) throw new NotFoundError("Mapped cash account not found.");
+        cash = mapped;
+      } else {
+        cash = await accountByCode(orgId, "1000");
+      }
       const magnitude = txn.amount < 0n ? -txn.amount : txn.amount;
       // Convention: negative = money out. Money out debits the chosen account
       // (e.g. an expense) and credits cash; money in does the reverse.

@@ -5,8 +5,8 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { BankStatementConfirmInputTransactionsItem } from './bankStatementConfirmInputTransactionsItem';
+import type { BankStatementConfirmInputAccountsItem } from './bankStatementConfirmInputAccountsItem';
 
 export interface BankStatementConfirmInput {
-  transactions: BankStatementConfirmInputTransactionsItem[];
+  accounts: BankStatementConfirmInputAccountsItem[];
 }

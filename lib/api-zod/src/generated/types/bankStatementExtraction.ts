@@ -5,21 +5,21 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { BankStatementTxn } from './bankStatementTxn';
+import type { BankStatementAccount } from './bankStatementAccount';
 
 /**
- * Dry-run extraction result. `balanced` and `discrepancy` are computed server-side in integer minor units — opening + sum(transactions) vs closing.
+ * Dry-run extraction result. Each account reconciles independently, and the statement-level cross-check compares the sum of closing balances to the statement's stated total ending balance (when it prints one) — the catch-all that fails if an entire account was missed.
  */
 export interface BankStatementExtraction {
   periodStart?: string | null;
   periodEnd?: string | null;
-  openingBalance: string;
-  closingBalance: string;
-  computedClosingBalance: string;
-  balanced: boolean;
-  /** closing − (opening + sum), formatted decimal; "0.00" when balanced. */
-  discrepancy: string;
-  transactions: BankStatementTxn[];
+  accounts: BankStatementAccount[];
+  /** The statement's stated combined ending balance, if printed. */
+  statementTotalEndingBalance: string | null;
+  /** Server-computed sum of every account's stated closing balance. */
+  sumOfClosingBalances: string;
+  /** Whether sumOfClosingBalances equals statementTotalEndingBalance; null when the statement does not print a combined total. */
+  totalMatches: boolean | null;
   /** SHA-256 of the uploaded PDF content. */
   statementHash: string;
 }

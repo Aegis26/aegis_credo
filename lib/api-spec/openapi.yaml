@@ -2862,17 +2862,28 @@ components:
         lowConfidence:
           type: boolean
           description: True when the model was unsure about this row — review it carefully.
-      required: [date, description, amount, lowConfidence]
-    BankStatementExtraction:
-      type: object
-      description: >-
-        Dry-run extraction result. `balanced` and `discrepancy` are computed
-        server-side in integer minor units — opening + sum(transactions) vs closing.
-      properties:
-        periodStart:
+        chainBreak:
+          type: boolean
+          description: >-
+            True when the statement's printed running balance for this row does
+            not equal the previous balance ± this amount — a likely misread.
+        transferGroup:
           type: string
           nullable: true
-        periodEnd:
+          description: >-
+            Non-null when this row is one leg of a detected internal transfer
+            between two accounts on the same statement; both legs share the id.
+      required: [date, description, amount, lowConfidence, chainBreak, transferGroup]
+    BankStatementAccount:
+      type: object
+      description: >-
+        One bank account on the statement, reconciled independently:
+        opening + sum(transactions) vs closing, computed server-side in
+        integer minor units.
+      properties:
+        accountName:
+          type: string
+        accountNumberLast4:
           type: string
           nullable: true
         openingBalance:
@@ -2890,27 +2901,97 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/BankStatementTxn"
+      required:
+        [accountName, accountNumberLast4, openingBalance, closingBalance, computedClosingBalance, balanced, discrepancy, transactions]
+    BankStatementExtraction:
+      type: object
+      description: >-
+        Dry-run extraction result. Each account reconciles independently, and
+        the statement-level cross-check compares the sum of closing balances to
+        the statement's stated total ending balance (when it prints one) — the
+        catch-all that fails if an entire account was missed.
+      properties:
+        periodStart:
+          type: string
+          nullable: true
+        periodEnd:
+          type: string
+          nullable: true
+        accounts:
+          type: array
+          items:
+            $ref: "#/components/schemas/BankStatementAccount"
+        statementTotalEndingBalance:
+          type: string
+          nullable: true
+          description: The statement's stated combined ending balance, if printed.
+        sumOfClosingBalances:
+          type: string
+          description: Server-computed sum of every account's stated closing balance.
+        totalMatches:
+          type: boolean
+          nullable: true
+          description: >-
+            Whether sumOfClosingBalances equals statementTotalEndingBalance;
+            null when the statement does not print a combined total.
         statementHash:
           type: string
           description: SHA-256 of the uploaded PDF content.
       required:
-        [openingBalance, closingBalance, computedClosingBalance, balanced, discrepancy, transactions, statementHash]
+        [accounts, statementTotalEndingBalance, sumOfClosingBalances, totalMatches, statementHash]
     BankStatementConfirmInput:
       type: object
       properties:
-        transactions:
+        accounts:
           type: array
           items:
             type: object
+            description: >-
+              One reviewed account: exactly one of cashAccountId (existing
+              ledger cash account) or newAccount (create one) must be provided.
             properties:
-              date:
+              accountName:
                 type: string
-              description:
+              accountNumberLast4:
                 type: string
-              amount:
+                nullable: true
+              openingBalance:
                 type: string
-            required: [date, description, amount]
-      required: [transactions]
+                description: Reviewed opening balance; the server re-verifies opening + all rows (including excluded) = closing.
+              closingBalance:
+                type: string
+              cashAccountId:
+                type: string
+                nullable: true
+              newAccount:
+                type: object
+                nullable: true
+                properties:
+                  code:
+                    type: string
+                  name:
+                    type: string
+                required: [code, name]
+              transactions:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    date:
+                      type: string
+                    description:
+                      type: string
+                    amount:
+                      type: string
+                    excluded:
+                      type: boolean
+                      description: >-
+                        Reviewed-out rows (e.g. internal-transfer legs). They
+                        still count toward the balance verification but are
+                        not imported.
+                  required: [date, description, amount]
+            required: [accountName, openingBalance, closingBalance, transactions]
+      required: [accounts]
     BankStatementConfirmResult:
       type: object
       properties:

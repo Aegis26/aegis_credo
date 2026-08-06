@@ -20,7 +20,8 @@ export type Permission =
   | "ledger.post" // create journal entries, bills, invoices, payroll, imports
   | "ledger.reverse" // reverse a posted entry
   | "reports.read" // read balances and financial reports
-  | "members.manage"; // invite/revoke members and accountants
+  | "members.manage" // invite/revoke members and accountants
+  | "coa.manage"; // alter the chart of accounts (create accounts)
 
 // Role -> allowed permissions. "accountant" is the external-collaborator role:
 // read-only reporting access, granted per-org and revocable.
@@ -30,6 +31,7 @@ const ROLE_PERMISSIONS: Record<MembershipRole, ReadonlySet<Permission>> = {
     "ledger.reverse",
     "reports.read",
     "members.manage",
+    "coa.manage",
   ]),
   staff: new Set<Permission>(["ledger.post", "ledger.reverse", "reports.read"]),
   view_only: new Set<Permission>(["reports.read"]),

@@ -16,4 +16,8 @@ export interface BankStatementTxn {
   amount: string;
   /** True when the model was unsure about this row — review it carefully. */
   lowConfidence: boolean;
+  /** True when the statement's printed running balance for this row does not equal the previous balance ± this amount — a likely misread. */
+  chainBreak: boolean;
+  /** Non-null when this row is one leg of a detected internal transfer between two accounts on the same statement; both legs share the id. */
+  transferGroup: string | null;
 }

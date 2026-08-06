@@ -329,14 +329,18 @@ export interface BankStatementTxn {
   amount: string;
   /** True when the model was unsure about this row — review it carefully. */
   lowConfidence: boolean;
+  /** True when the statement's printed running balance for this row does not equal the previous balance ± this amount — a likely misread. */
+  chainBreak: boolean;
+  /** Non-null when this row is one leg of a detected internal transfer between two accounts on the same statement; both legs share the id. */
+  transferGroup: string | null;
 }
 
 /**
- * Dry-run extraction result. `balanced` and `discrepancy` are computed server-side in integer minor units — opening + sum(transactions) vs closing.
+ * One bank account on the statement, reconciled independently: opening + sum(transactions) vs closing, computed server-side in integer minor units.
  */
-export interface BankStatementExtraction {
-  periodStart?: string | null;
-  periodEnd?: string | null;
+export interface BankStatementAccount {
+  accountName: string;
+  accountNumberLast4: string | null;
   openingBalance: string;
   closingBalance: string;
   computedClosingBalance: string;
@@ -344,18 +348,54 @@ export interface BankStatementExtraction {
   /** closing − (opening + sum), formatted decimal; "0.00" when balanced. */
   discrepancy: string;
   transactions: BankStatementTxn[];
+}
+
+/**
+ * Dry-run extraction result. Each account reconciles independently, and the statement-level cross-check compares the sum of closing balances to the statement's stated total ending balance (when it prints one) — the catch-all that fails if an entire account was missed.
+ */
+export interface BankStatementExtraction {
+  periodStart?: string | null;
+  periodEnd?: string | null;
+  accounts: BankStatementAccount[];
+  /** The statement's stated combined ending balance, if printed. */
+  statementTotalEndingBalance: string | null;
+  /** Server-computed sum of every account's stated closing balance. */
+  sumOfClosingBalances: string;
+  /** Whether sumOfClosingBalances equals statementTotalEndingBalance; null when the statement does not print a combined total. */
+  totalMatches: boolean | null;
   /** SHA-256 of the uploaded PDF content. */
   statementHash: string;
 }
 
-export type BankStatementConfirmInputTransactionsItem = {
+export type BankStatementConfirmInputAccountsItemNewAccount = {
+  code: string;
+  name: string;
+} | null;
+
+export type BankStatementConfirmInputAccountsItemTransactionsItem = {
   date: string;
   description: string;
   amount: string;
+  /** Reviewed-out rows (e.g. internal-transfer legs). They still count toward the balance verification but are not imported. */
+  excluded?: boolean;
+};
+
+/**
+ * One reviewed account: exactly one of cashAccountId (existing ledger cash account) or newAccount (create one) must be provided.
+ */
+export type BankStatementConfirmInputAccountsItem = {
+  accountName: string;
+  accountNumberLast4?: string | null;
+  /** Reviewed opening balance; the server re-verifies opening + all rows (including excluded) = closing. */
+  openingBalance: string;
+  closingBalance: string;
+  cashAccountId?: string | null;
+  newAccount?: BankStatementConfirmInputAccountsItemNewAccount;
+  transactions: BankStatementConfirmInputAccountsItemTransactionsItem[];
 };
 
 export interface BankStatementConfirmInput {
-  transactions: BankStatementConfirmInputTransactionsItem[];
+  accounts: BankStatementConfirmInputAccountsItem[];
 }
 
 export interface BankStatementConfirmResult {

@@ -794,6 +794,9 @@ export const ExtractBankStatementBody = zod.object({
 export const ExtractBankStatementResponse = zod.object({
   "periodStart": zod.string().nullish(),
   "periodEnd": zod.string().nullish(),
+  "accounts": zod.array(zod.object({
+  "accountName": zod.string(),
+  "accountNumberLast4": zod.string().nullable(),
   "openingBalance": zod.string(),
   "closingBalance": zod.string(),
   "computedClosingBalance": zod.string(),
@@ -803,10 +806,16 @@ export const ExtractBankStatementResponse = zod.object({
   "date": zod.string().describe('ISO date (YYYY-MM-DD)'),
   "description": zod.string(),
   "amount": zod.string(),
-  "lowConfidence": zod.boolean().describe('True when the model was unsure about this row — review it carefully.')
-}).describe('One extracted statement line. `amount` is a signed decimal string in the statement currency (negative = money out), parsed server-side to integer minor units — never a float.')),
+  "lowConfidence": zod.boolean().describe('True when the model was unsure about this row — review it carefully.'),
+  "chainBreak": zod.boolean().describe('True when the statement\'s printed running balance for this row does not equal the previous balance ± this amount — a likely misread.'),
+  "transferGroup": zod.string().nullable().describe('Non-null when this row is one leg of a detected internal transfer between two accounts on the same statement; both legs share the id.')
+}).describe('One extracted statement line. `amount` is a signed decimal string in the statement currency (negative = money out), parsed server-side to integer minor units — never a float.'))
+}).describe('One bank account on the statement, reconciled independently: opening + sum(transactions) vs closing, computed server-side in integer minor units.')),
+  "statementTotalEndingBalance": zod.string().nullable().describe('The statement\'s stated combined ending balance, if printed.'),
+  "sumOfClosingBalances": zod.string().describe('Server-computed sum of every account\'s stated closing balance.'),
+  "totalMatches": zod.boolean().nullable().describe('Whether sumOfClosingBalances equals statementTotalEndingBalance; null when the statement does not print a combined total.'),
   "statementHash": zod.string().describe('SHA-256 of the uploaded PDF content.')
-}).describe('Dry-run extraction result. `balanced` and `discrepancy` are computed server-side in integer minor units — opening + sum(transactions) vs closing.')
+}).describe('Dry-run extraction result. Each account reconciles independently, and the statement-level cross-check compares the sum of closing balances to the statement\'s stated total ending balance (when it prints one) — the catch-all that fails if an entire account was missed.')
 
 
 /**
@@ -817,11 +826,23 @@ export const ConfirmBankStatementParams = zod.object({
 })
 
 export const ConfirmBankStatementBody = zod.object({
+  "accounts": zod.array(zod.object({
+  "accountName": zod.string(),
+  "accountNumberLast4": zod.string().nullish(),
+  "openingBalance": zod.string().describe('Reviewed opening balance; the server re-verifies opening + all rows (including excluded) = closing.'),
+  "closingBalance": zod.string(),
+  "cashAccountId": zod.string().nullish(),
+  "newAccount": zod.object({
+  "code": zod.string(),
+  "name": zod.string()
+}).nullish(),
   "transactions": zod.array(zod.object({
   "date": zod.string(),
   "description": zod.string(),
-  "amount": zod.string()
+  "amount": zod.string(),
+  "excluded": zod.boolean().optional().describe('Reviewed-out rows (e.g. internal-transfer legs). They still count toward the balance verification but are not imported.')
 }))
+}).describe('One reviewed account: exactly one of cashAccountId (existing ledger cash account) or newAccount (create one) must be provided.'))
 })
 
 export const ConfirmBankStatementResponse = zod.object({
