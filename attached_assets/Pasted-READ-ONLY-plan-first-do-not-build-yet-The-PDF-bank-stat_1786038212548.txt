@@ -1,0 +1,46 @@
+READ-ONLY plan first — do not build yet. The PDF bank-statement import fails on
+real multi-account statements. I'm attaching a REAL Capital One statement (use it
+as the test fixture — do NOT invent one). It has THREE accounts on one document,
+each with its own opening balance, transactions, and closing balance, plus
+internal transfers between them and an informational no-amount row.
+
+Investigate and propose how to handle these, and report the plan before building:
+
+1. MULTI-ACCOUNT EXTRACTION: the extractor must return an ARRAY of accounts, each
+   with account name/number, opening balance, closing balance, and its own
+   transaction list. Reconcile EACH account separately (opening + Σtransactions =
+   closing), and cross-check that the sum of closing balances equals the
+   statement's stated total ending balance ($7,598.08 here). How will you change
+   the extraction schema and the reconciliation logic?
+
+2. INTERNAL TRANSFERS (critical): transactions like "Withdrawal to Simply
+   Checking" and "Deposit from Chris s Fortune" are the SAME money moving between
+   the user's own accounts on this statement — NOT income or expense. If imported
+   naively, they double-count and distort the P&L. Propose how to DETECT likely
+   internal transfers (match a withdrawal in one account to a deposit in another,
+   same amount/date, descriptions referencing the other account) and FLAG them in
+   the review screen so the user isn't silently miscategorizing them. Do NOT
+   auto-post transfers in v1 — detect, flag, let the human confirm.
+
+3. NO-AMOUNT / INFORMATIONAL ROWS: rows like "Interest Rate Change from 3.154% to
+   3.057%" have no amount and must be SKIPPED, not imported as $0 transactions
+   (the ledger rejects amount-less lines). Confirm they're excluded and don't
+   break reconciliation.
+
+4. RUNNING BALANCE as an integrity check: each row shows a running balance. Use it
+   to verify each transaction chains (prev balance ± amount = shown balance) and
+   flag rows that don't.
+
+5. ACCOUNT MAPPING: each extracted account needs to map to a ledger cash account.
+   Investigate how bank_transactions currently associates with an account, and
+   propose how the user maps/creates a cash account per extracted bank account
+   before confirming. How does this plug into the existing Reconcile pipeline?
+
+REVIEW SCREEN: show each account as its own section with its own balance-
+reconciliation badge; flag detected internal transfers; nothing posts until the
+user confirms.
+
+Report the plan, the schema changes, and how transfers and account-mapping will
+work. Change nothing until I approve. Use the attached real statement as the
+fixture and note that final accuracy requires me to re-test against it and other
+real statements.
