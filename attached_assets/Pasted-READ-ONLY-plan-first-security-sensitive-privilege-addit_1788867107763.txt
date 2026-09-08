@@ -1,0 +1,53 @@
+READ-ONLY plan first — security-sensitive privilege addition. Do not build until
+I approve the plan.
+
+I want a MASTER ADMIN (platform operator) for me as the app operator. It manages
+the platform and users but MUST NOT read customer financial data across orgs.
+Preserve the multi-tenant isolation exactly as it is.
+
+IDENTITY (env-controlled, fail closed, portable):
+- Identified by env var MASTER_ADMIN_EMAIL (Replit Secret now, Railway env var
+  later).
+- A user is master admin ONLY IF their authenticated SESSION email exactly matches
+  MASTER_ADMIN_EMAIL (normalized). Determine this SERVER-SIDE, PER REQUEST. Do NOT
+  store an admin flag in the DB — admin status is controlled solely by the env var,
+  so no one with DB write can self-grant.
+- FAIL CLOSED: if MASTER_ADMIN_EMAIL is unset, empty, or malformed, there is NO
+  master admin. Never default to granting admin.
+- Login still goes through the existing argon2id flow (I create the account via the
+  create-user CLI); the env var only elevates it. No password in env.
+
+WHAT IT CAN DO (platform operations ONLY):
+- List all organizations — METADATA ONLY (name, created date, owner, member count).
+  NOT ledger data, balances, or transactions.
+- Manage users: list, create, deactivate/reactivate, view account status (for
+  lockout/support). No customer financial data.
+- System visibility: health + aggregate COUNTS (orgs/users). Counts, never contents.
+- All behind new platform-admin endpoints reachable ONLY by the master admin.
+
+THE HARD BOUNDARY (load-bearing security property):
+- The master admin must NOT read any org's FINANCIAL data (trial balance, P&L,
+  balance sheet, invoices, bills, bank transactions, statements, journal entries)
+  for an org it is not a member of.
+- Being master admin does NOT make it a member of every org and does NOT grant
+  reports.read/ledger.post. The existing requirePermission + double-where org
+  scoping STILL APPLIES UNCHANGED. Platform-admin is a SEPARATE capability set,
+  NOT a bypass of tenant isolation.
+- Concretely: master admin hitting /orgs/:orgId/reports/trial-balance for an org
+  it isn't a member of must still get 403, like any other non-member.
+
+AUDIT: every master-admin action is written to the audit log.
+
+DEFINITION OF DONE (the boundary tests are the point):
+- Master admin (email matches env) can reach the platform-admin endpoints.
+- A non-master-admin user gets 403 on every platform-admin endpoint.
+- With MASTER_ADMIN_EMAIL unset/empty/malformed, NO user is master admin (fail-
+  closed test).
+- CRITICAL: the master admin CANNOT read financial data (trial balance / invoices
+  / bank transactions) of an org it is not a member of — still 403. This proves
+  platform-admin is not a tenant-isolation bypass.
+- All existing tests still pass.
+
+Report the plan first — how you determine master-admin status, the endpoints you'll
+add, and exactly how you guarantee the financial-data boundary. Change nothing
+until I approve.
