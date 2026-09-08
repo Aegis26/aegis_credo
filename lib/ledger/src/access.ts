@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import {
   db,
   usersTable,
@@ -40,17 +40,23 @@ const ROLE_PERMISSIONS: Record<MembershipRole, ReadonlySet<Permission>> = {
 
 /** Create (or return existing) user by email. Email is globally unique. */
 export async function upsertUser(email: string, name?: string): Promise<User> {
+  const normalizedEmail = email.trim().toLowerCase();
+  const [created] = await db
+    .insert(usersTable)
+    .values({ email: normalizedEmail, name })
+    .onConflictDoNothing()
+    .returning();
+  if (created) return created;
+
+  // The normalized unique index makes concurrent/case-variant invitations
+  // converge on one identity.
   const [existing] = await db
     .select()
     .from(usersTable)
-    .where(eq(usersTable.email, email))
+    .where(sql`lower(${usersTable.email}) = ${normalizedEmail}`)
     .limit(1);
-  if (existing) return existing;
-  const [user] = await db
-    .insert(usersTable)
-    .values({ email, name })
-    .returning();
-  return user;
+  if (!existing) throw new Error("User upsert conflict could not be resolved.");
+  return existing;
 }
 
 export interface AddMemberOptions {

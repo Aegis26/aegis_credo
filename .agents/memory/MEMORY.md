@@ -11,3 +11,4 @@
 - [Multi-account statement import](statement-multi-account.md) — server re-verifies opening+ALL rows(incl. excluded)=closing; transfers flag-only; dedup gains account prefix; inline COA creation needs coa.manage.
 - [Statement-extraction errors](statement-extraction-errors.md) — Anthropic SDK needs stream().finalMessage() at big max_tokens; UI error bodies are at ApiError.data.error (not axios shape); log error class only, never content.
 - [Plaid import gotchas](plaid-import-gotchas.md) — PFC `RENT_AND_UTILITIES` primary starts with "RENT" (substring trap); content-dedup on date|amount|name survives id rotation on re-link; opening balance idempotent per connection.
+- [Platform operator boundary](platform-operator-boundary.md) — platform administration never satisfies tenant permissions; revalidate session identity, version, and account state on every request.

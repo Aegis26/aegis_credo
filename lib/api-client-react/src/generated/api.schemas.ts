@@ -1234,6 +1234,95 @@ export interface BudgetVsActualReport {
   totalVariance: string;
 }
 
+export type PlatformUserStatusProperty = typeof PlatformUserStatusProperty[keyof typeof PlatformUserStatusProperty];
+
+
+export const PlatformUserStatusProperty = {
+  active: 'active',
+  deactivated: 'deactivated',
+} as const;
+
+export interface PlatformUser {
+  id: string;
+  email: string;
+  /** @nullable */
+  name: string | null;
+  createdAt: string;
+  status: PlatformUserStatusProperty;
+}
+
+export interface PlatformUserList {
+  users: PlatformUser[];
+  page: number;
+  pageSize: number;
+}
+
+export interface PlatformUserInput {
+  /** @minLength 3 */
+  email: string;
+  name?: string;
+  /** @minLength 8 */
+  password: string;
+}
+
+export type PlatformUserStatusStatus = typeof PlatformUserStatusStatus[keyof typeof PlatformUserStatusStatus];
+
+
+export const PlatformUserStatusStatus = {
+  active: 'active',
+  deactivated: 'deactivated',
+} as const;
+
+export interface PlatformUserStatus {
+  id: string;
+  status: PlatformUserStatusStatus;
+  loginAvailable: boolean;
+  /** @nullable */
+  lockedUntil: string | null;
+}
+
+export interface PlatformOrganization {
+  id: string;
+  name: string;
+  createdAt: string;
+  owners: PlatformUser[];
+  activeMemberCount: number;
+}
+
+export interface PlatformOrganizationList {
+  organizations: PlatformOrganization[];
+  page: number;
+  pageSize: number;
+}
+
+export interface PasswordResetLink {
+  resetLink: string;
+}
+
+export interface PasswordResetInput {
+  /** @minLength 1 */
+  token: string;
+  /** @minLength 8 */
+  newPassword: string;
+}
+
+export type PlatformHealthDatabase = typeof PlatformHealthDatabase[keyof typeof PlatformHealthDatabase];
+
+
+export const PlatformHealthDatabase = {
+  ok: 'ok',
+} as const;
+
+export interface PlatformHealth {
+  database: PlatformHealthDatabase;
+  userCount: number;
+  organizationCount: number;
+}
+
+export type PageParameter = number;
+
+export type PageSizeParameter = number;
+
 export type GetPracticeDashboardParams = {
 /**
  * Restrict to a single practice the user is a member of.
@@ -1283,4 +1372,28 @@ export const ListOrgApprovalsStatus = {
   approved: 'approved',
   rejected: 'rejected',
 } as const;
+
+export type ListPlatformOrganizationsParams = {
+/**
+ * @minimum 1
+ */
+page?: PageParameter;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+pageSize?: PageSizeParameter;
+};
+
+export type ListPlatformUsersParams = {
+/**
+ * @minimum 1
+ */
+page?: PageParameter;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+pageSize?: PageSizeParameter;
+};
 

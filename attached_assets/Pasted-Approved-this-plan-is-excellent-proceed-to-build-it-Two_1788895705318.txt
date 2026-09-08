@@ -1,0 +1,33 @@
+Approved — this plan is excellent, proceed to build it. Two additions/confirmations:
+
+1. THREAT-MODEL CAVEAT: I accept it. The env-var design protects against
+   application-level self-grant (no one using the app can escalate themselves),
+   which is the realistic threat. It does NOT protect against an attacker with raw
+   production-database write access — and that's fine, because such an attacker has
+   already fully compromised the system by other means. Protecting the database
+   itself is a separate control (restricted DB access, no shared prod
+   credentials), not the admin design's job. Build it as planned under that
+   understanding.
+
+2. MISSING PIECE — admin-initiated password reset. My follow-up request to add
+   this may not have reached you. Add it to this build:
+   - The master admin can trigger a password reset for any user.
+   - Generate a cryptographically-random, SINGLE-USE, TIME-LIMITED token (~30 min);
+     store only a HASH of it; invalidate any prior unused token for that user.
+   - The USER completes the reset via a link → sets their own new password via the
+     existing argon2id flow. The token is consumed on use. The system NEVER
+     generates, stores, sends, or returns an actual password.
+   - Email isn't wired up yet: for now, the admin trigger returns the secure reset
+     LINK to the admin to hand to the user. Put the delivery behind one "send"
+     seam so swapping to real email (Resend/SendGrid) later is contained.
+   - Rate-limit the trigger and the completion endpoint. Audit both to the platform
+     audit log.
+   - This does NOT let the admin change a user's email, set a password directly, or
+     view a password — reset only.
+   Tests: single-use enforced, expired token rejected, tampered token rejected,
+   only master admin can trigger (else 403), and no endpoint ever returns/logs a
+   password.
+
+Build everything read-only-verified as your plan states; show me the diff, the
+passing tests (especially the non-member-financial-403 test and the single-use-
+token test), and confirm all existing tests still pass.

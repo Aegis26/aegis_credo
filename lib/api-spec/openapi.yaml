@@ -2300,8 +2300,88 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /platform-admin/organizations:
+    get:
+      operationId: listPlatformOrganizations
+      tags: [platform-admin]
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200": { description: Platform organization metadata, content: { application/json: { schema: { $ref: "#/components/schemas/PlatformOrganizationList" } } } }
+        "403": { description: Not master admin, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+  /platform-admin/users:
+    get:
+      operationId: listPlatformUsers
+      tags: [platform-admin]
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200": { description: Platform users, content: { application/json: { schema: { $ref: "#/components/schemas/PlatformUserList" } } } }
+    post:
+      operationId: createPlatformUser
+      tags: [platform-admin]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/PlatformUserInput" } } } }
+      responses:
+        "201": { description: User created, content: { application/json: { schema: { $ref: "#/components/schemas/PlatformUser" } } } }
+  /platform-admin/users/{userId}/status:
+    get:
+      operationId: getPlatformUserStatus
+      tags: [platform-admin]
+      parameters: [ { $ref: "#/components/parameters/UserId" } ]
+      responses:
+        "200": { description: User status, content: { application/json: { schema: { $ref: "#/components/schemas/PlatformUserStatus" } } } }
+  /platform-admin/users/{userId}/deactivate:
+    post:
+      operationId: deactivatePlatformUser
+      tags: [platform-admin]
+      parameters: [ { $ref: "#/components/parameters/UserId" } ]
+      responses:
+        "200": { description: Updated user, content: { application/json: { schema: { $ref: "#/components/schemas/PlatformUserStatus" } } } }
+  /platform-admin/users/{userId}/reactivate:
+    post:
+      operationId: reactivatePlatformUser
+      tags: [platform-admin]
+      parameters: [ { $ref: "#/components/parameters/UserId" } ]
+      responses:
+        "200": { description: Updated user, content: { application/json: { schema: { $ref: "#/components/schemas/PlatformUserStatus" } } } }
+  /platform-admin/users/{userId}/password-reset:
+    post:
+      operationId: createPlatformPasswordReset
+      tags: [platform-admin]
+      parameters: [ { $ref: "#/components/parameters/UserId" } ]
+      responses:
+        "200": { description: Reset delivery link, content: { application/json: { schema: { $ref: "#/components/schemas/PasswordResetLink" } } } }
+  /platform-admin/health:
+    get:
+      operationId: getPlatformHealth
+      tags: [platform-admin]
+      responses:
+        "200": { description: Aggregate platform health, content: { application/json: { schema: { $ref: "#/components/schemas/PlatformHealth" } } } }
+  /auth/password-reset:
+    post:
+      operationId: completePasswordReset
+      tags: [auth]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/PasswordResetInput" } } } }
+      responses:
+        "204": { description: Password reset completed }
+        "400": { description: Invalid reset request, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
 components:
   parameters:
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    PageSize:
+      name: pageSize
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema: { type: string }
     OrgId:
       name: orgId
       in: path
@@ -4197,3 +4277,67 @@ components:
         totalVariance:
           type: string
       required: [budget, rows, totalBudgeted, totalActual, totalVariance]
+    PlatformUser:
+      type: object
+      required: [id, email, name, createdAt, status]
+      properties:
+        id: { type: string }
+        email: { type: string }
+        name: { type: ["string", "null"] }
+        createdAt: { type: string, format: date-time }
+        status: { type: string, enum: [active, deactivated] }
+    PlatformUserList:
+      type: object
+      required: [users, page, pageSize]
+      properties:
+        users: { type: array, items: { $ref: "#/components/schemas/PlatformUser" } }
+        page: { type: integer }
+        pageSize: { type: integer }
+    PlatformUserInput:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, minLength: 3 }
+        name: { type: string }
+        password: { type: string, minLength: 8 }
+    PlatformUserStatus:
+      type: object
+      required: [id, status, loginAvailable, lockedUntil]
+      properties:
+        id: { type: string }
+        status: { type: string, enum: [active, deactivated] }
+        loginAvailable: { type: boolean }
+        lockedUntil: { type: ["string", "null"], format: date-time }
+    PlatformOrganization:
+      type: object
+      required: [id, name, createdAt, owners, activeMemberCount]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        createdAt: { type: string, format: date-time }
+        owners: { type: array, items: { $ref: "#/components/schemas/PlatformUser" } }
+        activeMemberCount: { type: integer }
+    PlatformOrganizationList:
+      type: object
+      required: [organizations, page, pageSize]
+      properties:
+        organizations: { type: array, items: { $ref: "#/components/schemas/PlatformOrganization" } }
+        page: { type: integer }
+        pageSize: { type: integer }
+    PasswordResetLink:
+      type: object
+      required: [resetLink]
+      properties: { resetLink: { type: string } }
+    PasswordResetInput:
+      type: object
+      required: [token, newPassword]
+      properties:
+        token: { type: string, minLength: 1 }
+        newPassword: { type: string, minLength: 8 }
+    PlatformHealth:
+      type: object
+      required: [database, userCount, organizationCount]
+      properties:
+        database: { type: string, enum: [ok] }
+        userCount: { type: integer }
+        organizationCount: { type: integer }

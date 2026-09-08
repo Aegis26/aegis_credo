@@ -22,6 +22,17 @@ function allowedHosts(): Set<string> {
   }
   const dev = process.env.REPLIT_DEV_DOMAIN?.trim().toLowerCase();
   if (dev) hosts.add(dev);
+  const publicAppUrl = process.env.PUBLIC_APP_URL?.trim();
+  if (publicAppUrl) {
+    try {
+      const parsed = new URL(publicAppUrl);
+      if (parsed.protocol === "https:" || parsed.protocol === "http:") {
+        hosts.add(parsed.host.toLowerCase());
+      }
+    } catch {
+      // Invalid deployment configuration grants no origin access.
+    }
+  }
   return hosts;
 }
 

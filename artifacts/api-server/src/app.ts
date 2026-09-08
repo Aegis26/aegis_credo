@@ -2,6 +2,7 @@ import express, { type Express } from "express";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import pinoHttp from "pino-http";
+import type { Logger } from "pino";
 import { pool } from "@workspace/db";
 import { createRouter } from "./routes";
 import { logger } from "./lib/logger";
@@ -15,6 +16,9 @@ export interface AppOptions {
   apiRateLimitMax?: number;
   /** Max requests per IP per window on expensive endpoints. Overridable for tests. */
   heavyRateLimitMax?: number;
+  platformResetRateLimitMax?: number;
+  /** Injectable structured logger used by security/logging tests. */
+  httpLogger?: Logger;
 }
 
 export function createApp(options: AppOptions = {}): Express {
@@ -41,7 +45,7 @@ export function createApp(options: AppOptions = {}): Express {
 
   app.use(
     pinoHttp({
-      logger,
+      logger: options.httpLogger ?? logger,
       serializers: {
         req(req) {
           return {
@@ -101,6 +105,7 @@ export function createApp(options: AppOptions = {}): Express {
       authRateLimitMax: options.authRateLimitMax,
       apiRateLimitMax: options.apiRateLimitMax,
       heavyRateLimitMax: options.heavyRateLimitMax,
+      platformResetRateLimitMax: options.platformResetRateLimitMax,
     }),
   );
 
@@ -122,10 +127,24 @@ export function createApp(options: AppOptions = {}): Express {
         ((err as { type?: string }).type === "entity.parse.failed" ||
           (err instanceof SyntaxError &&
             (err as { status?: number }).status === 400));
-      req.log?.error({ err }, "Unhandled error reached final middleware");
       if (isBodyParseError) {
+        // Body-parser errors carry the raw request body on `err.body`. Logging
+        // the error object would leak passwords and reset tokens.
+        req.log?.warn(
+          {
+            errorType: (err as { type?: string }).type ?? "invalid_json",
+            status: 400,
+          },
+          "Invalid JSON request body",
+        );
         res.status(400).json({ error: "Invalid request." });
       } else {
+        req.log?.error(
+          {
+            errorName: err instanceof Error ? err.name : "UnknownError",
+          },
+          "Unhandled error reached final middleware",
+        );
         res.status(500).json({ error: "Internal error." });
       }
     },

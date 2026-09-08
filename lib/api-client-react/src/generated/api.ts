@@ -92,6 +92,8 @@ import type {
   InvoicePaymentInput,
   ListBankTransactionsParams,
   ListOrgApprovalsParams,
+  ListPlatformOrganizationsParams,
+  ListPlatformUsersParams,
   LoginRequest,
   Member,
   MemberInput,
@@ -102,10 +104,18 @@ import type {
   OrgDashboard,
   OrgInput,
   OrgList,
+  PasswordResetInput,
+  PasswordResetLink,
   PayrollRunList,
   PbcRequest,
   PbcRequestInput,
   PbcResponseInput,
+  PlatformHealth,
+  PlatformOrganizationList,
+  PlatformUser,
+  PlatformUserInput,
+  PlatformUserList,
+  PlatformUserStatus,
   Practice,
   PracticeDashboard,
   PracticeInput,
@@ -5507,4 +5517,627 @@ export function useGetBudgetVsActualReport<TData = Awaited<ReturnType<typeof get
 
 
 
+
+export const getListPlatformOrganizationsUrl = (params?: ListPlatformOrganizationsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/platform-admin/organizations?${stringifiedParams}` : `/api/platform-admin/organizations`
+}
+
+export const listPlatformOrganizations = async (params?: ListPlatformOrganizationsParams, options?: RequestInit): Promise<PlatformOrganizationList> => {
+
+  return customFetch<PlatformOrganizationList>(getListPlatformOrganizationsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPlatformOrganizationsQueryKey = (params?: ListPlatformOrganizationsParams,) => {
+    return [
+    `/api/platform-admin/organizations`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListPlatformOrganizationsQueryOptions = <TData = Awaited<ReturnType<typeof listPlatformOrganizations>>, TError = ErrorType<ErrorResponse>>(params?: ListPlatformOrganizationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPlatformOrganizations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPlatformOrganizationsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPlatformOrganizations>>> = ({ signal }) => listPlatformOrganizations(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPlatformOrganizations>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPlatformOrganizationsQueryResult = NonNullable<Awaited<ReturnType<typeof listPlatformOrganizations>>>
+export type ListPlatformOrganizationsQueryError = ErrorType<ErrorResponse>
+
+
+
+export function useListPlatformOrganizations<TData = Awaited<ReturnType<typeof listPlatformOrganizations>>, TError = ErrorType<ErrorResponse>>(
+ params?: ListPlatformOrganizationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPlatformOrganizations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPlatformOrganizationsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListPlatformUsersUrl = (params?: ListPlatformUsersParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/platform-admin/users?${stringifiedParams}` : `/api/platform-admin/users`
+}
+
+export const listPlatformUsers = async (params?: ListPlatformUsersParams, options?: RequestInit): Promise<PlatformUserList> => {
+
+  return customFetch<PlatformUserList>(getListPlatformUsersUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPlatformUsersQueryKey = (params?: ListPlatformUsersParams,) => {
+    return [
+    `/api/platform-admin/users`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListPlatformUsersQueryOptions = <TData = Awaited<ReturnType<typeof listPlatformUsers>>, TError = ErrorType<unknown>>(params?: ListPlatformUsersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPlatformUsers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPlatformUsersQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPlatformUsers>>> = ({ signal }) => listPlatformUsers(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPlatformUsers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPlatformUsersQueryResult = NonNullable<Awaited<ReturnType<typeof listPlatformUsers>>>
+export type ListPlatformUsersQueryError = ErrorType<unknown>
+
+
+
+export function useListPlatformUsers<TData = Awaited<ReturnType<typeof listPlatformUsers>>, TError = ErrorType<unknown>>(
+ params?: ListPlatformUsersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPlatformUsers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPlatformUsersQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreatePlatformUserUrl = () => {
+
+
+
+
+  return `/api/platform-admin/users`
+}
+
+export const createPlatformUser = async (platformUserInput: PlatformUserInput, options?: RequestInit): Promise<PlatformUser> => {
+
+  return customFetch<PlatformUser>(getCreatePlatformUserUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(platformUserInput)
+  }
+);}
+
+
+
+
+
+export const getCreatePlatformUserMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPlatformUser>>, TError,{data: BodyType<PlatformUserInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createPlatformUser>>, TError,{data: BodyType<PlatformUserInput>}, TContext> => {
+
+const mutationKey = ['createPlatformUser'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createPlatformUser>>, {data: BodyType<PlatformUserInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createPlatformUser(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreatePlatformUserMutationResult = NonNullable<Awaited<ReturnType<typeof createPlatformUser>>>
+    export type CreatePlatformUserMutationBody = BodyType<PlatformUserInput>
+    export type CreatePlatformUserMutationError = ErrorType<unknown>
+
+    export const useCreatePlatformUser = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPlatformUser>>, TError,{data: BodyType<PlatformUserInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createPlatformUser>>,
+        TError,
+        {data: BodyType<PlatformUserInput>},
+        TContext
+      > => {
+      return useMutation(getCreatePlatformUserMutationOptions(options));
+    }
+
+export const getGetPlatformUserStatusUrl = (userId: string,) => {
+
+
+
+
+  return `/api/platform-admin/users/${userId}/status`
+}
+
+export const getPlatformUserStatus = async (userId: string, options?: RequestInit): Promise<PlatformUserStatus> => {
+
+  return customFetch<PlatformUserStatus>(getGetPlatformUserStatusUrl(userId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPlatformUserStatusQueryKey = (userId: string,) => {
+    return [
+    `/api/platform-admin/users/${userId}/status`
+    ] as const;
+    }
+
+
+export const getGetPlatformUserStatusQueryOptions = <TData = Awaited<ReturnType<typeof getPlatformUserStatus>>, TError = ErrorType<unknown>>(userId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPlatformUserStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPlatformUserStatusQueryKey(userId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPlatformUserStatus>>> = ({ signal }) => getPlatformUserStatus(userId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: userId !== null && userId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPlatformUserStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPlatformUserStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getPlatformUserStatus>>>
+export type GetPlatformUserStatusQueryError = ErrorType<unknown>
+
+
+
+export function useGetPlatformUserStatus<TData = Awaited<ReturnType<typeof getPlatformUserStatus>>, TError = ErrorType<unknown>>(
+ userId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPlatformUserStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPlatformUserStatusQueryOptions(userId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getDeactivatePlatformUserUrl = (userId: string,) => {
+
+
+
+
+  return `/api/platform-admin/users/${userId}/deactivate`
+}
+
+export const deactivatePlatformUser = async (userId: string, options?: RequestInit): Promise<PlatformUserStatus> => {
+
+  return customFetch<PlatformUserStatus>(getDeactivatePlatformUserUrl(userId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeactivatePlatformUserMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deactivatePlatformUser>>, TError,{userId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deactivatePlatformUser>>, TError,{userId: string}, TContext> => {
+
+const mutationKey = ['deactivatePlatformUser'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deactivatePlatformUser>>, {userId: string}> = (props) => {
+          const {userId} = props ?? {};
+
+          return  deactivatePlatformUser(userId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeactivatePlatformUserMutationResult = NonNullable<Awaited<ReturnType<typeof deactivatePlatformUser>>>
+
+    export type DeactivatePlatformUserMutationError = ErrorType<unknown>
+
+    export const useDeactivatePlatformUser = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deactivatePlatformUser>>, TError,{userId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deactivatePlatformUser>>,
+        TError,
+        {userId: string},
+        TContext
+      > => {
+      return useMutation(getDeactivatePlatformUserMutationOptions(options));
+    }
+
+export const getReactivatePlatformUserUrl = (userId: string,) => {
+
+
+
+
+  return `/api/platform-admin/users/${userId}/reactivate`
+}
+
+export const reactivatePlatformUser = async (userId: string, options?: RequestInit): Promise<PlatformUserStatus> => {
+
+  return customFetch<PlatformUserStatus>(getReactivatePlatformUserUrl(userId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getReactivatePlatformUserMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reactivatePlatformUser>>, TError,{userId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reactivatePlatformUser>>, TError,{userId: string}, TContext> => {
+
+const mutationKey = ['reactivatePlatformUser'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reactivatePlatformUser>>, {userId: string}> = (props) => {
+          const {userId} = props ?? {};
+
+          return  reactivatePlatformUser(userId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReactivatePlatformUserMutationResult = NonNullable<Awaited<ReturnType<typeof reactivatePlatformUser>>>
+
+    export type ReactivatePlatformUserMutationError = ErrorType<unknown>
+
+    export const useReactivatePlatformUser = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reactivatePlatformUser>>, TError,{userId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reactivatePlatformUser>>,
+        TError,
+        {userId: string},
+        TContext
+      > => {
+      return useMutation(getReactivatePlatformUserMutationOptions(options));
+    }
+
+export const getCreatePlatformPasswordResetUrl = (userId: string,) => {
+
+
+
+
+  return `/api/platform-admin/users/${userId}/password-reset`
+}
+
+export const createPlatformPasswordReset = async (userId: string, options?: RequestInit): Promise<PasswordResetLink> => {
+
+  return customFetch<PasswordResetLink>(getCreatePlatformPasswordResetUrl(userId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getCreatePlatformPasswordResetMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPlatformPasswordReset>>, TError,{userId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createPlatformPasswordReset>>, TError,{userId: string}, TContext> => {
+
+const mutationKey = ['createPlatformPasswordReset'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createPlatformPasswordReset>>, {userId: string}> = (props) => {
+          const {userId} = props ?? {};
+
+          return  createPlatformPasswordReset(userId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreatePlatformPasswordResetMutationResult = NonNullable<Awaited<ReturnType<typeof createPlatformPasswordReset>>>
+
+    export type CreatePlatformPasswordResetMutationError = ErrorType<unknown>
+
+    export const useCreatePlatformPasswordReset = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPlatformPasswordReset>>, TError,{userId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createPlatformPasswordReset>>,
+        TError,
+        {userId: string},
+        TContext
+      > => {
+      return useMutation(getCreatePlatformPasswordResetMutationOptions(options));
+    }
+
+export const getGetPlatformHealthUrl = () => {
+
+
+
+
+  return `/api/platform-admin/health`
+}
+
+export const getPlatformHealth = async ( options?: RequestInit): Promise<PlatformHealth> => {
+
+  return customFetch<PlatformHealth>(getGetPlatformHealthUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPlatformHealthQueryKey = () => {
+    return [
+    `/api/platform-admin/health`
+    ] as const;
+    }
+
+
+export const getGetPlatformHealthQueryOptions = <TData = Awaited<ReturnType<typeof getPlatformHealth>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPlatformHealth>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPlatformHealthQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPlatformHealth>>> = ({ signal }) => getPlatformHealth({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPlatformHealth>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPlatformHealthQueryResult = NonNullable<Awaited<ReturnType<typeof getPlatformHealth>>>
+export type GetPlatformHealthQueryError = ErrorType<unknown>
+
+
+
+export function useGetPlatformHealth<TData = Awaited<ReturnType<typeof getPlatformHealth>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPlatformHealth>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPlatformHealthQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCompletePasswordResetUrl = () => {
+
+
+
+
+  return `/api/auth/password-reset`
+}
+
+export const completePasswordReset = async (passwordResetInput: PasswordResetInput, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getCompletePasswordResetUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(passwordResetInput)
+  }
+);}
+
+
+
+
+
+export const getCompletePasswordResetMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completePasswordReset>>, TError,{data: BodyType<PasswordResetInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof completePasswordReset>>, TError,{data: BodyType<PasswordResetInput>}, TContext> => {
+
+const mutationKey = ['completePasswordReset'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof completePasswordReset>>, {data: BodyType<PasswordResetInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  completePasswordReset(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CompletePasswordResetMutationResult = NonNullable<Awaited<ReturnType<typeof completePasswordReset>>>
+    export type CompletePasswordResetMutationBody = BodyType<PasswordResetInput>
+    export type CompletePasswordResetMutationError = ErrorType<ErrorResponse>
+
+    export const useCompletePasswordReset = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completePasswordReset>>, TError,{data: BodyType<PasswordResetInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof completePasswordReset>>,
+        TError,
+        {data: BodyType<PasswordResetInput>},
+        TContext
+      > => {
+      return useMutation(getCompletePasswordResetMutationOptions(options));
+    }
 

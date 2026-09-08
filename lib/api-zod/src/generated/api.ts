@@ -1778,3 +1778,145 @@ export const GetBudgetVsActualReportResponse = zod.object({
 })
 
 
+export const listPlatformOrganizationsQueryPageDefault = 1;
+
+export const listPlatformOrganizationsQueryPageSizeDefault = 25;
+export const listPlatformOrganizationsQueryPageSizeMax = 100;
+
+
+
+export const ListPlatformOrganizationsQueryParams = zod.object({
+  "page": zod.coerce.number().min(1).default(listPlatformOrganizationsQueryPageDefault),
+  "pageSize": zod.coerce.number().min(1).max(listPlatformOrganizationsQueryPageSizeMax).default(listPlatformOrganizationsQueryPageSizeDefault)
+})
+
+export const ListPlatformOrganizationsResponse = zod.object({
+  "organizations": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "owners": zod.array(zod.object({
+  "id": zod.string(),
+  "email": zod.string(),
+  "name": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "status": zod.enum(['active', 'deactivated'])
+})),
+  "activeMemberCount": zod.number()
+})),
+  "page": zod.number(),
+  "pageSize": zod.number()
+})
+
+
+export const listPlatformUsersQueryPageDefault = 1;
+
+export const listPlatformUsersQueryPageSizeDefault = 25;
+export const listPlatformUsersQueryPageSizeMax = 100;
+
+
+
+export const ListPlatformUsersQueryParams = zod.object({
+  "page": zod.coerce.number().min(1).default(listPlatformUsersQueryPageDefault),
+  "pageSize": zod.coerce.number().min(1).max(listPlatformUsersQueryPageSizeMax).default(listPlatformUsersQueryPageSizeDefault)
+})
+
+export const ListPlatformUsersResponse = zod.object({
+  "users": zod.array(zod.object({
+  "id": zod.string(),
+  "email": zod.string(),
+  "name": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "status": zod.enum(['active', 'deactivated'])
+})),
+  "page": zod.number(),
+  "pageSize": zod.number()
+})
+
+
+export const createPlatformUserBodyEmailMin = 3;
+
+export const createPlatformUserBodyPasswordMin = 8;
+
+
+
+export const CreatePlatformUserBody = zod.object({
+  "email": zod.string().min(createPlatformUserBodyEmailMin),
+  "name": zod.string().optional(),
+  "password": zod.string().min(createPlatformUserBodyPasswordMin)
+})
+
+export const CreatePlatformUserResponse = zod.object({
+  "id": zod.string(),
+  "email": zod.string(),
+  "name": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "status": zod.enum(['active', 'deactivated'])
+})
+
+
+export const GetPlatformUserStatusParams = zod.object({
+  "userId": zod.coerce.string()
+})
+
+export const GetPlatformUserStatusResponse = zod.object({
+  "id": zod.string(),
+  "status": zod.enum(['active', 'deactivated']),
+  "loginAvailable": zod.boolean(),
+  "lockedUntil": zod.coerce.date().nullable()
+})
+
+
+export const DeactivatePlatformUserParams = zod.object({
+  "userId": zod.coerce.string()
+})
+
+export const DeactivatePlatformUserResponse = zod.object({
+  "id": zod.string(),
+  "status": zod.enum(['active', 'deactivated']),
+  "loginAvailable": zod.boolean(),
+  "lockedUntil": zod.coerce.date().nullable()
+})
+
+
+export const ReactivatePlatformUserParams = zod.object({
+  "userId": zod.coerce.string()
+})
+
+export const ReactivatePlatformUserResponse = zod.object({
+  "id": zod.string(),
+  "status": zod.enum(['active', 'deactivated']),
+  "loginAvailable": zod.boolean(),
+  "lockedUntil": zod.coerce.date().nullable()
+})
+
+
+export const CreatePlatformPasswordResetParams = zod.object({
+  "userId": zod.coerce.string()
+})
+
+export const CreatePlatformPasswordResetResponse = zod.object({
+  "resetLink": zod.string()
+})
+
+
+export const GetPlatformHealthResponse = zod.object({
+  "database": zod.enum(['ok']),
+  "userCount": zod.number(),
+  "organizationCount": zod.number()
+})
+
+
+
+export const completePasswordResetBodyNewPasswordMin = 8;
+
+
+
+export const CompletePasswordResetBody = zod.object({
+  "token": zod.string().min(1),
+  "newPassword": zod.string().min(completePasswordResetBodyNewPasswordMin)
+})
+
+export const CompletePasswordResetResponse = zod.void()
+
+

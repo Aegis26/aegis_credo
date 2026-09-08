@@ -19,6 +19,8 @@ import groupsRouter from "./groups";
 import approvalsRouter from "./approvals";
 import analyticsRouter from "./analytics";
 import { requireAuth } from "../middlewares/auth";
+import { requireMasterAdmin } from "../middlewares/master-admin";
+import platformAdminRouter from "./platform-admin";
 
 export interface RouterOptions {
   /** Max auth requests per IP per window. Overridable for tests. */
@@ -27,6 +29,8 @@ export interface RouterOptions {
   apiRateLimitMax?: number;
   /** Max requests per IP per window on expensive endpoints. Overridable for tests. */
   heavyRateLimitMax?: number;
+  /** Max platform password-reset triggers per IP per window. */
+  platformResetRateLimitMax?: number;
 }
 
 const RATE_WINDOW_MS = 15 * 60 * 1000;
@@ -81,6 +85,11 @@ export function createRouter(options: RouterOptions = {}): IRouter {
   // Everything below requires a valid session. Identity always comes from the
   // session here — the client never supplies a userId.
   router.use(requireAuth);
+  router.use(
+    "/platform-admin",
+    requireMasterAdmin,
+    platformAdminRouter({ resetRateLimitMax: options.platformResetRateLimitMax }),
+  );
   router.use(practiceRouter);
   router.use(closeRouter);
   router.use(orgsRouter);

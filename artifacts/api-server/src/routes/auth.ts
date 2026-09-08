@@ -6,10 +6,13 @@ import {
   LoginBody,
   LoginResponse,
   GetSessionResponse,
+  CompletePasswordResetBody,
 } from "@workspace/api-zod";
 import type { User } from "@workspace/db";
 import { signup, login, getUserById, recordAuthEvent } from "../lib/auth-service";
 import { sendLedgerError, UnauthorizedError } from "../lib/errors";
+import { completePasswordReset } from "../lib/password-reset-service";
+import { requireAuth } from "../middlewares/auth";
 
 function authUser(user: User): { id: string; email: string; name: string | null } {
   return { id: user.id, email: user.email, name: user.name };
@@ -59,6 +62,9 @@ export function createAuthRouter(options: AuthRouterOptions = {}): IRouter {
     handler: (_req, res) =>
       res.status(429).json({ error: "Too many requests. Try again later." }),
   });
+  // Unlike login/signup this route is only valid for a bearer reset token; keep
+  // it behind the same intentionally conservative public auth budget.
+  router.use("/auth/session", requireAuth);
 
   router.post("/auth/signup", limiter, async (req, res) => {
     try {
@@ -76,6 +82,8 @@ export function createAuthRouter(options: AuthRouterOptions = {}): IRouter {
       // Fresh session id on privilege change to prevent session fixation.
       await regenerateSession(req);
       req.session.userId = user.id;
+       req.session.authenticatedEmail = user.email;
+       req.session.userSessionVersion = user.sessionVersion;
       await saveSession(req);
       res.status(201).json(SignupResponse.parse({ user: authUser(user) }));
     } catch (err) {
@@ -93,8 +101,23 @@ export function createAuthRouter(options: AuthRouterOptions = {}): IRouter {
       });
       await regenerateSession(req);
       req.session.userId = user.id;
+       req.session.authenticatedEmail = user.email;
+       req.session.userSessionVersion = user.sessionVersion;
       await saveSession(req);
       res.status(200).json(LoginResponse.parse({ user: authUser(user) }));
+    } catch (err) {
+      sendLedgerError(res, err);
+    }
+  });
+
+  router.post("/auth/password-reset", limiter, async (req, res) => {
+    try {
+      const body = CompletePasswordResetBody.parse(req.body);
+      if (!(await completePasswordReset(body.token, body.newPassword))) {
+        res.status(400).json({ error: "Invalid or expired reset token." });
+        return;
+      }
+      res.status(204).end();
     } catch (err) {
       sendLedgerError(res, err);
     }

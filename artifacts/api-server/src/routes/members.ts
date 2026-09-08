@@ -20,8 +20,22 @@ import {
   inviteAccountant as inviteAccountantEntry,
   revokeMember as revokeMemberEntry,
 } from "@workspace/ledger";
-import { sendLedgerError, HttpError } from "../lib/errors";
+import { sendLedgerError, ConflictError, HttpError } from "../lib/errors";
 import { getSessionUserId } from "../middlewares/auth";
+import {
+  configuredMasterEmail,
+  normalizeEmail,
+} from "../lib/auth-service";
+
+function assertNotReservedOperatorEmail(email: string): string {
+  const normalized = normalizeEmail(email);
+  if (normalized === configuredMasterEmail()) {
+    throw new ConflictError(
+      "That email is reserved for operator provisioning.",
+    );
+  }
+  return normalized;
+}
 
 const router: IRouter = Router();
 
@@ -98,7 +112,10 @@ router.post("/orgs/:orgId/members", async (req, res) => {
     const body = AddMemberBody.parse(req.body);
     await requirePermission(orgId, actorId, "members.manage");
 
-    const user = await upsertUser(body.email, body.name || undefined);
+    const user = await upsertUser(
+      assertNotReservedOperatorEmail(body.email),
+      body.name || undefined,
+    );
     await addMemberEntry(orgId, user.id, body.role, {
       actor: actorId,
       invitedBy: actorId,
@@ -130,7 +147,10 @@ router.post("/orgs/:orgId/accountants", async (req, res) => {
     const body = InviteAccountantBody.parse(req.body);
     await requirePermission(orgId, actorId, "members.manage");
 
-    const user = await upsertUser(body.email, body.name || undefined);
+    const user = await upsertUser(
+      assertNotReservedOperatorEmail(body.email),
+      body.name || undefined,
+    );
     await inviteAccountantEntry(orgId, user.id, {
       actor: actorId,
       invitedBy: actorId,

@@ -1,4 +1,13 @@
-import { pgTable, uuid, text, timestamp, integer, unique } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import {
+  pgTable,
+  uuid,
+  text,
+  timestamp,
+  integer,
+  unique,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -20,11 +29,17 @@ export const usersTable = pgTable(
     passwordHash: text("password_hash"),
     failedLoginCount: integer("failed_login_count").notNull().default(0),
     lockedUntil: timestamp("locked_until", { withTimezone: true }),
+    // Deactivation is reversible but invalidates every existing server session.
+    deactivatedAt: timestamp("deactivated_at", { withTimezone: true }),
+    sessionVersion: integer("session_version").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
   },
-  (t) => [unique("users_email_unique").on(t.email)],
+  (t) => [
+    unique("users_email_unique").on(t.email),
+    uniqueIndex("users_email_normalized_unique").on(sql`lower(${t.email})`),
+  ],
 );
 
 export const insertUserSchema = createInsertSchema(usersTable).omit({

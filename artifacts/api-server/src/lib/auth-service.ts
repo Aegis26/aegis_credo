@@ -32,8 +32,19 @@ export function hashPassword(password: string): Promise<string> {
   return argon2.hash(password, { type: argon2.argon2id });
 }
 
-function normalizeEmail(email: string): string {
+export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
+}
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Read and validate the configured platform identity at request time.
+ * Invalid/missing values always mean there is no master administrator.
+ */
+export function configuredMasterEmail(): string | undefined {
+  const email = normalizeEmail(process.env.MASTER_ADMIN_EMAIL ?? "");
+  return email && EMAIL_PATTERN.test(email) ? email : undefined;
 }
 
 /** Append an immutable auth audit row. Never throws to the caller's flow. */
@@ -60,11 +71,19 @@ export interface SignupInput {
   password: string;
   name?: string;
   ip?: string | null;
+  /** Shell-only provisioning escape hatch; HTTP callers must never set this. */
+  allowConfiguredMasterEmail?: boolean;
 }
 
 /** Create a new account with a hashed password. Rejects duplicate emails. */
 export async function signup(input: SignupInput): Promise<User> {
   const email = normalizeEmail(input.email);
+  if (
+    !input.allowConfiguredMasterEmail &&
+    email === configuredMasterEmail()
+  ) {
+    throw new ConflictError("Email is reserved for operator provisioning.");
+  }
   const [existing] = await db
     .select()
     .from(usersTable)
@@ -106,7 +125,7 @@ export async function login(input: LoginInput): Promise<User> {
     .where(eq(usersTable.email, email))
     .limit(1);
 
-  if (!user || !user.passwordHash) {
+  if (!user || !user.passwordHash || user.deactivatedAt) {
     // Equalize timing against the real verify path, then fail generically.
     await argon2.verify(await dummyHash(), input.password).catch(() => false);
     await recordAuthEvent("login_failed", {

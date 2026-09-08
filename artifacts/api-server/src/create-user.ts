@@ -25,7 +25,13 @@ async function main(): Promise<void> {
     return;
   }
   try {
-    const user = await signup({ email, password, name, ip: "cli" });
+    const user = await signup({
+      email,
+      password,
+      name,
+      ip: "cli",
+      allowConfiguredMasterEmail: true,
+    });
     console.log(`Created user ${user.email} (id ${user.id})`);
   } catch (err) {
     console.error(err instanceof Error ? err.message : String(err));

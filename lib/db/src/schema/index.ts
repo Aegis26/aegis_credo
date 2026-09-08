@@ -10,6 +10,8 @@ export * from "./audit-log";
 export * from "./users";
 export * from "./auth-events";
 export * from "./session";
+export * from "./platform-audit-log";
+export * from "./password-reset-tokens";
 export * from "./memberships";
 export * from "./import-batches";
 export * from "./bills";

@@ -11,6 +11,7 @@ import { AppShell } from "@/components/app-shell";
 import { CurrentOrgProvider } from "@/hooks/use-current-org";
 
 import Login from "@/pages/login";
+import ResetPassword from "@/pages/reset-password";
 import Onboarding from "@/pages/onboarding";
 import Dashboard from "@/pages/dashboard";
 import Bank from "@/pages/bank";
@@ -110,6 +111,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
+      <Route path="/reset-password" component={ResetPassword} />
       {/* Public signup is disabled (invite-only); redirect to login. */}
       <Route path="/signup" component={RedirectToLogin} />
       <Route component={ProtectedRouter} />
