@@ -16,7 +16,7 @@ const app = createApp({ authRateLimitMax: 1000 });
 const EMAIL = `csrf-${Date.now()}@test.example`;
 const PASSWORD = "correct-horse-battery-staple-9";
 
-const DEV_DOMAIN = process.env.REPLIT_DEV_DOMAIN;
+const ALLOWED_ORIGIN = "https://books.test.example";
 
 afterAll(async () => {
   await pool.query(
@@ -60,10 +60,10 @@ describe("CSRF layer (b): origin check on state-changing requests", () => {
 
   it("rejects lookalike origins (suffix/prefix tricks)", async () => {
     for (const origin of [
-      "https://evil.example.replit.app.attacker.com",
+      "https://books.test.example.attacker.com",
       "https://127.0.0.1.attacker.com",
       "https://localhost.attacker.com",
-      DEV_DOMAIN ? `https://${DEV_DOMAIN}.attacker.com` : "https://x.attacker.com",
+      "https://x.attacker.com",
     ]) {
       const res = await request(app)
         .post("/api/auth/login")
@@ -73,11 +73,26 @@ describe("CSRF layer (b): origin check on state-changing requests", () => {
     }
   });
 
-  it("allows a POST with the app's own dev-domain Origin", async () => {
-    if (!DEV_DOMAIN) return; // env-dependent; covered in dev/prod environments
+  it("allows a POST with an explicitly allowed Origin", async () => {
+    const old = process.env.ALLOWED_ORIGINS;
+    process.env.ALLOWED_ORIGINS = ALLOWED_ORIGIN;
+    try {
+      const res = await request(app)
+        .post("/api/auth/login")
+        .set("Origin", ALLOWED_ORIGIN)
+        .send({ email: EMAIL, password: PASSWORD });
+      expect(res.status).toBe(200);
+    } finally {
+      if (old === undefined) delete process.env.ALLOWED_ORIGINS;
+      else process.env.ALLOWED_ORIGINS = old;
+    }
+  });
+
+  it("allows a same-host development preview without provider-specific variables", async () => {
     const res = await request(app)
       .post("/api/auth/login")
-      .set("Origin", `https://${DEV_DOMAIN}`)
+      .set("Host", "preview.example.test")
+      .set("Origin", "https://preview.example.test")
       .send({ email: EMAIL, password: PASSWORD });
     expect(res.status).toBe(200);
   });

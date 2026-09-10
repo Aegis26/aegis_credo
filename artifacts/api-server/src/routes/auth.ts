@@ -13,6 +13,7 @@ import { signup, login, getUserById, recordAuthEvent } from "../lib/auth-service
 import { sendLedgerError, UnauthorizedError } from "../lib/errors";
 import { completePasswordReset } from "../lib/password-reset-service";
 import { requireAuth } from "../middlewares/auth";
+import { sessionCookieOptions } from "../lib/runtime-config";
 
 function authUser(user: User): { id: string; email: string; name: string | null } {
   return { id: user.id, email: user.email, name: user.name };
@@ -128,7 +129,8 @@ export function createAuthRouter(options: AuthRouterOptions = {}): IRouter {
       const userId = req.session?.userId;
       if (userId) await recordAuthEvent("logout", { userId, ip: req.ip });
       await destroySession(req);
-      res.clearCookie("sid");
+      const { maxAge: _maxAge, ...clearOptions } = sessionCookieOptions();
+      res.clearCookie("sid", clearOptions);
       res.status(204).end();
     } catch (err) {
       sendLedgerError(res, err);

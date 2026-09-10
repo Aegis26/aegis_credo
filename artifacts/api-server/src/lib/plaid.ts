@@ -8,19 +8,43 @@ import {
 } from "plaid";
 import { PlaidNotConfiguredError } from "./errors";
 
-/** True when Plaid sandbox credentials are present in the environment. */
+const PLAID_ENVIRONMENTS = {
+  sandbox: PlaidEnvironments.sandbox,
+  development: PlaidEnvironments.development,
+  production: PlaidEnvironments.production,
+} as const;
+
+type PlaidEnvironment = keyof typeof PLAID_ENVIRONMENTS;
+
+function configuredPlaidEnvironment(): PlaidEnvironment | undefined {
+  const value = process.env.PLAID_ENV;
+  return value &&
+    Object.prototype.hasOwnProperty.call(PLAID_ENVIRONMENTS, value)
+    ? (value as PlaidEnvironment)
+    : undefined;
+}
+
+/** True when complete Plaid credentials and an approved environment are set. */
 export function isPlaidConfigured(): boolean {
-  return Boolean(process.env.PLAID_CLIENT_ID && process.env.PLAID_SECRET);
+  return Boolean(
+    process.env.PLAID_CLIENT_ID &&
+      process.env.PLAID_SECRET &&
+      configuredPlaidEnvironment(),
+  );
 }
 
 let client: PlaidApi | undefined;
 
-/** Lazily build the sandbox Plaid client; throws 503 when unconfigured. */
+/** Lazily build the configured Plaid client; throws 503 when unconfigured. */
 function plaid(): PlaidApi {
   if (!isPlaidConfigured()) throw new PlaidNotConfiguredError();
   if (!client) {
+    const environment = configuredPlaidEnvironment();
+    // Keep this check adjacent to client construction so a future caller
+    // cannot accidentally create a client for an implicit/default endpoint.
+    if (!environment) throw new PlaidNotConfiguredError();
     const configuration = new Configuration({
-      basePath: PlaidEnvironments.sandbox,
+      basePath: PLAID_ENVIRONMENTS[environment],
       baseOptions: {
         headers: {
           "PLAID-CLIENT-ID": process.env.PLAID_CLIENT_ID,

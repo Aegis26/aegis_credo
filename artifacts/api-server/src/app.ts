@@ -1,4 +1,5 @@
 import express, { type Express } from "express";
+import path from "node:path";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import pinoHttp from "pino-http";
@@ -8,6 +9,12 @@ import { createRouter } from "./routes";
 import { logger } from "./lib/logger";
 import { assertTokenKeyAtStartup } from "./lib/token-crypto";
 import { originCheck } from "./middlewares/origin-check";
+import {
+  assertRuntimeConfig,
+  isProduction,
+  sessionCookieOptions,
+  trustProxy,
+} from "./lib/runtime-config";
 
 export interface AppOptions {
   /** Max auth requests per IP per window. Overridable for tests. */
@@ -23,10 +30,11 @@ export interface AppOptions {
 
 export function createApp(options: AppOptions = {}): Express {
   const app: Express = express();
-  const isProduction = process.env.NODE_ENV === "production";
+  const production = isProduction();
+  assertRuntimeConfig();
 
   const secret = process.env.SESSION_SECRET;
-  if (!secret && isProduction) {
+  if (!secret && production) {
     throw new Error(
       "SESSION_SECRET environment variable is required in production.",
     );
@@ -35,11 +43,9 @@ export function createApp(options: AppOptions = {}): Express {
   // FAIL CLOSED like SESSION_SECRET: in production the app refuses to start
   // without a valid 32-byte base64 TOKEN_ENCRYPTION_KEY. In development a set
   // key is validated; an unset key is tolerated (bank features throw at use).
-  assertTokenKeyAtStartup(isProduction);
+  assertTokenKeyAtStartup(production);
 
-  // Behind Replit's reverse proxy: trust one hop so req.ip and Secure cookies
-  // reflect the real client and the TLS-terminated origin.
-  app.set("trust proxy", 1);
+  app.set("trust proxy", trustProxy());
   // Don't advertise the framework.
   app.disable("x-powered-by");
 
@@ -63,7 +69,7 @@ export function createApp(options: AppOptions = {}): Express {
     }),
   );
   // CSRF defense-in-depth: reject state-changing requests whose Origin is not
-  // one of our own domains (REPLIT_DOMAINS + dev domain). The UI is same-origin
+  // one of the exact ALLOWED_ORIGINS. The UI is same-origin
   // behind the shared proxy, so no CORS middleware is needed or wanted.
   app.use(originCheck);
   // Body parsing: the default 100 KB limit applies everywhere EXCEPT the two
@@ -90,12 +96,7 @@ export function createApp(options: AppOptions = {}): Express {
       resave: false,
       saveUninitialized: false,
       rolling: true,
-      cookie: {
-        httpOnly: true,
-        secure: isProduction,
-        sameSite: "lax",
-        maxAge: 1000 * 60 * 60 * 24 * 7,
-      },
+      cookie: sessionCookieOptions(),
     }),
   );
 
@@ -108,6 +109,23 @@ export function createApp(options: AppOptions = {}): Express {
       platformResetRateLimitMax: options.platformResetRateLimitMax,
     }),
   );
+
+  if (production) {
+    const frontendDir = path.resolve(
+      import.meta.dirname,
+      "../../books/dist/public",
+    );
+    app.use(express.static(frontendDir));
+    app.get("/{*splat}", (req, res, next) => {
+      if (req.path.startsWith("/api")) {
+        res.status(404).json({ error: "Not found." });
+        return;
+      }
+      res.sendFile(path.join(frontendDir, "index.html"), (err) => {
+        if (err) next(err);
+      });
+    });
+  }
 
   // Final safety net: anything that escapes route-level handling (most
   // commonly a malformed-JSON body rejected by express.json) gets a uniform

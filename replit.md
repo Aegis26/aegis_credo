@@ -29,7 +29,7 @@ A multi-tenant, double-entry accounting platform: ledger engine (lib), authentic
 
 ### Web/API hardening
 
-- **CSRF is two independent layers**: the SameSite=Lax `sid` cookie AND `src/middlewares/origin-check.ts` — 403 for any state-changing (non-GET/HEAD/OPTIONS) request whose `Origin` host is not in `REPLIT_DOMAINS` + `REPLIT_DEV_DOMAIN` (env-driven, re-read per request; exact loopback hostnames allowed in dev only; no-Origin requests pass). No CORS middleware — same-origin behind the shared proxy; do not re-add `cors()`. Tests: `src/csrf.test.ts`.
+- **CSRF is two independent layers**: the SameSite=Lax `sid` cookie AND `src/middlewares/origin-check.ts` — 403 for any state-changing (non-GET/HEAD/OPTIONS) request whose exact origin is not in `ALLOWED_ORIGINS` (env-driven, re-read per request; exact loopback origins allowed in dev only; no-Origin requests pass). No CORS middleware — same-origin behind the shared proxy; do not re-add `cors()`. Tests: `src/csrf.test.ts`.
 - **500 responses return a generic `"Internal error."` and NEVER echo `err.message`** (SQL/driver/SDK detail would leak). Real error is logged server-side. A final error middleware keeps malformed-JSON responses as uniform JSON 400 (no Express HTML/stack pages). `x-powered-by` is disabled. Tests: `src/hardening.test.ts`.
 - **Rate limiting**: auth limiter (`AUTH_RATE_LIMIT_MAX`, 50/15 min) + global `/api` limiter (`API_RATE_LIMIT_MAX`, 1000) + stricter heavy-endpoint limiter (`HEAVY_RATE_LIMIT_MAX`, 60: import preview, batch export/report, custom report, consolidated statements). Non-numeric env values fall back to defaults.
 - **HTTP logging never includes bodies, headers, or query strings** (pino serializers log method, path, status only) — no PII/financial data/tokens in logs.

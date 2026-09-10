@@ -7,14 +7,11 @@
  * is a contained change: implement the interface, change one export.
  *
  * DATA HANDLING (documented for the privacy policy — prototype architecture):
- * - The uploaded PDF is held in memory only and sent base64 to a vision LLM
- *   via Replit's AI Integrations proxy (Anthropic-compatible). It is NEVER
+ * - The uploaded PDF is held in memory only and sent base64 to Anthropic's
+ *   vision API. It is NEVER
  *   written to disk and NEVER logged (routes log only method/URL/status).
- * - Retention/usage on the AI path is governed by Replit AI Integrations and
- *   Anthropic's API terms (Anthropic's commercial API does not train on API
- *   data by default). Before real customer data flows through this, revisit
- *   running extraction on our own Anthropic key for cost visibility, model
- *   control, and portability off Replit — see replit.md.
+ * - Retention/usage on the AI path is governed by Anthropic's API terms
+ *   (Anthropic's commercial API does not train on API data by default).
  *
  * SAFETY: the model's output is UNTRUSTED. It is parsed as strict JSON,
  * validated with Zod, and every amount goes through `parseMoney` to BigInt
@@ -133,7 +130,7 @@ export function parseModelJson(text: string): unknown {
   return JSON.parse(trimmed);
 }
 
-/** Anthropic (via Replit AI Integrations proxy) — the current prototype provider. */
+/** Anthropic provider for the statement extraction path. */
 class AnthropicStatementExtractor implements StatementExtractor {
   async extract(pdfBase64: string): Promise<RawStatement> {
     // Lazy import so the module (and its env-var assertions) only load when

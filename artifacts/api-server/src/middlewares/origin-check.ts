@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
+import { allowedOrigins, isProduction } from "../lib/runtime-config";
 
 /**
  * CSRF defense-in-depth (second layer alongside the SameSite=lax cookie):
@@ -8,34 +9,10 @@ import type { Request, Response, NextFunction } from "express";
  * server calls, and legacy same-origin edge cases never send one, and a
  * cross-site browser request always does.
  *
- * The allowlist is DERIVED FROM THE ENVIRONMENT, never hardcoded:
- * - REPLIT_DOMAINS (comma-separated production/published domains — includes
- *   any custom domain Replit attaches to the deployment)
- * - REPLIT_DEV_DOMAIN (the development preview domain)
+ * The allowlist is derived from ALLOWED_ORIGINS as exact origins, never
+ * hardcoded. Production accepts HTTPS entries only and requires at least one.
  * It is re-read per request so env changes never require a code change.
  */
-function allowedHosts(): Set<string> {
-  const hosts = new Set<string>();
-  for (const d of (process.env.REPLIT_DOMAINS ?? "").split(",")) {
-    const t = d.trim().toLowerCase();
-    if (t) hosts.add(t);
-  }
-  const dev = process.env.REPLIT_DEV_DOMAIN?.trim().toLowerCase();
-  if (dev) hosts.add(dev);
-  const publicAppUrl = process.env.PUBLIC_APP_URL?.trim();
-  if (publicAppUrl) {
-    try {
-      const parsed = new URL(publicAppUrl);
-      if (parsed.protocol === "https:" || parsed.protocol === "http:") {
-        hosts.add(parsed.host.toLowerCase());
-      }
-    } catch {
-      // Invalid deployment configuration grants no origin access.
-    }
-  }
-  return hosts;
-}
-
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
 export function originCheck(req: Request, res: Response, next: NextFunction): void {
@@ -44,22 +21,30 @@ export function originCheck(req: Request, res: Response, next: NextFunction): vo
   const origin = req.headers.origin;
   if (!origin) return next(); // no Origin: not a cross-site browser request
 
-  let host: string;
+  let parsed: URL;
   try {
-    host = new URL(origin).host.toLowerCase();
+    parsed = new URL(origin);
   } catch {
     res.status(403).json({ error: "Invalid Origin header." });
     return;
   }
 
-  if (allowedHosts().has(host)) return next();
+  if (allowedOrigins().has(parsed.origin)) return next();
 
   // Local development fallback: the dev proxy serves on localhost. Match
   // EXACT loopback hostnames only — never a prefix — so lookalikes such as
   // 127.0.0.1.attacker.com stay rejected.
-  if (process.env.NODE_ENV !== "production") {
-    const hostname = new URL(origin).hostname.toLowerCase();
-    if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1" || hostname === "[::1]") {
+  if (!isProduction()) {
+    const hostname = parsed.hostname.toLowerCase();
+    const forwardedHost = req.get("x-forwarded-host")?.split(",")[0]?.trim();
+    const requestHost = forwardedHost || req.get("host");
+    if (
+      parsed.host === requestHost ||
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "::1" ||
+      hostname === "[::1]"
+    ) {
       return next();
     }
   }

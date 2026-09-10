@@ -7,24 +7,10 @@ import {
   usersTable,
 } from "@workspace/db";
 import { hashPassword } from "./auth-service";
+import { publicAppUrl } from "./runtime-config";
 
 const hash = (token: string) =>
   crypto.createHash("sha256").update(token).digest("hex");
-const publicUrl = (): string => {
-  const raw = process.env.PUBLIC_APP_URL;
-  // The Books artifact is mounted at root. Railway/production may set the
-  // portable PUBLIC_APP_URL when the public application has an absolute URL.
-  if (!raw) return "";
-  try {
-    const url = new URL(raw);
-    return url.protocol === "https:" || url.protocol === "http:"
-      ? url.toString().replace(/\/$/, "")
-      : "";
-  } catch {
-    return "";
-  }
-};
-
 export interface PasswordResetAuditContext {
   actorUserId: string;
   requestId?: string | null;
@@ -106,7 +92,7 @@ export async function createPasswordReset(
     return true;
   });
   if (!created) return undefined;
-  const link = `${publicUrl()}/reset-password?token=${encodeURIComponent(token)}`;
+  const link = `${publicAppUrl()}/reset-password?token=${encodeURIComponent(token)}`;
   return sendPasswordResetLink(link);
 }
 

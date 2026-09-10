@@ -1,0 +1,36 @@
+Approved — excellent audit. Proceed with the portability changes, following your
+recommended implementation sequence. Requirements and one decision:
+
+DATA MIGRATION (finding #13) — DECISION: Start CLEAN on Railway. Do NOT migrate my
+Replit data — it's test data (Craig's, the Capital One import, test orgs) and I
+want my real business books fresh. So: build the schema fresh on Railway via
+versioned migrations, I'll provision the master admin and create my real org from
+scratch. (Note: I am deliberately choosing a clean start; confirm nothing about
+this loses the CODE or config, only the test data, which is intended.)
+
+Requirements:
+- Anthropic: switch to ANTHROPIC_API_KEY via the existing StatementExtractor seam
+  (drop the Replit proxy).
+- Single Railway service: Express serves the built React app AND /api (same-origin,
+  no CORS) — preserve the existing cookie/CSRF security exactly.
+- Versioned Drizzle migrations for a FRESH empty Postgres, INCLUDING the session
+  table (login must work on a clean DB) and every table/constraint/index. A
+  deterministic non-interactive `db:migrate` command that runs before startup. No
+  startup-time schema mutation.
+- Vite build must not require Replit-injected PORT/BASE_PATH; default BASE_PATH=/.
+- ALLOWED_ORIGINS (exact HTTPS list) replacing REPLIT_DOMAINS; require at least one
+  valid origin in production; keep blocking foreign origins.
+- Require PUBLIC_APP_URL in production (so password-reset links are absolute).
+- PLAID_ENV var, fail-closed on invalid values (so real keys can't silently run
+  against sandbox later).
+- Session/proxy config: require SESSION_SECRET and NODE_ENV=production; make
+  trust-proxy explicit; centralize cookie options and reuse on logout.
+- Generic root build/start scripts + Railway config + /api/healthz health check;
+  bind 0.0.0.0; read PORT from env.
+- Remove unused Replit deps (@replit/connectors-sdk) and production plugin coupling.
+- Produce a .env.example / env doc matching your inventory table.
+
+Do NOT create the repo, set up Railway, set secrets, or deploy — those are mine.
+All existing tests, typecheck, AND a "migrate against a fresh empty database"
+verification must pass. Report the diff and confirm the app has no remaining hard
+Replit runtime dependency.
