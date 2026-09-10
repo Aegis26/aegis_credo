@@ -1,0 +1,53 @@
+We're moving this app OFF Replit hosting to GitHub + Railway. Your job is to make
+the CODEBASE fully portable and Railway-ready. You are NOT creating the GitHub
+repo, setting up Railway, setting env vars, rotating secrets, or touching the
+domain — those are my actions. Do NOT push or deploy. Do NOT touch the ledger
+core, posting logic, or existing posted data. All existing tests must still pass.
+
+READ-ONLY FIRST — audit and report before changing anything:
+
+Find EVERY dependency, integration, or assumption in the codebase that is specific
+to the Replit platform and would break or behave differently when hosted on
+Railway. Report each with file/line and what it does. Known ones to confirm, plus
+find any others:
+1. Statement extraction currently uses Replit's AI Integrations proxy — this does
+   NOT exist off Replit. It must move to our own Anthropic API key.
+2. The CSRF Origin-check middleware uses REPLIT_DOMAINS for its allowed-origins
+   list — that won't be set/correct on Railway with a custom domain.
+3. Session cookie config (domain/Secure/SameSite) — confirm it works on a custom
+   domain, not just *.replit.app.
+Also hunt for: Replit object storage / Replit DB usage, hardcoded replit.app or
+replit.dev URLs, Replit-specific env vars or runtime assumptions, the dev-preview
+URL handling, any Replit auth/identity coupling, and the PORT/host binding (must
+read PORT from env for Railway).
+
+Report the full list and a portability plan. Change nothing until I approve.
+
+THEN (on approval) make it portable:
+- Statement extraction: use ANTHROPIC_API_KEY (our own key) via the existing
+  StatementExtractor interface — replace the Replit AI proxy path. This is the
+  queued "switch to own Anthropic key" task. Confirm the seam is clean.
+- Allowed-origins / CSRF Origin check: drive from an env var (e.g. ALLOWED_ORIGINS
+  or a PUBLIC_APP_URL) that I can set to my production domain, instead of relying
+  on REPLIT_DOMAINS. It must still block foreign origins.
+- Session cookie: make the cookie domain / Secure / SameSite env-driven so login
+  works on my custom domain over HTTPS.
+- Confirm the app reads PORT (and all config) from environment variables, binds
+  correctly, and has a production build + start command that works on a generic
+  Node host (Railway) — not a Replit-specific run command.
+- Confirm the Drizzle schema migrations can run against a FRESH, empty Postgres
+  (Railway provides a new DB) via a clear command.
+- Replace any other Replit-specific dependency you found with a portable,
+  env-driven equivalent.
+
+DELIVERABLE — also produce:
+- The DEFINITIVE list of every environment variable the app needs to run in
+  production, each with a one-line description and whether it's required or
+  optional, so I can set them in Railway. Include at least: DATABASE_URL,
+  SESSION_SECRET, TOKEN_ENCRYPTION_KEY, MASTER_ADMIN_EMAIL, ALLOW_PUBLIC_SIGNUP,
+  PLAID_CLIENT_ID, PLAID_SECRET, ANTHROPIC_API_KEY, PORT, and the new
+  origins/domain var — plus any others you find.
+- Confirmation that the app has NO remaining hard dependency on the Replit runtime
+  or platform, and that all tests pass.
+
+Report the read-only audit first.
