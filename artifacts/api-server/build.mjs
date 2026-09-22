@@ -15,7 +15,12 @@ async function buildAll() {
   await rm(distDir, { recursive: true, force: true });
 
   await esbuild({
-    entryPoints: [path.resolve(artifactDir, "src/index.ts")],
+    // Ship the shell-only account provisioning utility with production builds.
+    // Railway's runtime image contains dist/ but not the TypeScript source tree.
+    entryPoints: [
+      path.resolve(artifactDir, "src/index.ts"),
+      path.resolve(artifactDir, "src/create-user.ts"),
+    ],
     platform: "node",
     bundle: true,
     format: "esm",
