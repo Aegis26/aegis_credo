@@ -15,3 +15,4 @@
 - [Railway pnpm reproducibility](railway-pnpm-reproducibility.md) — pin the root pnpm version to the lockfile major or Railpack may select an incompatible default and reject frozen installs.
 - [Production maintenance CLIs](production-maintenance-clis.md) — Railway runtime images omit TypeScript source and dev tools; ship operational scripts as compiled dist entrypoints.
 - [Drizzle push baseline](drizzle-push-baseline.md) — existing DB tables may have no migration journal; inspect before replaying generated baseline, and specify array→JSONB USING conversions.
+- [Railway schema verification](railway-schema-verification.md) — the Railway agent may infer schema from GitHub, not the live database; require an actual SQL result before claiming prod migration state.
