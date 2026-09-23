@@ -71,7 +71,12 @@ import type {
   CreateBudgetRequest,
   CreateDimensionRequest,
   CreateGroupRequest,
+  CredentialCreateInput,
+  CredentialList,
+  CredentialMutationResponse,
+  CredentialRevokeResponse,
   CustomReportResult,
+  CustomerList,
   DecideApprovalRequest,
   Dimension,
   DimensionList,
@@ -79,6 +84,9 @@ import type {
   GetArAgingParams,
   GetPracticeDashboardParams,
   GetTaxEstimateParams,
+  GlEntry,
+  GlEntryInput,
+  GlEntryList,
   GrantClientInput,
   Group,
   GroupList,
@@ -86,11 +94,15 @@ import type {
   ImportFileInput,
   ImportPreviewInput,
   ImportPreviewResult,
+  IntegrationInvoiceInput,
+  IntegrationReports,
   Invoice,
   InvoiceInput,
   InvoiceList,
   InvoicePaymentInput,
   ListBankTransactionsParams,
+  ListIntegrationGlEntriesParams,
+  ListIntegrationInvoicesParams,
   ListOrgApprovalsParams,
   ListPlatformOrganizationsParams,
   ListPlatformUsersParams,
@@ -6141,3 +6153,854 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(getCompletePasswordResetMutationOptions(options));
     }
 
+export const getListOrgCredentialsUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/credentials`
+}
+
+/**
+ * Requires an authenticated session; caller must be an owner of the organization to manage credentials.
+ * @summary List machine API credentials for an organization
+ */
+export const listOrgCredentials = async (orgId: string, options?: RequestInit): Promise<CredentialList> => {
+
+  return customFetch<CredentialList>(getListOrgCredentialsUrl(orgId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListOrgCredentialsQueryKey = (orgId: string,) => {
+    return [
+    `/api/orgs/${orgId}/credentials`
+    ] as const;
+    }
+
+
+export const getListOrgCredentialsQueryOptions = <TData = Awaited<ReturnType<typeof listOrgCredentials>>, TError = ErrorType<ErrorResponse>>(orgId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOrgCredentials>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOrgCredentialsQueryKey(orgId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOrgCredentials>>> = ({ signal }) => listOrgCredentials(orgId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listOrgCredentials>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListOrgCredentialsQueryResult = NonNullable<Awaited<ReturnType<typeof listOrgCredentials>>>
+export type ListOrgCredentialsQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List machine API credentials for an organization
+ */
+
+export function useListOrgCredentials<TData = Awaited<ReturnType<typeof listOrgCredentials>>, TError = ErrorType<ErrorResponse>>(
+ orgId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOrgCredentials>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListOrgCredentialsQueryOptions(orgId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateOrgCredentialUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/credentials`
+}
+
+/**
+ * Requires an authenticated session and organization-owner access. The plaintext API key is returned only once.
+ * @summary Create a machine API credential
+ */
+export const createOrgCredential = async (orgId: string,
+    credentialCreateInput: CredentialCreateInput, options?: RequestInit): Promise<CredentialMutationResponse> => {
+
+  return customFetch<CredentialMutationResponse>(getCreateOrgCredentialUrl(orgId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(credentialCreateInput)
+  }
+);}
+
+
+
+
+
+export const getCreateOrgCredentialMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrgCredential>>, TError,{orgId: string;data: BodyType<CredentialCreateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createOrgCredential>>, TError,{orgId: string;data: BodyType<CredentialCreateInput>}, TContext> => {
+
+const mutationKey = ['createOrgCredential'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createOrgCredential>>, {orgId: string;data: BodyType<CredentialCreateInput>}> = (props) => {
+          const {orgId,data} = props ?? {};
+
+          return  createOrgCredential(orgId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateOrgCredentialMutationResult = NonNullable<Awaited<ReturnType<typeof createOrgCredential>>>
+    export type CreateOrgCredentialMutationBody = BodyType<CredentialCreateInput>
+    export type CreateOrgCredentialMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Create a machine API credential
+ */
+export const useCreateOrgCredential = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrgCredential>>, TError,{orgId: string;data: BodyType<CredentialCreateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createOrgCredential>>,
+        TError,
+        {orgId: string;data: BodyType<CredentialCreateInput>},
+        TContext
+      > => {
+      return useMutation(getCreateOrgCredentialMutationOptions(options));
+    }
+
+export const getRevokeOrgCredentialUrl = (orgId: string,
+    credentialId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/credentials/${credentialId}`
+}
+
+/**
+ * @summary Revoke a machine API credential
+ */
+export const revokeOrgCredential = async (orgId: string,
+    credentialId: string, options?: RequestInit): Promise<CredentialRevokeResponse> => {
+
+  return customFetch<CredentialRevokeResponse>(getRevokeOrgCredentialUrl(orgId,credentialId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getRevokeOrgCredentialMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeOrgCredential>>, TError,{orgId: string;credentialId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof revokeOrgCredential>>, TError,{orgId: string;credentialId: string}, TContext> => {
+
+const mutationKey = ['revokeOrgCredential'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeOrgCredential>>, {orgId: string;credentialId: string}> = (props) => {
+          const {orgId,credentialId} = props ?? {};
+
+          return  revokeOrgCredential(orgId,credentialId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RevokeOrgCredentialMutationResult = NonNullable<Awaited<ReturnType<typeof revokeOrgCredential>>>
+
+    export type RevokeOrgCredentialMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Revoke a machine API credential
+ */
+export const useRevokeOrgCredential = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeOrgCredential>>, TError,{orgId: string;credentialId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof revokeOrgCredential>>,
+        TError,
+        {orgId: string;credentialId: string},
+        TContext
+      > => {
+      return useMutation(getRevokeOrgCredentialMutationOptions(options));
+    }
+
+export const getRotateOrgCredentialUrl = (orgId: string,
+    credentialId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/credentials/${credentialId}/rotate`
+}
+
+/**
+ * The previous key is revoked and the replacement plaintext API key is returned only once.
+ * @summary Rotate a machine API credential
+ */
+export const rotateOrgCredential = async (orgId: string,
+    credentialId: string, options?: RequestInit): Promise<CredentialMutationResponse> => {
+
+  return customFetch<CredentialMutationResponse>(getRotateOrgCredentialUrl(orgId,credentialId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRotateOrgCredentialMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rotateOrgCredential>>, TError,{orgId: string;credentialId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof rotateOrgCredential>>, TError,{orgId: string;credentialId: string}, TContext> => {
+
+const mutationKey = ['rotateOrgCredential'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof rotateOrgCredential>>, {orgId: string;credentialId: string}> = (props) => {
+          const {orgId,credentialId} = props ?? {};
+
+          return  rotateOrgCredential(orgId,credentialId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RotateOrgCredentialMutationResult = NonNullable<Awaited<ReturnType<typeof rotateOrgCredential>>>
+
+    export type RotateOrgCredentialMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Rotate a machine API credential
+ */
+export const useRotateOrgCredential = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rotateOrgCredential>>, TError,{orgId: string;credentialId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof rotateOrgCredential>>,
+        TError,
+        {orgId: string;credentialId: string},
+        TContext
+      > => {
+      return useMutation(getRotateOrgCredentialMutationOptions(options));
+    }
+
+export const getListIntegrationInvoicesUrl = (orgId: string,
+    params?: ListIntegrationInvoicesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/integrations/orgs/${orgId}/invoices?${stringifiedParams}` : `/api/integrations/orgs/${orgId}/invoices`
+}
+
+/**
+ * Machine-only endpoint. Requires the read:invoices scope in the bearer API key.
+ * @summary List invoices for a machine integration
+ */
+export const listIntegrationInvoices = async (orgId: string,
+    params?: ListIntegrationInvoicesParams, options?: RequestInit): Promise<InvoiceList> => {
+
+  return customFetch<InvoiceList>(getListIntegrationInvoicesUrl(orgId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListIntegrationInvoicesQueryKey = (orgId: string,
+    params?: ListIntegrationInvoicesParams,) => {
+    return [
+    `/api/integrations/orgs/${orgId}/invoices`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListIntegrationInvoicesQueryOptions = <TData = Awaited<ReturnType<typeof listIntegrationInvoices>>, TError = ErrorType<ErrorResponse>>(orgId: string,
+    params?: ListIntegrationInvoicesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listIntegrationInvoices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListIntegrationInvoicesQueryKey(orgId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listIntegrationInvoices>>> = ({ signal }) => listIntegrationInvoices(orgId,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listIntegrationInvoices>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListIntegrationInvoicesQueryResult = NonNullable<Awaited<ReturnType<typeof listIntegrationInvoices>>>
+export type ListIntegrationInvoicesQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List invoices for a machine integration
+ */
+
+export function useListIntegrationInvoices<TData = Awaited<ReturnType<typeof listIntegrationInvoices>>, TError = ErrorType<ErrorResponse>>(
+ orgId: string,
+    params?: ListIntegrationInvoicesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listIntegrationInvoices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListIntegrationInvoicesQueryOptions(orgId,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateIntegrationInvoiceUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/integrations/orgs/${orgId}/invoices`
+}
+
+/**
+ * Machine-only endpoint. Requires the write:invoices scope in the bearer API key.
+ * @summary Create an invoice through a machine integration
+ */
+export const createIntegrationInvoice = async (orgId: string,
+    integrationInvoiceInput: IntegrationInvoiceInput, options?: RequestInit): Promise<Invoice> => {
+
+  return customFetch<Invoice>(getCreateIntegrationInvoiceUrl(orgId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(integrationInvoiceInput)
+  }
+);}
+
+
+
+
+
+export const getCreateIntegrationInvoiceMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createIntegrationInvoice>>, TError,{orgId: string;data: BodyType<IntegrationInvoiceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createIntegrationInvoice>>, TError,{orgId: string;data: BodyType<IntegrationInvoiceInput>}, TContext> => {
+
+const mutationKey = ['createIntegrationInvoice'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createIntegrationInvoice>>, {orgId: string;data: BodyType<IntegrationInvoiceInput>}> = (props) => {
+          const {orgId,data} = props ?? {};
+
+          return  createIntegrationInvoice(orgId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateIntegrationInvoiceMutationResult = NonNullable<Awaited<ReturnType<typeof createIntegrationInvoice>>>
+    export type CreateIntegrationInvoiceMutationBody = BodyType<IntegrationInvoiceInput>
+    export type CreateIntegrationInvoiceMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Create an invoice through a machine integration
+ */
+export const useCreateIntegrationInvoice = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createIntegrationInvoice>>, TError,{orgId: string;data: BodyType<IntegrationInvoiceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createIntegrationInvoice>>,
+        TError,
+        {orgId: string;data: BodyType<IntegrationInvoiceInput>},
+        TContext
+      > => {
+      return useMutation(getCreateIntegrationInvoiceMutationOptions(options));
+    }
+
+export const getListIntegrationGlEntriesUrl = (orgId: string,
+    params?: ListIntegrationGlEntriesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/integrations/orgs/${orgId}/gl-entries?${stringifiedParams}` : `/api/integrations/orgs/${orgId}/gl-entries`
+}
+
+/**
+ * Machine-only endpoint. Requires the read:gl scope in the bearer API key.
+ * @summary List general-ledger entries for a machine integration
+ */
+export const listIntegrationGlEntries = async (orgId: string,
+    params?: ListIntegrationGlEntriesParams, options?: RequestInit): Promise<GlEntryList> => {
+
+  return customFetch<GlEntryList>(getListIntegrationGlEntriesUrl(orgId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListIntegrationGlEntriesQueryKey = (orgId: string,
+    params?: ListIntegrationGlEntriesParams,) => {
+    return [
+    `/api/integrations/orgs/${orgId}/gl-entries`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListIntegrationGlEntriesQueryOptions = <TData = Awaited<ReturnType<typeof listIntegrationGlEntries>>, TError = ErrorType<ErrorResponse>>(orgId: string,
+    params?: ListIntegrationGlEntriesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listIntegrationGlEntries>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListIntegrationGlEntriesQueryKey(orgId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listIntegrationGlEntries>>> = ({ signal }) => listIntegrationGlEntries(orgId,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listIntegrationGlEntries>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListIntegrationGlEntriesQueryResult = NonNullable<Awaited<ReturnType<typeof listIntegrationGlEntries>>>
+export type ListIntegrationGlEntriesQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List general-ledger entries for a machine integration
+ */
+
+export function useListIntegrationGlEntries<TData = Awaited<ReturnType<typeof listIntegrationGlEntries>>, TError = ErrorType<ErrorResponse>>(
+ orgId: string,
+    params?: ListIntegrationGlEntriesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listIntegrationGlEntries>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListIntegrationGlEntriesQueryOptions(orgId,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateIntegrationGlEntryUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/integrations/orgs/${orgId}/gl-entries`
+}
+
+/**
+ * Machine-only endpoint. Requires write:gl and an idempotency key.
+ * @summary Post a general-ledger entry through a machine integration
+ */
+export const createIntegrationGlEntry = async (orgId: string,
+    glEntryInput: GlEntryInput, options?: RequestInit): Promise<GlEntry> => {
+
+  return customFetch<GlEntry>(getCreateIntegrationGlEntryUrl(orgId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(glEntryInput)
+  }
+);}
+
+
+
+
+
+export const getCreateIntegrationGlEntryMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createIntegrationGlEntry>>, TError,{orgId: string;data: BodyType<GlEntryInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createIntegrationGlEntry>>, TError,{orgId: string;data: BodyType<GlEntryInput>}, TContext> => {
+
+const mutationKey = ['createIntegrationGlEntry'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createIntegrationGlEntry>>, {orgId: string;data: BodyType<GlEntryInput>}> = (props) => {
+          const {orgId,data} = props ?? {};
+
+          return  createIntegrationGlEntry(orgId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateIntegrationGlEntryMutationResult = NonNullable<Awaited<ReturnType<typeof createIntegrationGlEntry>>>
+    export type CreateIntegrationGlEntryMutationBody = BodyType<GlEntryInput>
+    export type CreateIntegrationGlEntryMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Post a general-ledger entry through a machine integration
+ */
+export const useCreateIntegrationGlEntry = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createIntegrationGlEntry>>, TError,{orgId: string;data: BodyType<GlEntryInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createIntegrationGlEntry>>,
+        TError,
+        {orgId: string;data: BodyType<GlEntryInput>},
+        TContext
+      > => {
+      return useMutation(getCreateIntegrationGlEntryMutationOptions(options));
+    }
+
+export const getGetIntegrationReportsUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/integrations/orgs/${orgId}/reports`
+}
+
+/**
+ * Machine-only endpoint. Returns trial balance, profit and loss, and balance sheet. Requires read:reports.
+ * @summary Get core financial reports through a machine integration
+ */
+export const getIntegrationReports = async (orgId: string, options?: RequestInit): Promise<IntegrationReports> => {
+
+  return customFetch<IntegrationReports>(getGetIntegrationReportsUrl(orgId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetIntegrationReportsQueryKey = (orgId: string,) => {
+    return [
+    `/api/integrations/orgs/${orgId}/reports`
+    ] as const;
+    }
+
+
+export const getGetIntegrationReportsQueryOptions = <TData = Awaited<ReturnType<typeof getIntegrationReports>>, TError = ErrorType<ErrorResponse>>(orgId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getIntegrationReports>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetIntegrationReportsQueryKey(orgId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getIntegrationReports>>> = ({ signal }) => getIntegrationReports(orgId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getIntegrationReports>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetIntegrationReportsQueryResult = NonNullable<Awaited<ReturnType<typeof getIntegrationReports>>>
+export type GetIntegrationReportsQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Get core financial reports through a machine integration
+ */
+
+export function useGetIntegrationReports<TData = Awaited<ReturnType<typeof getIntegrationReports>>, TError = ErrorType<ErrorResponse>>(
+ orgId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getIntegrationReports>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetIntegrationReportsQueryOptions(orgId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetIntegrationTrialBalanceUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/integrations/orgs/${orgId}/reports/trial-balance`
+}
+
+/**
+ * Machine-only endpoint. Requires the read:reports scope in the bearer API key.
+ * @summary Get a trial balance through a machine integration
+ */
+export const getIntegrationTrialBalance = async (orgId: string, options?: RequestInit): Promise<TrialBalanceReport> => {
+
+  return customFetch<TrialBalanceReport>(getGetIntegrationTrialBalanceUrl(orgId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetIntegrationTrialBalanceQueryKey = (orgId: string,) => {
+    return [
+    `/api/integrations/orgs/${orgId}/reports/trial-balance`
+    ] as const;
+    }
+
+
+export const getGetIntegrationTrialBalanceQueryOptions = <TData = Awaited<ReturnType<typeof getIntegrationTrialBalance>>, TError = ErrorType<ErrorResponse>>(orgId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getIntegrationTrialBalance>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetIntegrationTrialBalanceQueryKey(orgId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getIntegrationTrialBalance>>> = ({ signal }) => getIntegrationTrialBalance(orgId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getIntegrationTrialBalance>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetIntegrationTrialBalanceQueryResult = NonNullable<Awaited<ReturnType<typeof getIntegrationTrialBalance>>>
+export type GetIntegrationTrialBalanceQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Get a trial balance through a machine integration
+ */
+
+export function useGetIntegrationTrialBalance<TData = Awaited<ReturnType<typeof getIntegrationTrialBalance>>, TError = ErrorType<ErrorResponse>>(
+ orgId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getIntegrationTrialBalance>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetIntegrationTrialBalanceQueryOptions(orgId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListIntegrationCustomersUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/integrations/orgs/${orgId}/customers`
+}
+
+/**
+ * Machine-only endpoint. Customers are derived from invoice customer strings and require read:customers.
+ * @summary List invoice customers through a machine integration
+ */
+export const listIntegrationCustomers = async (orgId: string, options?: RequestInit): Promise<CustomerList> => {
+
+  return customFetch<CustomerList>(getListIntegrationCustomersUrl(orgId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListIntegrationCustomersQueryKey = (orgId: string,) => {
+    return [
+    `/api/integrations/orgs/${orgId}/customers`
+    ] as const;
+    }
+
+
+export const getListIntegrationCustomersQueryOptions = <TData = Awaited<ReturnType<typeof listIntegrationCustomers>>, TError = ErrorType<ErrorResponse>>(orgId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listIntegrationCustomers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListIntegrationCustomersQueryKey(orgId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listIntegrationCustomers>>> = ({ signal }) => listIntegrationCustomers(orgId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listIntegrationCustomers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListIntegrationCustomersQueryResult = NonNullable<Awaited<ReturnType<typeof listIntegrationCustomers>>>
+export type ListIntegrationCustomersQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List invoice customers through a machine integration
+ */
+
+export function useListIntegrationCustomers<TData = Awaited<ReturnType<typeof listIntegrationCustomers>>, TError = ErrorType<ErrorResponse>>(
+ orgId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listIntegrationCustomers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListIntegrationCustomersQueryOptions(orgId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}

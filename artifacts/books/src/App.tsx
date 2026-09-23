@@ -28,6 +28,7 @@ import Entities from "@/pages/entities";
 import Approvals from "@/pages/approvals";
 import ReportBuilder from "@/pages/report-builder";
 import Budgets from "@/pages/budgets";
+import SettingsIntegrations from "@/pages/settings/integrations";
 
 import PracticeDashboard from "@/pages/practice/dashboard";
 import PracticeClientClose from "@/pages/practice/close";
@@ -83,6 +84,7 @@ function ProtectedRouter() {
             <Route path="/entities" component={Entities} />
             <Route path="/approvals" component={Approvals} />
             <Route path="/budgets" component={Budgets} />
+            <Route path="/settings/integrations" component={SettingsIntegrations} />
             <Route path="/taxes" component={Taxes} />
             <Route path="/team" component={Team} />
             

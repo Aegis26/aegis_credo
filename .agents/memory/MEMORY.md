@@ -14,3 +14,4 @@
 - [Platform operator boundary](platform-operator-boundary.md) — platform administration never satisfies tenant permissions; revalidate session identity, version, and account state on every request.
 - [Railway pnpm reproducibility](railway-pnpm-reproducibility.md) — pin the root pnpm version to the lockfile major or Railpack may select an incompatible default and reject frozen installs.
 - [Production maintenance CLIs](production-maintenance-clis.md) — Railway runtime images omit TypeScript source and dev tools; ship operational scripts as compiled dist entrypoints.
+- [Drizzle push baseline](drizzle-push-baseline.md) — existing DB tables may have no migration journal; inspect before replaying generated baseline, and specify array→JSONB USING conversions.

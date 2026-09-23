@@ -44,7 +44,8 @@ import {
   Network,
   ShieldCheck,
   SlidersHorizontal,
-  Wallet
+  Wallet,
+  Blocks
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { BrandWordmark } from "@/lib/brand";
@@ -87,6 +88,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     { name: "Approvals", href: "/approvals", icon: ShieldCheck },
     { name: "Report Builder", href: "/report-builder", icon: SlidersHorizontal },
     { name: "Budgets", href: "/budgets", icon: Wallet },
+    { name: "Integrations", href: "/settings/integrations", icon: Blocks },
   ];
 
   const practiceNavigation = [

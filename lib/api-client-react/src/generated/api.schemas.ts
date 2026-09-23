@@ -5,6 +5,209 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+/**
+ * Money fields are decimal strings.
+ */
+export interface TrialBalanceRow {
+  accountId: string;
+  code: string;
+  name: string;
+  type: string;
+  debit: string;
+  credit: string;
+}
+
+/**
+ * Money fields are decimal strings.
+ */
+export interface TrialBalanceReport {
+  rows: TrialBalanceRow[];
+  totalDebit: string;
+  totalCredit: string;
+  difference: string;
+  balanced: boolean;
+}
+
+/**
+ * Money fields are decimal strings.
+ */
+export interface ProfitAndLossLine {
+  accountId: string;
+  code: string;
+  name: string;
+  amount: string;
+}
+
+/**
+ * Money fields are decimal strings.
+ */
+export interface ProfitAndLossReport {
+  revenue: ProfitAndLossLine[];
+  expenses: ProfitAndLossLine[];
+  totalRevenue: string;
+  totalExpenses: string;
+  netIncome: string;
+}
+
+/**
+ * Money fields are decimal strings.
+ */
+export interface BalanceSheetLine {
+  accountId: string;
+  code: string;
+  name: string;
+  amount: string;
+}
+
+/**
+ * Money fields are decimal strings.
+ */
+export interface BalanceSheetReport {
+  assets: BalanceSheetLine[];
+  liabilities: BalanceSheetLine[];
+  equity: BalanceSheetLine[];
+  totalAssets: string;
+  totalLiabilities: string;
+  totalEquity: string;
+  netIncome: string;
+  equityWithIncome: string;
+  totalLiabilitiesAndEquity: string;
+  balanced: boolean;
+}
+
+export interface IntegrationReports {
+  trialBalance: TrialBalanceReport;
+  profitAndLoss: ProfitAndLossReport;
+  balanceSheet: BalanceSheetReport;
+}
+
+export interface CredentialSummary {
+  id: string;
+  name: string;
+  scopes: string[];
+  createdAt: string;
+  lastUsedAt: string | null;
+  revokedAt: string | null;
+  isActive: boolean;
+  notes: string | null;
+}
+
+export interface CredentialList {
+  credentials: CredentialSummary[];
+}
+
+export type CredentialCreateInputScopesItem = typeof CredentialCreateInputScopesItem[keyof typeof CredentialCreateInputScopesItem];
+
+
+export const CredentialCreateInputScopesItem = {
+  'read:invoices': 'read:invoices',
+  'write:invoices': 'write:invoices',
+  'read:gl': 'read:gl',
+  'write:gl': 'write:gl',
+  'read:reports': 'read:reports',
+  'read:customers': 'read:customers',
+} as const;
+
+export interface CredentialCreateInput {
+  /** @minLength 1 */
+  name: string;
+  scopes: CredentialCreateInputScopesItem[];
+  notes?: string;
+}
+
+export interface CredentialMutationResponse {
+  credential: CredentialSummary;
+  apiKey: string;
+}
+
+export interface CredentialRevokeResponse {
+  credential: CredentialSummary;
+}
+
+/**
+ * Invoice input for machine integrations. One idempotency key is required for deduplication.
+ */
+export interface IntegrationInvoiceInput {
+  /** @minLength 1 */
+  customer: string;
+  /** @minLength 1 */
+  invoiceNumber?: string;
+  invoiceDate: string;
+  dueDate: string;
+  amount: string;
+  /** @pattern ^[0-9a-fA-F-]{36}$ */
+  arAccountId?: string;
+  /** @pattern ^[0-9a-fA-F-]{36}$ */
+  revenueAccountId?: string;
+  /** @minLength 1 */
+  externalId?: string;
+  /** @minLength 1 */
+  idempotencyKey: string;
+}
+
+export interface GlEntryOutputLine {
+  id: string;
+  /** @pattern ^[0-9a-fA-F-]{36}$ */
+  accountId: string;
+  /** Decimal string amount. */
+  debit: string;
+  /** Decimal string amount. */
+  credit: string;
+  memo: string | null;
+}
+
+export interface GlEntry {
+  id: string;
+  entryDate: string;
+  memo: string | null;
+  source: string;
+  postedAt: string;
+  lines: GlEntryOutputLine[];
+}
+
+export interface GlEntryLineInput {
+  /** @pattern ^[0-9a-fA-F-]{36}$ */
+  accountId: string;
+  /** Decimal string amount. */
+  debit?: string;
+  /** Decimal string amount. */
+  credit?: string;
+  memo?: string;
+  /** @pattern ^[0-9a-fA-F-]{36}$ */
+  classId?: string;
+  /** @pattern ^[0-9a-fA-F-]{36}$ */
+  departmentId?: string;
+  /** @pattern ^[0-9a-fA-F-]{36}$ */
+  locationId?: string;
+  /** @pattern ^[0-9a-fA-F-]{36}$ */
+  counterpartyOrgId?: string;
+}
+
+export interface GlEntryInput {
+  /** ISO date (YYYY-MM-DD). */
+  entryDate: string;
+  memo?: string;
+  /** @minLength 1 */
+  idempotencyKey: string;
+  /** @minItems 2 */
+  lines: GlEntryLineInput[];
+}
+
+export interface GlEntryList {
+  entries: GlEntry[];
+}
+
+/**
+ * Customer derived from the customer string on invoices; no separate customer record exists.
+ */
+export interface Customer {
+  name: string;
+}
+
+export interface CustomerList {
+  customers: Customer[];
+}
+
 export interface HealthStatus {
   status: string;
 }
@@ -223,76 +426,6 @@ export interface OrgDashboard {
   difference: string;
   balanced: boolean;
   recentActivity: RecentEntry[];
-}
-
-/**
- * Money fields are decimal strings.
- */
-export interface TrialBalanceRow {
-  accountId: string;
-  code: string;
-  name: string;
-  type: string;
-  debit: string;
-  credit: string;
-}
-
-/**
- * Money fields are decimal strings.
- */
-export interface TrialBalanceReport {
-  rows: TrialBalanceRow[];
-  totalDebit: string;
-  totalCredit: string;
-  difference: string;
-  balanced: boolean;
-}
-
-/**
- * Money fields are decimal strings.
- */
-export interface ProfitAndLossLine {
-  accountId: string;
-  code: string;
-  name: string;
-  amount: string;
-}
-
-/**
- * Money fields are decimal strings.
- */
-export interface ProfitAndLossReport {
-  revenue: ProfitAndLossLine[];
-  expenses: ProfitAndLossLine[];
-  totalRevenue: string;
-  totalExpenses: string;
-  netIncome: string;
-}
-
-/**
- * Money fields are decimal strings.
- */
-export interface BalanceSheetLine {
-  accountId: string;
-  code: string;
-  name: string;
-  amount: string;
-}
-
-/**
- * Money fields are decimal strings.
- */
-export interface BalanceSheetReport {
-  assets: BalanceSheetLine[];
-  liabilities: BalanceSheetLine[];
-  equity: BalanceSheetLine[];
-  totalAssets: string;
-  totalLiabilities: string;
-  totalEquity: string;
-  netIncome: string;
-  equityWithIncome: string;
-  totalLiabilitiesAndEquity: string;
-  balanced: boolean;
 }
 
 /**
@@ -1323,6 +1456,16 @@ export type PageParameter = number;
 
 export type PageSizeParameter = number;
 
+/**
+ * Maximum number of records to return.
+ */
+export type LimitParameter = number;
+
+/**
+ * Number of records to skip.
+ */
+export type OffsetParameter = number;
+
 export type GetPracticeDashboardParams = {
 /**
  * Restrict to a single practice the user is a member of.
@@ -1395,5 +1538,33 @@ page?: PageParameter;
  * @maximum 100
  */
 pageSize?: PageSizeParameter;
+};
+
+export type ListIntegrationInvoicesParams = {
+/**
+ * Maximum number of records to return.
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: LimitParameter;
+/**
+ * Number of records to skip.
+ * @minimum 0
+ */
+offset?: OffsetParameter;
+};
+
+export type ListIntegrationGlEntriesParams = {
+/**
+ * Maximum number of records to return.
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: LimitParameter;
+/**
+ * Number of records to skip.
+ * @minimum 0
+ */
+offset?: OffsetParameter;
 };
 

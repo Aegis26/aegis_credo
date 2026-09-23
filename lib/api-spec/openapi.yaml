@@ -2367,6 +2367,252 @@ paths:
       responses:
         "204": { description: Password reset completed }
         "400": { description: Invalid reset request, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+  /orgs/{orgId}/credentials:
+    get:
+      operationId: listOrgCredentials
+      tags: [orgs]
+      summary: List machine API credentials for an organization
+      description: Requires an authenticated session; caller must be an owner of the organization to manage credentials.
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      responses:
+        "200":
+          description: Credential summaries (secret values are never returned)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CredentialList"
+        "401":
+          description: Missing or invalid bearer credentials
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+        "403":
+          description: Authenticated caller is not allowed to manage credentials for this organization
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    post:
+      operationId: createOrgCredential
+      tags: [orgs]
+      summary: Create a machine API credential
+      description: Requires an authenticated session and organization-owner access. The plaintext API key is returned only once.
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CredentialCreateInput"
+      responses:
+        "201":
+          description: Credential summary and one-time plaintext API key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CredentialMutationResponse"
+        "400":
+          description: Invalid name, scopes, or notes
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+        "401":
+          description: Missing or invalid bearer credentials
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+        "403":
+          description: Authenticated caller is not allowed to manage credentials for this organization
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+  /orgs/{orgId}/credentials/{credentialId}:
+    delete:
+      operationId: revokeOrgCredential
+      tags: [orgs]
+      summary: Revoke a machine API credential
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+        - $ref: "#/components/parameters/CredentialId"
+      responses:
+        "200":
+          description: Credential revoked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CredentialRevokeResponse"
+        "401":
+          description: Missing or invalid bearer credentials
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+        "403":
+          description: Authenticated caller is not allowed to manage credentials for this organization
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+        "404":
+          description: Credential not found
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+  /orgs/{orgId}/credentials/{credentialId}/rotate:
+    post:
+      operationId: rotateOrgCredential
+      tags: [orgs]
+      summary: Rotate a machine API credential
+      description: The previous key is revoked and the replacement plaintext API key is returned only once.
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+        - $ref: "#/components/parameters/CredentialId"
+      responses:
+        "200":
+          description: Rotated credential summary and one-time plaintext API key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CredentialMutationResponse"
+        "401":
+          description: Missing or invalid bearer credentials
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+        "403":
+          description: Authenticated caller is not allowed to manage credentials for this organization
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+        "404":
+          description: Credential not found
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+  /integrations/orgs/{orgId}/invoices:
+    get:
+      operationId: listIntegrationInvoices
+      tags: [invoices]
+      summary: List invoices for a machine integration
+      description: Machine-only endpoint. Requires the read:invoices scope in the bearer API key.
+      security: [{ MachineBearer: [] }]
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Invoices
+          content: { application/json: { schema: { $ref: "#/components/schemas/InvoiceList" } } }
+        "401":
+          description: Missing or invalid bearer API key
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+        "403":
+          description: API key lacks read:invoices or is not authorized for this organization
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    post:
+      operationId: createIntegrationInvoice
+      tags: [invoices]
+      summary: Create an invoice through a machine integration
+      description: Machine-only endpoint. Requires the write:invoices scope in the bearer API key.
+      security: [{ MachineBearer: [] }]
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/IntegrationInvoiceInput" } } }
+      responses:
+        "201":
+          description: Created invoice
+          content: { application/json: { schema: { $ref: "#/components/schemas/Invoice" } } }
+        "400":
+          description: Invalid invoice input
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+        "401":
+          description: Missing or invalid bearer API key
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+        "403":
+          description: API key lacks write:invoices or is not authorized for this organization
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+  /integrations/orgs/{orgId}/gl-entries:
+    get:
+      operationId: listIntegrationGlEntries
+      tags: [reports]
+      summary: List general-ledger entries for a machine integration
+      description: Machine-only endpoint. Requires the read:gl scope in the bearer API key.
+      security: [{ MachineBearer: [] }]
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: General-ledger entries and their lines
+          content: { application/json: { schema: { $ref: "#/components/schemas/GlEntryList" } } }
+        "401":
+          description: Missing or invalid bearer API key
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+        "403":
+          description: API key lacks read:gl or is not authorized for this organization
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    post:
+      operationId: createIntegrationGlEntry
+      tags: [reports]
+      summary: Post a general-ledger entry through a machine integration
+      description: Machine-only endpoint. Requires write:gl and an idempotency key.
+      security: [{ MachineBearer: [] }]
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/GlEntryInput" } } }
+      responses:
+        "201":
+          description: Created general-ledger entry
+          content: { application/json: { schema: { $ref: "#/components/schemas/GlEntry" } } }
+        "400":
+          description: Invalid or unbalanced entry
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+        "401":
+          description: Missing or invalid bearer API key
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+        "403":
+          description: API key lacks write:gl or is not authorized for this organization
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+  /integrations/orgs/{orgId}/reports:
+    get:
+      operationId: getIntegrationReports
+      tags: [reports]
+      summary: Get core financial reports through a machine integration
+      description: Machine-only endpoint. Returns trial balance, profit and loss, and balance sheet. Requires read:reports.
+      security: [{ MachineBearer: [] }]
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      responses:
+        "200":
+          description: Core financial reports
+          content: { application/json: { schema: { $ref: "#/components/schemas/IntegrationReports" } } }
+        "401":
+          description: Missing or invalid bearer API key
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+        "403":
+          description: API key lacks read:reports or is not authorized for this organization
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+  /integrations/orgs/{orgId}/reports/trial-balance:
+    get:
+      operationId: getIntegrationTrialBalance
+      tags: [reports]
+      summary: Get a trial balance through a machine integration
+      description: Machine-only endpoint. Requires the read:reports scope in the bearer API key.
+      security: [{ MachineBearer: [] }]
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      responses:
+        "200":
+          description: Trial balance
+          content: { application/json: { schema: { $ref: "#/components/schemas/TrialBalanceReport" } } }
+        "401":
+          description: Missing or invalid bearer API key
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+        "403":
+          description: API key lacks read:reports or is not authorized for this organization
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+  /integrations/orgs/{orgId}/customers:
+    get:
+      operationId: listIntegrationCustomers
+      tags: [invoices]
+      summary: List invoice customers through a machine integration
+      description: Machine-only endpoint. Customers are derived from invoice customer strings and require read:customers.
+      security: [{ MachineBearer: [] }]
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      responses:
+        "200":
+          description: Distinct customer names derived from invoices
+          content: { application/json: { schema: { $ref: "#/components/schemas/CustomerList" } } }
+        "401":
+          description: Missing or invalid bearer API key
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+        "403":
+          description: API key lacks read:customers or is not authorized for this organization
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
 components:
   parameters:
     Page:
@@ -2377,6 +2623,18 @@ components:
       name: pageSize
       in: query
       schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+    Limit:
+      name: limit
+      in: query
+      required: false
+      description: Maximum number of records to return.
+      schema: { type: integer, minimum: 1, maximum: 100, default: 100 }
+    Offset:
+      name: offset
+      in: query
+      required: false
+      description: Number of records to skip.
+      schema: { type: integer, minimum: 0, default: 0 }
     UserId:
       name: userId
       in: path
@@ -2396,7 +2654,129 @@ components:
       description: The consolidation group id.
       schema:
         type: string
+    CredentialId:
+      name: credentialId
+      in: path
+      required: true
+      description: Machine API credential identifier.
+      schema:
+        type: string
   schemas:
+    IntegrationReports:
+      type: object
+      properties:
+        trialBalance: { $ref: "#/components/schemas/TrialBalanceReport" }
+        profitAndLoss: { $ref: "#/components/schemas/ProfitAndLossReport" }
+        balanceSheet: { $ref: "#/components/schemas/BalanceSheetReport" }
+      required: [trialBalance, profitAndLoss, balanceSheet]
+    CredentialSummary:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        scopes: { type: array, items: { type: string } }
+        createdAt: { type: string, format: date-time }
+        lastUsedAt: { type: string, format: date-time, nullable: true }
+        revokedAt: { type: string, format: date-time, nullable: true }
+        isActive: { type: boolean }
+        notes: { type: string, nullable: true }
+      required: [id, name, scopes, createdAt, lastUsedAt, revokedAt, isActive, notes]
+    CredentialList:
+      type: object
+      properties:
+        credentials: { type: array, items: { $ref: "#/components/schemas/CredentialSummary" } }
+      required: [credentials]
+    CredentialCreateInput:
+      type: object
+      properties:
+        name: { type: string, minLength: 1 }
+        scopes:
+          type: array
+          items:
+            type: string
+            enum: ["read:invoices", "write:invoices", "read:gl", "write:gl", "read:reports", "read:customers"]
+        notes: { type: string }
+      required: [name, scopes]
+    CredentialMutationResponse:
+      type: object
+      properties:
+        credential: { $ref: "#/components/schemas/CredentialSummary" }
+        apiKey: { type: string }
+      required: [credential, apiKey]
+    CredentialRevokeResponse:
+      type: object
+      properties:
+        credential: { $ref: "#/components/schemas/CredentialSummary" }
+      required: [credential]
+    IntegrationInvoiceInput:
+      type: object
+      description: Invoice input for machine integrations. One idempotency key is required for deduplication.
+      properties:
+        customer: { type: string, minLength: 1 }
+        invoiceNumber: { type: string, minLength: 1 }
+        invoiceDate: { type: string, format: date }
+        dueDate: { type: string, format: date }
+        amount: { type: string }
+        arAccountId: { type: string, pattern: "^[0-9a-fA-F-]{36}$" }
+        revenueAccountId: { type: string, pattern: "^[0-9a-fA-F-]{36}$" }
+        externalId: { type: string, minLength: 1 }
+        idempotencyKey: { type: string, minLength: 1 }
+      required: [customer, invoiceDate, dueDate, amount, idempotencyKey]
+    GlEntryOutputLine:
+      type: object
+      properties:
+        id: { type: string }
+        accountId: { type: string, pattern: "^[0-9a-fA-F-]{36}$" }
+        debit: { type: string, description: "Decimal string amount." }
+        credit: { type: string, description: "Decimal string amount." }
+        memo: { type: string, nullable: true }
+      required: [id, accountId, debit, credit, memo]
+    GlEntry:
+      type: object
+      properties:
+        id: { type: string }
+        entryDate: { type: string, format: date }
+        memo: { type: string, nullable: true }
+        source: { type: string }
+        postedAt: { type: string, format: date-time }
+        lines: { type: array, items: { $ref: "#/components/schemas/GlEntryOutputLine" } }
+      required: [id, entryDate, memo, source, postedAt, lines]
+    GlEntryInput:
+      type: object
+      properties:
+        entryDate: { type: string, format: date, description: "ISO date (YYYY-MM-DD)." }
+        memo: { type: string }
+        idempotencyKey: { type: string, minLength: 1 }
+        lines: { type: array, minItems: 2, items: { $ref: "#/components/schemas/GlEntryLineInput" } }
+      required: [entryDate, idempotencyKey, lines]
+    GlEntryLineInput:
+      type: object
+      properties:
+        accountId: { type: string, pattern: "^[0-9a-fA-F-]{36}$" }
+        debit: { type: string, description: "Decimal string amount." }
+        credit: { type: string, description: "Decimal string amount." }
+        memo: { type: string }
+        classId: { type: string, pattern: "^[0-9a-fA-F-]{36}$" }
+        departmentId: { type: string, pattern: "^[0-9a-fA-F-]{36}$" }
+        locationId: { type: string, pattern: "^[0-9a-fA-F-]{36}$" }
+        counterpartyOrgId: { type: string, pattern: "^[0-9a-fA-F-]{36}$" }
+      required: [accountId]
+    GlEntryList:
+      type: object
+      properties:
+        entries: { type: array, items: { $ref: "#/components/schemas/GlEntry" } }
+      required: [entries]
+    Customer:
+      type: object
+      description: Customer derived from the customer string on invoices; no separate customer record exists.
+      properties:
+        name: { type: string }
+      required: [name]
+    CustomerList:
+      type: object
+      properties:
+        customers: { type: array, items: { $ref: "#/components/schemas/Customer" } }
+      required: [customers]
     HealthStatus:
       type: object
       properties:
@@ -4341,3 +4721,9 @@ components:
         database: { type: string, enum: [ok] }
         userCount: { type: integer }
         organizationCount: { type: integer }
+  securitySchemes:
+    MachineBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: "Bearer API key supplied as Authorization: Bearer <api-key>."

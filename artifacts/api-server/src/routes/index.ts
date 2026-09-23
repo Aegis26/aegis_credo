@@ -21,6 +21,9 @@ import analyticsRouter from "./analytics";
 import { requireAuth } from "../middlewares/auth";
 import { requireMasterAdmin } from "../middlewares/master-admin";
 import platformAdminRouter from "./platform-admin";
+import credentialRouter from "./credentials";
+import machineFinanceRouter from "./machine-finance";
+import { requireMachineCredential } from "../middlewares/machine-credentials";
 
 export interface RouterOptions {
   /** Max auth requests per IP per window. Overridable for tests. */
@@ -82,9 +85,23 @@ export function createRouter(options: RouterOptions = {}): IRouter {
   router.use(healthRouter);
   router.use(createAuthRouter({ rateLimitMax: options.authRateLimitMax }));
 
+  // Machine callers have a separate, explicitly scoped surface. Never pass a
+  // bearer request into the session-based routers below (even if a cookie is
+  // also attached). Each finance handler checks both the org and its scope.
+  router.use("/integrations", requireMachineCredential);
+  router.use(machineFinanceRouter);
+  router.use((req, res, next) => {
+    if (req.headers.authorization) {
+      res.status(401).json({ error: "Bearer credentials are only valid on integration endpoints." });
+      return;
+    }
+    next();
+  });
+
   // Everything below requires a valid session. Identity always comes from the
   // session here — the client never supplies a userId.
   router.use(requireAuth);
+  router.use(credentialRouter);
   router.use(
     "/platform-admin",
     requireMasterAdmin,

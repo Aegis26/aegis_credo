@@ -15,6 +15,8 @@ declare global {
   namespace Express {
     interface Request {
       userId?: string;
+      machinePrincipal?: import("./lib/machine-credentials").MachinePrincipal;
+      machine?: import("./lib/machine-credentials").MachinePrincipal;
     }
   }
 }

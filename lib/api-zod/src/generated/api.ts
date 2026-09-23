@@ -1920,3 +1920,386 @@ export const CompletePasswordResetBody = zod.object({
 export const CompletePasswordResetResponse = zod.void()
 
 
+/**
+ * Requires an authenticated session; caller must be an owner of the organization to manage credentials.
+ * @summary List machine API credentials for an organization
+ */
+export const ListOrgCredentialsParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+export const ListOrgCredentialsResponse = zod.object({
+  "credentials": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "scopes": zod.array(zod.string()),
+  "createdAt": zod.coerce.date(),
+  "lastUsedAt": zod.coerce.date().nullable(),
+  "revokedAt": zod.coerce.date().nullable(),
+  "isActive": zod.boolean(),
+  "notes": zod.string().nullable()
+}))
+})
+
+
+/**
+ * Requires an authenticated session and organization-owner access. The plaintext API key is returned only once.
+ * @summary Create a machine API credential
+ */
+export const CreateOrgCredentialParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+
+
+
+export const CreateOrgCredentialBody = zod.object({
+  "name": zod.string().min(1),
+  "scopes": zod.array(zod.enum(['read:invoices', 'write:invoices', 'read:gl', 'write:gl', 'read:reports', 'read:customers'])),
+  "notes": zod.string().optional()
+})
+
+export const CreateOrgCredentialResponse = zod.object({
+  "credential": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "scopes": zod.array(zod.string()),
+  "createdAt": zod.coerce.date(),
+  "lastUsedAt": zod.coerce.date().nullable(),
+  "revokedAt": zod.coerce.date().nullable(),
+  "isActive": zod.boolean(),
+  "notes": zod.string().nullable()
+}),
+  "apiKey": zod.string()
+})
+
+
+/**
+ * @summary Revoke a machine API credential
+ */
+export const RevokeOrgCredentialParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.'),
+  "credentialId": zod.coerce.string().describe('Machine API credential identifier.')
+})
+
+export const RevokeOrgCredentialResponse = zod.object({
+  "credential": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "scopes": zod.array(zod.string()),
+  "createdAt": zod.coerce.date(),
+  "lastUsedAt": zod.coerce.date().nullable(),
+  "revokedAt": zod.coerce.date().nullable(),
+  "isActive": zod.boolean(),
+  "notes": zod.string().nullable()
+})
+})
+
+
+/**
+ * The previous key is revoked and the replacement plaintext API key is returned only once.
+ * @summary Rotate a machine API credential
+ */
+export const RotateOrgCredentialParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.'),
+  "credentialId": zod.coerce.string().describe('Machine API credential identifier.')
+})
+
+export const RotateOrgCredentialResponse = zod.object({
+  "credential": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "scopes": zod.array(zod.string()),
+  "createdAt": zod.coerce.date(),
+  "lastUsedAt": zod.coerce.date().nullable(),
+  "revokedAt": zod.coerce.date().nullable(),
+  "isActive": zod.boolean(),
+  "notes": zod.string().nullable()
+}),
+  "apiKey": zod.string()
+})
+
+
+/**
+ * Machine-only endpoint. Requires the read:invoices scope in the bearer API key.
+ * @summary List invoices for a machine integration
+ */
+export const ListIntegrationInvoicesParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+export const listIntegrationInvoicesQueryLimitDefault = 100;
+export const listIntegrationInvoicesQueryLimitMax = 100;
+
+export const listIntegrationInvoicesQueryOffsetDefault = 0;
+export const listIntegrationInvoicesQueryOffsetMin = 0;
+
+
+
+export const ListIntegrationInvoicesQueryParams = zod.object({
+  "limit": zod.coerce.number().min(1).max(listIntegrationInvoicesQueryLimitMax).default(listIntegrationInvoicesQueryLimitDefault).describe('Maximum number of records to return.'),
+  "offset": zod.coerce.number().min(listIntegrationInvoicesQueryOffsetMin).default(listIntegrationInvoicesQueryOffsetDefault).describe('Number of records to skip.')
+})
+
+export const ListIntegrationInvoicesResponse = zod.object({
+  "invoices": zod.array(zod.object({
+  "id": zod.string(),
+  "customer": zod.string(),
+  "invoiceNumber": zod.string().nullish(),
+  "invoiceDate": zod.string(),
+  "dueDate": zod.string(),
+  "amount": zod.string(),
+  "paid": zod.string(),
+  "outstanding": zod.string(),
+  "status": zod.string(),
+  "sentAt": zod.string().nullish()
+}).describe('Money fields are decimal strings.'))
+})
+
+
+/**
+ * Machine-only endpoint. Requires the write:invoices scope in the bearer API key.
+ * @summary Create an invoice through a machine integration
+ */
+export const CreateIntegrationInvoiceParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+
+
+export const createIntegrationInvoiceBodyArAccountIdRegExp = new RegExp('^[0-9a-fA-F-]{36}$');
+export const createIntegrationInvoiceBodyRevenueAccountIdRegExp = new RegExp('^[0-9a-fA-F-]{36}$');
+
+
+
+
+export const CreateIntegrationInvoiceBody = zod.object({
+  "customer": zod.string().min(1),
+  "invoiceNumber": zod.string().min(1).optional(),
+  "invoiceDate": zod.coerce.date(),
+  "dueDate": zod.coerce.date(),
+  "amount": zod.string(),
+  "arAccountId": zod.string().regex(createIntegrationInvoiceBodyArAccountIdRegExp).optional(),
+  "revenueAccountId": zod.string().regex(createIntegrationInvoiceBodyRevenueAccountIdRegExp).optional(),
+  "externalId": zod.string().min(1).optional(),
+  "idempotencyKey": zod.string().min(1)
+}).describe('Invoice input for machine integrations. One idempotency key is required for deduplication.')
+
+export const CreateIntegrationInvoiceResponse = zod.object({
+  "id": zod.string(),
+  "customer": zod.string(),
+  "invoiceNumber": zod.string().nullish(),
+  "invoiceDate": zod.string(),
+  "dueDate": zod.string(),
+  "amount": zod.string(),
+  "paid": zod.string(),
+  "outstanding": zod.string(),
+  "status": zod.string(),
+  "sentAt": zod.string().nullish()
+}).describe('Money fields are decimal strings.')
+
+
+/**
+ * Machine-only endpoint. Requires the read:gl scope in the bearer API key.
+ * @summary List general-ledger entries for a machine integration
+ */
+export const ListIntegrationGlEntriesParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+export const listIntegrationGlEntriesQueryLimitDefault = 100;
+export const listIntegrationGlEntriesQueryLimitMax = 100;
+
+export const listIntegrationGlEntriesQueryOffsetDefault = 0;
+export const listIntegrationGlEntriesQueryOffsetMin = 0;
+
+
+
+export const ListIntegrationGlEntriesQueryParams = zod.object({
+  "limit": zod.coerce.number().min(1).max(listIntegrationGlEntriesQueryLimitMax).default(listIntegrationGlEntriesQueryLimitDefault).describe('Maximum number of records to return.'),
+  "offset": zod.coerce.number().min(listIntegrationGlEntriesQueryOffsetMin).default(listIntegrationGlEntriesQueryOffsetDefault).describe('Number of records to skip.')
+})
+
+export const listIntegrationGlEntriesResponseEntriesItemLinesItemAccountIdRegExp = new RegExp('^[0-9a-fA-F-]{36}$');
+
+
+export const ListIntegrationGlEntriesResponse = zod.object({
+  "entries": zod.array(zod.object({
+  "id": zod.string(),
+  "entryDate": zod.coerce.date(),
+  "memo": zod.string().nullable(),
+  "source": zod.string(),
+  "postedAt": zod.coerce.date(),
+  "lines": zod.array(zod.object({
+  "id": zod.string(),
+  "accountId": zod.string().regex(listIntegrationGlEntriesResponseEntriesItemLinesItemAccountIdRegExp),
+  "debit": zod.string().describe('Decimal string amount.'),
+  "credit": zod.string().describe('Decimal string amount.'),
+  "memo": zod.string().nullable()
+}))
+}))
+})
+
+
+/**
+ * Machine-only endpoint. Requires write:gl and an idempotency key.
+ * @summary Post a general-ledger entry through a machine integration
+ */
+export const CreateIntegrationGlEntryParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+
+export const createIntegrationGlEntryBodyLinesItemAccountIdRegExp = new RegExp('^[0-9a-fA-F-]{36}$');
+export const createIntegrationGlEntryBodyLinesItemClassIdRegExp = new RegExp('^[0-9a-fA-F-]{36}$');
+export const createIntegrationGlEntryBodyLinesItemDepartmentIdRegExp = new RegExp('^[0-9a-fA-F-]{36}$');
+export const createIntegrationGlEntryBodyLinesItemLocationIdRegExp = new RegExp('^[0-9a-fA-F-]{36}$');
+export const createIntegrationGlEntryBodyLinesItemCounterpartyOrgIdRegExp = new RegExp('^[0-9a-fA-F-]{36}$');
+export const createIntegrationGlEntryBodyLinesMin = 2;
+
+
+
+export const CreateIntegrationGlEntryBody = zod.object({
+  "entryDate": zod.coerce.date().describe('ISO date (YYYY-MM-DD).'),
+  "memo": zod.string().optional(),
+  "idempotencyKey": zod.string().min(1),
+  "lines": zod.array(zod.object({
+  "accountId": zod.string().regex(createIntegrationGlEntryBodyLinesItemAccountIdRegExp),
+  "debit": zod.string().optional().describe('Decimal string amount.'),
+  "credit": zod.string().optional().describe('Decimal string amount.'),
+  "memo": zod.string().optional(),
+  "classId": zod.string().regex(createIntegrationGlEntryBodyLinesItemClassIdRegExp).optional(),
+  "departmentId": zod.string().regex(createIntegrationGlEntryBodyLinesItemDepartmentIdRegExp).optional(),
+  "locationId": zod.string().regex(createIntegrationGlEntryBodyLinesItemLocationIdRegExp).optional(),
+  "counterpartyOrgId": zod.string().regex(createIntegrationGlEntryBodyLinesItemCounterpartyOrgIdRegExp).optional()
+})).min(createIntegrationGlEntryBodyLinesMin)
+})
+
+export const createIntegrationGlEntryResponseLinesItemAccountIdRegExp = new RegExp('^[0-9a-fA-F-]{36}$');
+
+
+export const CreateIntegrationGlEntryResponse = zod.object({
+  "id": zod.string(),
+  "entryDate": zod.coerce.date(),
+  "memo": zod.string().nullable(),
+  "source": zod.string(),
+  "postedAt": zod.coerce.date(),
+  "lines": zod.array(zod.object({
+  "id": zod.string(),
+  "accountId": zod.string().regex(createIntegrationGlEntryResponseLinesItemAccountIdRegExp),
+  "debit": zod.string().describe('Decimal string amount.'),
+  "credit": zod.string().describe('Decimal string amount.'),
+  "memo": zod.string().nullable()
+}))
+})
+
+
+/**
+ * Machine-only endpoint. Returns trial balance, profit and loss, and balance sheet. Requires read:reports.
+ * @summary Get core financial reports through a machine integration
+ */
+export const GetIntegrationReportsParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+export const GetIntegrationReportsResponse = zod.object({
+  "trialBalance": zod.object({
+  "rows": zod.array(zod.object({
+  "accountId": zod.string(),
+  "code": zod.string(),
+  "name": zod.string(),
+  "type": zod.string(),
+  "debit": zod.string(),
+  "credit": zod.string()
+}).describe('Money fields are decimal strings.')),
+  "totalDebit": zod.string(),
+  "totalCredit": zod.string(),
+  "difference": zod.string(),
+  "balanced": zod.boolean()
+}).describe('Money fields are decimal strings.'),
+  "profitAndLoss": zod.object({
+  "revenue": zod.array(zod.object({
+  "accountId": zod.string(),
+  "code": zod.string(),
+  "name": zod.string(),
+  "amount": zod.string()
+}).describe('Money fields are decimal strings.')),
+  "expenses": zod.array(zod.object({
+  "accountId": zod.string(),
+  "code": zod.string(),
+  "name": zod.string(),
+  "amount": zod.string()
+}).describe('Money fields are decimal strings.')),
+  "totalRevenue": zod.string(),
+  "totalExpenses": zod.string(),
+  "netIncome": zod.string()
+}).describe('Money fields are decimal strings.'),
+  "balanceSheet": zod.object({
+  "assets": zod.array(zod.object({
+  "accountId": zod.string(),
+  "code": zod.string(),
+  "name": zod.string(),
+  "amount": zod.string()
+}).describe('Money fields are decimal strings.')),
+  "liabilities": zod.array(zod.object({
+  "accountId": zod.string(),
+  "code": zod.string(),
+  "name": zod.string(),
+  "amount": zod.string()
+}).describe('Money fields are decimal strings.')),
+  "equity": zod.array(zod.object({
+  "accountId": zod.string(),
+  "code": zod.string(),
+  "name": zod.string(),
+  "amount": zod.string()
+}).describe('Money fields are decimal strings.')),
+  "totalAssets": zod.string(),
+  "totalLiabilities": zod.string(),
+  "totalEquity": zod.string(),
+  "netIncome": zod.string(),
+  "equityWithIncome": zod.string(),
+  "totalLiabilitiesAndEquity": zod.string(),
+  "balanced": zod.boolean()
+}).describe('Money fields are decimal strings.')
+})
+
+
+/**
+ * Machine-only endpoint. Requires the read:reports scope in the bearer API key.
+ * @summary Get a trial balance through a machine integration
+ */
+export const GetIntegrationTrialBalanceParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+export const GetIntegrationTrialBalanceResponse = zod.object({
+  "rows": zod.array(zod.object({
+  "accountId": zod.string(),
+  "code": zod.string(),
+  "name": zod.string(),
+  "type": zod.string(),
+  "debit": zod.string(),
+  "credit": zod.string()
+}).describe('Money fields are decimal strings.')),
+  "totalDebit": zod.string(),
+  "totalCredit": zod.string(),
+  "difference": zod.string(),
+  "balanced": zod.boolean()
+}).describe('Money fields are decimal strings.')
+
+
+/**
+ * Machine-only endpoint. Customers are derived from invoice customer strings and require read:customers.
+ * @summary List invoice customers through a machine integration
+ */
+export const ListIntegrationCustomersParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+export const ListIntegrationCustomersResponse = zod.object({
+  "customers": zod.array(zod.object({
+  "name": zod.string()
+}).describe('Customer derived from the customer string on invoices; no separate customer record exists.'))
+})
+
+

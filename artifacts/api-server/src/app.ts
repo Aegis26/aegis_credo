@@ -9,6 +9,7 @@ import { createRouter } from "./routes";
 import { logger } from "./lib/logger";
 import { assertTokenKeyAtStartup } from "./lib/token-crypto";
 import { originCheck } from "./middlewares/origin-check";
+import { hasMachineBearer } from "./middlewares/machine-credentials";
 import {
   assertRuntimeConfig,
   isProduction,
@@ -71,7 +72,16 @@ export function createApp(options: AppOptions = {}): Express {
   // CSRF defense-in-depth: reject state-changing requests whose Origin is not
   // one of the exact ALLOWED_ORIGINS. The UI is same-origin
   // behind the shared proxy, so no CORS middleware is needed or wanted.
-  app.use(originCheck);
+  app.use((req, res, next) => {
+    // Bearer calls to the machine-only API do not use browser cookies. Their
+    // authentication middleware validates the key before any handler runs;
+    // invalid bearer headers must never fall through to session auth.
+    if (req.path.startsWith("/api/integrations/") && hasMachineBearer(req)) {
+      next();
+      return;
+    }
+    originCheck(req, res, next);
+  });
   // Body parsing: the default 100 KB limit applies everywhere EXCEPT the two
   // file-upload endpoints (base64 PDFs/XLSX), which get a scoped larger limit
   // so a huge body cannot be posted to arbitrary routes.
