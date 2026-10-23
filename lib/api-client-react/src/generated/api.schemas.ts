@@ -5,6 +5,79 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export type TaxDraftInputKind = typeof TaxDraftInputKind[keyof typeof TaxDraftInputKind];
+
+
+export const TaxDraftInputKind = {
+  nec: 'nec',
+  'schedule-c': 'schedule-c',
+  'sales-tax': 'sales-tax',
+} as const;
+
+export interface TaxAccountMapping {
+  accountId: string;
+  line: string;
+}
+
+export interface TaxDraftInput {
+  /**
+     * @minimum 2024
+     * @maximum 2026
+     */
+  year: number;
+  kind?: TaxDraftInputKind;
+  includeBelowThreshold?: boolean;
+  confirmedPaymentIds?: string[];
+  vendor?: string;
+  mappings?: TaxAccountMapping[];
+  salesAccountIds?: string[];
+  salesTaxAccountIds?: string[];
+  acknowledged?: boolean;
+  sourceDigest?: string;
+}
+
+export interface TaxDraftPayment {
+  id: string;
+  date: string;
+  amount: string;
+  entryId: string;
+  accountName: string;
+  confirmed: boolean;
+  warnings: string[];
+}
+
+export interface TaxRecipient {
+  vendor: string;
+  total: string;
+  confirmedTotal: string;
+  aboveThreshold: boolean;
+  payments: TaxDraftPayment[];
+}
+
+export interface TaxDraftAccount {
+  id: string;
+  code: string;
+  name: string;
+  type: string;
+  amount: string;
+  debits: string;
+  credits: string;
+  entryIds: string[];
+}
+
+export interface TaxDraftReview {
+  orgName: string;
+  year: number;
+  currency: string;
+  threshold: string;
+  disclaimer: string;
+  sourceDigest: string;
+  unresolvedEntries: number;
+  warnings: string[];
+  candidates: TaxRecipient[];
+  accounts: TaxDraftAccount[];
+}
+
 /**
  * Money fields are decimal strings.
  */

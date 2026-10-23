@@ -128,7 +128,10 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
   });
 }
 
-buildAll().catch((err) => {
+buildAll().then(async () => {
+  const { cp } = await import("node:fs/promises");
+  await cp("assets/tax-forms", "dist/assets/tax-forms", { recursive: true });
+}).catch((err) => {
   console.error(err);
   process.exit(1);
 });

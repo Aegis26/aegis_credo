@@ -35,6 +35,38 @@ tags:
   - name: members
     description: Org membership — user management, roles, accountant collaboration
 paths:
+  /orgs/{orgId}/tax-forms/review:
+    post:
+      operationId: reviewTaxForms
+      summary: Review ledger-only draft tax documents (owner session required)
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/TaxDraftInput" } } }
+      responses:
+        "200":
+          description: Tax-year-bounded ledger review, no tax liability calculation
+          content: { application/json: { schema: { $ref: "#/components/schemas/TaxDraftReview" } } }
+        "403":
+          description: Organization owner required
+  /orgs/{orgId}/tax-forms/pdf:
+    post:
+      operationId: downloadTaxDraft
+      summary: Download an acknowledged review draft without storing the PDF
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/TaxDraftInput" } } }
+      responses:
+        "200":
+          description: Private PDF with a disclaimer on every page
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        "409":
+          description: Review is stale or incomplete
   /healthz:
     get:
       operationId: healthCheck
@@ -2662,6 +2694,80 @@ components:
       schema:
         type: string
   schemas:
+    TaxDraftInput:
+      type: object
+      required: [year]
+      properties:
+        year: { type: integer, minimum: 2024, maximum: 2026 }
+        kind: { type: string, enum: [nec, schedule-c, sales-tax] }
+        includeBelowThreshold: { type: boolean }
+        confirmedPaymentIds: { type: array, items: { type: string } }
+        vendor: { type: string }
+        mappings:
+          type: array
+          items: { $ref: "#/components/schemas/TaxAccountMapping" }
+        salesAccountIds: { type: array, items: { type: string } }
+        salesTaxAccountIds: { type: array, items: { type: string } }
+        acknowledged: { type: boolean }
+        sourceDigest: { type: string }
+    TaxAccountMapping:
+      type: object
+      required: [accountId, line]
+      properties:
+        accountId: { type: string }
+        line: { type: string }
+    TaxDraftReview:
+      type: object
+      required: [orgName, year, currency, threshold, disclaimer, warnings, candidates, accounts, sourceDigest, unresolvedEntries]
+      properties:
+        orgName: { type: string }
+        year: { type: integer }
+        currency: { type: string }
+        threshold: { type: string }
+        disclaimer: { type: string }
+        sourceDigest: { type: string }
+        unresolvedEntries: { type: integer }
+        warnings: { type: array, items: { type: string } }
+        candidates:
+          type: array
+          items: { $ref: "#/components/schemas/TaxRecipient" }
+        accounts:
+          type: array
+          items: { $ref: "#/components/schemas/TaxDraftAccount" }
+    TaxRecipient:
+      type: object
+      required: [vendor, total, confirmedTotal, aboveThreshold, payments]
+      properties:
+        vendor: { type: string }
+        total: { type: string }
+        confirmedTotal: { type: string }
+        aboveThreshold: { type: boolean }
+        payments:
+          type: array
+          items: { $ref: "#/components/schemas/TaxDraftPayment" }
+    TaxDraftPayment:
+      type: object
+      required: [id, date, amount, entryId, accountName, confirmed, warnings]
+      properties:
+        id: { type: string }
+        date: { type: string }
+        amount: { type: string }
+        entryId: { type: string }
+        accountName: { type: string }
+        confirmed: { type: boolean }
+        warnings: { type: array, items: { type: string } }
+    TaxDraftAccount:
+      type: object
+      required: [id, code, name, type, amount, debits, credits, entryIds]
+      properties:
+        id: { type: string }
+        code: { type: string }
+        name: { type: string }
+        type: { type: string }
+        amount: { type: string }
+        debits: { type: string }
+        credits: { type: string }
+        entryIds: { type: array, items: { type: string } }
     IntegrationReports:
       type: object
       properties:

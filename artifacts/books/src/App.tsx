@@ -19,6 +19,7 @@ import Reconcile from "@/pages/reconcile";
 import Invoices from "@/pages/invoices";
 import Reports from "@/pages/reports";
 import Taxes from "@/pages/taxes";
+import TaxForms from "@/pages/tax-forms";
 import ImportPage from "@/pages/import";
 import Bills from "@/pages/bills";
 import Aging from "@/pages/aging";
@@ -86,6 +87,7 @@ function ProtectedRouter() {
             <Route path="/budgets" component={Budgets} />
             <Route path="/settings/integrations" component={SettingsIntegrations} />
             <Route path="/taxes" component={Taxes} />
+            <Route path="/tax-forms" component={TaxForms} />
             <Route path="/team" component={Team} />
             
             <Route path="/practice" component={PracticeDashboard} />

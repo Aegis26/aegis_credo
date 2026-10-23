@@ -22,6 +22,7 @@ import { requireAuth } from "../middlewares/auth";
 import { requireMasterAdmin } from "../middlewares/master-admin";
 import platformAdminRouter from "./platform-admin";
 import credentialRouter from "./credentials";
+import taxFormsRouter from "./tax-forms";
 import machineFinanceRouter from "./machine-finance";
 import { requireMachineCredential } from "../middlewares/machine-credentials";
 
@@ -102,6 +103,7 @@ export function createRouter(options: RouterOptions = {}): IRouter {
   // session here — the client never supplies a userId.
   router.use(requireAuth);
   router.use(credentialRouter);
+  router.use(taxFormsRouter);
   router.use(
     "/platform-admin",
     requireMasterAdmin,

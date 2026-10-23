@@ -9,6 +9,102 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Review ledger-only draft tax documents (owner session required)
+ */
+export const ReviewTaxFormsParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+export const reviewTaxFormsBodyYearMin = 2024;
+export const reviewTaxFormsBodyYearMax = 2026;
+
+
+
+export const ReviewTaxFormsBody = zod.object({
+  "year": zod.number().min(reviewTaxFormsBodyYearMin).max(reviewTaxFormsBodyYearMax),
+  "kind": zod.enum(['nec', 'schedule-c', 'sales-tax']).optional(),
+  "includeBelowThreshold": zod.boolean().optional(),
+  "confirmedPaymentIds": zod.array(zod.string()).optional(),
+  "vendor": zod.string().optional(),
+  "mappings": zod.array(zod.object({
+  "accountId": zod.string(),
+  "line": zod.string()
+})).optional(),
+  "salesAccountIds": zod.array(zod.string()).optional(),
+  "salesTaxAccountIds": zod.array(zod.string()).optional(),
+  "acknowledged": zod.boolean().optional(),
+  "sourceDigest": zod.string().optional()
+})
+
+export const ReviewTaxFormsResponse = zod.object({
+  "orgName": zod.string(),
+  "year": zod.number(),
+  "currency": zod.string(),
+  "threshold": zod.string(),
+  "disclaimer": zod.string(),
+  "sourceDigest": zod.string(),
+  "unresolvedEntries": zod.number(),
+  "warnings": zod.array(zod.string()),
+  "candidates": zod.array(zod.object({
+  "vendor": zod.string(),
+  "total": zod.string(),
+  "confirmedTotal": zod.string(),
+  "aboveThreshold": zod.boolean(),
+  "payments": zod.array(zod.object({
+  "id": zod.string(),
+  "date": zod.string(),
+  "amount": zod.string(),
+  "entryId": zod.string(),
+  "accountName": zod.string(),
+  "confirmed": zod.boolean(),
+  "warnings": zod.array(zod.string())
+}))
+})),
+  "accounts": zod.array(zod.object({
+  "id": zod.string(),
+  "code": zod.string(),
+  "name": zod.string(),
+  "type": zod.string(),
+  "amount": zod.string(),
+  "debits": zod.string(),
+  "credits": zod.string(),
+  "entryIds": zod.array(zod.string())
+}))
+})
+
+
+/**
+ * @summary Download an acknowledged review draft without storing the PDF
+ */
+export const DownloadTaxDraftParams = zod.object({
+  "orgId": zod.coerce.string().describe('The client organization id.')
+})
+
+export const downloadTaxDraftBodyYearMin = 2024;
+export const downloadTaxDraftBodyYearMax = 2026;
+
+
+
+export const DownloadTaxDraftBody = zod.object({
+  "year": zod.number().min(downloadTaxDraftBodyYearMin).max(downloadTaxDraftBodyYearMax),
+  "kind": zod.enum(['nec', 'schedule-c', 'sales-tax']).optional(),
+  "includeBelowThreshold": zod.boolean().optional(),
+  "confirmedPaymentIds": zod.array(zod.string()).optional(),
+  "vendor": zod.string().optional(),
+  "mappings": zod.array(zod.object({
+  "accountId": zod.string(),
+  "line": zod.string()
+})).optional(),
+  "salesAccountIds": zod.array(zod.string()).optional(),
+  "salesTaxAccountIds": zod.array(zod.string()).optional(),
+  "acknowledged": zod.boolean().optional(),
+  "sourceDigest": zod.string().optional()
+})
+
+export const DownloadTaxDraftResponse = zod.unknown()
+
+
+/**
  * Returns server health status
  * @summary Health check
  */

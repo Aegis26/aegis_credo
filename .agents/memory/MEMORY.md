@@ -16,3 +16,4 @@
 - [Production maintenance CLIs](production-maintenance-clis.md) — Railway runtime images omit TypeScript source and dev tools; ship operational scripts as compiled dist entrypoints.
 - [Drizzle push baseline](drizzle-push-baseline.md) — existing DB tables may have no migration journal; inspect before replaying generated baseline, and specify array→JSONB USING conversions.
 - [Railway schema verification](railway-schema-verification.md) — the Railway agent may infer schema from GitHub, not the live database; require an actual SQL result before claiming prod migration state.
+- [Tax document scope](tax-document-scope.md) — ledger-only drafts stay separate from Taxes; no TIN/address storage without explicit approval and a separate security review.

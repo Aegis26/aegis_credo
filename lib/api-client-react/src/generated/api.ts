@@ -136,6 +136,8 @@ import type {
   RunReportRequest,
   SetBudgetLineRequest,
   SignupRequest,
+  TaxDraftInput,
+  TaxDraftReview,
   TaxEstimate,
   TrialBalanceReport
 } from './api.schemas';
@@ -166,6 +168,150 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getReviewTaxFormsUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/tax-forms/review`
+}
+
+/**
+ * @summary Review ledger-only draft tax documents (owner session required)
+ */
+export const reviewTaxForms = async (orgId: string,
+    taxDraftInput: TaxDraftInput, options?: RequestInit): Promise<TaxDraftReview> => {
+
+  return customFetch<TaxDraftReview>(getReviewTaxFormsUrl(orgId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(taxDraftInput)
+  }
+);}
+
+
+
+
+
+export const getReviewTaxFormsMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reviewTaxForms>>, TError,{orgId: string;data: BodyType<TaxDraftInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reviewTaxForms>>, TError,{orgId: string;data: BodyType<TaxDraftInput>}, TContext> => {
+
+const mutationKey = ['reviewTaxForms'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reviewTaxForms>>, {orgId: string;data: BodyType<TaxDraftInput>}> = (props) => {
+          const {orgId,data} = props ?? {};
+
+          return  reviewTaxForms(orgId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReviewTaxFormsMutationResult = NonNullable<Awaited<ReturnType<typeof reviewTaxForms>>>
+    export type ReviewTaxFormsMutationBody = BodyType<TaxDraftInput>
+    export type ReviewTaxFormsMutationError = ErrorType<void>
+
+    /**
+ * @summary Review ledger-only draft tax documents (owner session required)
+ */
+export const useReviewTaxForms = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reviewTaxForms>>, TError,{orgId: string;data: BodyType<TaxDraftInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reviewTaxForms>>,
+        TError,
+        {orgId: string;data: BodyType<TaxDraftInput>},
+        TContext
+      > => {
+      return useMutation(getReviewTaxFormsMutationOptions(options));
+    }
+
+export const getDownloadTaxDraftUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/orgs/${orgId}/tax-forms/pdf`
+}
+
+/**
+ * @summary Download an acknowledged review draft without storing the PDF
+ */
+export const downloadTaxDraft = async (orgId: string,
+    taxDraftInput: TaxDraftInput, options?: RequestInit): Promise<Blob> => {
+
+  return customFetch<Blob>(getDownloadTaxDraftUrl(orgId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(taxDraftInput)
+  }
+);}
+
+
+
+
+
+export const getDownloadTaxDraftMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof downloadTaxDraft>>, TError,{orgId: string;data: BodyType<TaxDraftInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof downloadTaxDraft>>, TError,{orgId: string;data: BodyType<TaxDraftInput>}, TContext> => {
+
+const mutationKey = ['downloadTaxDraft'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof downloadTaxDraft>>, {orgId: string;data: BodyType<TaxDraftInput>}> = (props) => {
+          const {orgId,data} = props ?? {};
+
+          return  downloadTaxDraft(orgId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DownloadTaxDraftMutationResult = NonNullable<Awaited<ReturnType<typeof downloadTaxDraft>>>
+    export type DownloadTaxDraftMutationBody = BodyType<TaxDraftInput>
+    export type DownloadTaxDraftMutationError = ErrorType<void>
+
+    /**
+ * @summary Download an acknowledged review draft without storing the PDF
+ */
+export const useDownloadTaxDraft = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof downloadTaxDraft>>, TError,{orgId: string;data: BodyType<TaxDraftInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof downloadTaxDraft>>,
+        TError,
+        {orgId: string;data: BodyType<TaxDraftInput>},
+        TContext
+      > => {
+      return useMutation(getDownloadTaxDraftMutationOptions(options));
+    }
 
 export const getHealthCheckUrl = () => {
 
@@ -7004,3 +7150,10 @@ export function useListIntegrationCustomers<TData = Awaited<ReturnType<typeof li
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+
+

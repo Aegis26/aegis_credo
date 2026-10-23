@@ -80,6 +80,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     { name: "Payroll", href: "/payroll", icon: Users },
     { name: "Reports", href: "/reports", icon: LineChart },
     { name: "Taxes", href: "/taxes", icon: Calculator },
+    { name: "Tax Forms", href: "/tax-forms", icon: FileText },
     { name: "Team", href: "/team", icon: UsersRound },
   ];
 
